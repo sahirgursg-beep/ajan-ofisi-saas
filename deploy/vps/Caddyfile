@@ -1,0 +1,5 @@
+{$SAAS_ALAN_ADI} {
+	encode gzip
+	reverse_proxy web:8080
+	header Strict-Transport-Security "max-age=31536000"
+}

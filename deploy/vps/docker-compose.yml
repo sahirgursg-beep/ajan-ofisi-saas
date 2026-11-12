@@ -1,0 +1,54 @@
+# Hostinger VPS: web paneli + isci + HTTPS (Caddy, ucretsiz Let's Encrypt sertifikasi kendiliginden).
+# Sunucuda: /opt/ajan-ofisi icinde `docker compose --env-file .env -f deploy/vps/docker-compose.yml up -d --build`
+name: ajan-ofisi
+
+x-ortak: &ortak
+  build:
+    context: ../..
+  image: ajan-ofisi:son
+  env_file: ../../.env
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "5" }
+
+services:
+  web:
+    <<: *ortak
+    environment:
+      SAAS_ORTAM: bulut
+      SAAS_TETIK: surekli
+      PORT: "8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/saglik')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  isci:
+    <<: *ortak
+    command: ["python", "-m", "saas.isci", "--surekli"]
+    environment:
+      SAAS_ORTAM: bulut
+      SAAS_TETIK: surekli
+      SAAS_ISCI_EN_UZUN_DK: "50"
+    stop_grace_period: 10m         # guncellemede eldeki uretim bitsin
+    deploy:
+      resources:
+        limits: { cpus: "1.8", memory: 6g }
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      SAAS_ALAN_ADI: ${SAAS_ALAN_ADI:?.env icinde SAAS_ALAN_ADI gerekli}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_veri:/data
+      - caddy_ayar:/config
+    depends_on: [web]
+
+volumes:
+  caddy_veri:
+  caddy_ayar:

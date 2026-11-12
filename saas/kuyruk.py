@@ -40,6 +40,8 @@ def isciyi_uyandir():
         subprocess.Popen([sys.executable, "-m", "saas.isci"], cwd=str(ayar.KOK),
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         return "yerel"
+    if ayar.TETIK == "surekli":           # VPS: isci zaten acik ve kuyrugu yokluyor
+        return "surekli"
     if ayar.TETIK == "cloudrun":
         return _cloud_run_calistir()
     return "yok"

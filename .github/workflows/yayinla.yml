@@ -1,0 +1,32 @@
+# main dalina her gonderimde: testler -> gecerse VPS'e otomatik guncelleme (gecmezse canliya cikmaz).
+name: Test ve yayin
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency: { group: yayin, cancel-in-progress: false }
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: sudo apt-get update -q && sudo apt-get install -yq ffmpeg fonts-dejavu-core
+      - run: pip install -r requirements-saas.txt -r requirements-dev.txt && python -m playwright install --with-deps chromium
+      - run: AJAN_TAM_TEST=1 python -m pytest testler -q -W ignore
+
+  yayin:
+    needs: test
+    runs-on: ubuntu-latest
+    if: ${{ vars.VPS_HOST != '' }}
+    steps:
+      - name: VPS'i guncelle
+        env:
+          SSH_ANAHTAR: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ vars.VPS_HOST }}
+        run: |
+          mkdir -p ~/.ssh && echo "$SSH_ANAHTAR" > ~/.ssh/id && chmod 600 ~/.ssh/id
+          ssh -i ~/.ssh/id -o StrictHostKeyChecking=accept-new root@"$HOST" 'bash /opt/ajan-ofisi/deploy/vps/guncelle.sh'

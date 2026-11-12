@@ -31,7 +31,7 @@ def al(ad, varsayilan=None, zorunlu=False):
 # ---- calisma bicimi ----
 ORTAM = al("SAAS_ORTAM", "yerel")                 # yerel | bulut
 DEPO = al("SAAS_DEPO", "yerel")                   # yerel (SQLite + klasor) | supabase
-TETIK = al("SAAS_TETIK", "yerel")                 # isciyi tetikleme: yerel (alt surec) | cloudrun | yok
+TETIK = al("SAAS_TETIK", "yerel")                 # isciyi tetikleme: yerel (alt surec) | surekli (VPS) | cloudrun | yok
 GENEL_ADRES = al("SAAS_GENEL_ADRES", "http://localhost:8800").rstrip("/")   # panelin dis adresi (OAuth donusu)
 
 # ---- yerel depo ----
@@ -79,8 +79,10 @@ def kontrol():
     if DEPO == "supabase":
         eksik += [a for a in ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_ANON_KEY") if not al(a)]
     if ORTAM == "bulut":
-        eksik += [a for a in ("SAAS_SIFRELEME_ANAHTARI", "SAAS_IMZA_ANAHTARI", "SAAS_ZAMANLAYICI_ANAHTARI",
-                              "META_APP_ID", "META_APP_SECRET") if not al(a)]
+        eksik += [a for a in ("SAAS_SIFRELEME_ANAHTARI", "SAAS_IMZA_ANAHTARI", "META_APP_ID", "META_APP_SECRET")
+                  if not al(a)]
+        if TETIK == "cloudrun" and not al("SAAS_ZAMANLAYICI_ANAHTARI"):
+            eksik.append("SAAS_ZAMANLAYICI_ANAHTARI")
         if YEREL_GIRIS:
             eksik.append("SAAS_YEREL_GIRIS bulutta kapali olmali")
     return eksik

@@ -6,8 +6,9 @@ Her is icin:
   3) geri yaz: yeni/degisen icerikler, gorseller, veri paketi ve ofis panosu depoya
 Gecici klasor is bitince silinir; kalici olan her sey depodadir. Ayni musteride ayni anda tek is calisir.
 
-Kullanim: python -m saas.isci            (kuyruk bosalana kadar)
-          python -m saas.isci --bir-is   (tek is)
+Kullanim: python -m saas.isci             (kuyruk bosalana kadar; Cloud Run Job)
+          python -m saas.isci --surekli   (hep acik, kuyrugu yoklar, zamanlayiciyi kendisi calistirir; VPS)
+          python -m saas.isci --bir-is    (tek is)
 """
 import io
 import json
@@ -279,8 +280,44 @@ def bir_is(isci_adi, paylasik):
     return is_
 
 
+def surekli(isci_adi):
+    """VPS bicimi: isci hep acik. Kuyrugu birkac saniyede bir yoklar, 10 dakikada bir zamanlayici turunu
+    kendisi calistirir (Cloud Scheduler gerekmez). SIGTERM gelince eldeki isi bitirip durur."""
+    import signal
+    from . import zamanlayici
+    dur = {"istek": False}
+    signal.signal(signal.SIGTERM, lambda *a: dur.update(istek=True))
+    son_tur = 0.0
+    with tempfile.TemporaryDirectory(prefix="ajan_paylasilan_") as p:
+        paylasik = paylasik_hazirla(Path(p) / "paylasilan")
+        gunluk("Isci surekli modda basladi")
+        while not dur["istek"]:
+            try:
+                if time.time() - son_tur >= ZAMANLAYICI_ARALIK_SN:
+                    son_tur = time.time()
+                    r = zamanlayici.tur(tetikle=False)
+                    if any(r.values()):
+                        gunluk(f"Zamanlayici: {r}")
+                if bir_is(isci_adi, paylasik) is None:
+                    for _ in range(BOS_BEKLE_SN):
+                        if dur["istek"]:
+                            break
+                        time.sleep(1)
+            except Exception:
+                gunluk(traceback.format_exc())
+                time.sleep(30)               # veritabani gecici erisilemezse donguyu bogma
+    gunluk("Isci durdu")
+    return 0
+
+
+ZAMANLAYICI_ARALIK_SN = int(os.environ.get("SAAS_ZAMANLAYICI_ARALIK_SN", "600"))
+BOS_BEKLE_SN = int(os.environ.get("SAAS_BOS_BEKLE_SN", "5"))
+
+
 def main():
     isci_adi = f"{socket.gethostname()}-{os.getpid()}"
+    if "--surekli" in sys.argv:
+        return surekli(isci_adi)
     bitis = time.time() + ayar.ISCI_EN_UZUN_DK * 60
     with tempfile.TemporaryDirectory(prefix="ajan_paylasilan_") as p:
         paylasik = paylasik_hazirla(Path(p) / "paylasilan")
