@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!-- E · CANLI: fotograftan cikarilan vurgu rengiyle cesur, enerjik kampanya gorseli. -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="{{fontlar}}"><link rel="stylesheet" href="{{ortak}}">
+<style>
+  :root { --w: 1080px; --h: 1350px; --vurgu: {{vurgu}}; --vurgu-koyu: {{vurgu_koyu}}; --yazi: {{vurgu_yazi}}; --foto: 760px; }
+  body.story { --foto: 1060px; }
+  .kare { background: var(--vurgu); }
+  .desen { position: absolute; inset: 0; opacity: .14;
+    background: radial-gradient(circle at 85% 12%, #fff 0 160px, transparent 161px),
+                radial-gradient(circle at 8% 92%, var(--vurgu-koyu) 0 260px, transparent 261px); }
+  .ust { position: absolute; top: 56px; left: 64px; right: 64px; display: flex; justify-content: space-between; align-items: center; }
+  body.story .ust { top: 120px; }
+  .logo { height: 62px; }
+  .etk { color: var(--yazi); font-size: 17px; opacity: .85; }
+  .baslik { position: absolute; top: 160px; left: 64px; right: 64px; color: var(--yazi); }
+  body.story .baslik { top: 250px; }
+  .baslik .b1 { font-weight: 800; font-size: 104px; line-height: .92; letter-spacing: -.03em; text-transform: uppercase; }
+  .baslik .b2 { font-family: var(--serif); font-style: italic; font-size: 48px; margin-top: 12px; opacity: .95; }
+  .foto-kutu { position: absolute; left: 64px; right: 64px; bottom: 210px; height: var(--foto);
+    border-radius: 28px; overflow: hidden; box-shadow: 0 40px 80px rgba(0,0,0,.35); transform: rotate(-1.2deg); }
+  body.story .foto-kutu { bottom: 330px; }
+  .foto-kutu img { width: 100%; height: 100%; object-fit: cover; }
+  .etiket-kart { position: absolute; right: 90px; bottom: 150px; background: #fff; color: #1C1612;
+    padding: 26px 34px; border-radius: 18px; box-shadow: 0 20px 40px rgba(0,0,0,.25); transform: rotate(2deg); text-align: right; }
+  body.story .etiket-kart { bottom: 270px; }
+  .etiket-kart .ad { font-family: var(--serif); font-weight: 600; font-size: 40px; line-height: 1; max-width: 520px; }
+  .etiket-kart .fiyat { margin-top: 10px; display: flex; gap: 18px; justify-content: flex-end; align-items: baseline; }
+  .eski { color: #8a7f74; font-size: 26px; }
+  .yeni { color: var(--vurgu-koyu); font-size: 52px; font-weight: 800; }
+  .alt { position: absolute; left: 64px; bottom: 60px; color: var(--yazi); font-size: 16px; }
+  body.story .alt { bottom: 140px; }
+</style></head>
+<body><div class="kare">
+  <div class="desen"></div>
+  <div class="ust"><img class="logo" src="{{logo_renk}}"><span class="etk etiket">{{kategori}}</span></div>
+  <div class="baslik"><div class="b1">{{buyuk_baslik}}</div><div class="b2">{{baslik}}</div></div>
+  <div class="foto-kutu"><img src="{{foto1}}"></div>
+  <div class="etiket-kart"><div class="ad">{{ad}}</div>
+    <div class="fiyat"><span class="eski ustu-cizili {{eski_gizle}}">{{eski_fiyat}}</span><span class="yeni">{{fiyat}}</span></div></div>
+  <div class="alt etiket">{{cta}} · {{web}}</div>
+</div></body></html>

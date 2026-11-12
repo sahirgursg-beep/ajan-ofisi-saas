@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!-- A · EDITORYAL: Area tarzi. Tam ekran fotograf, minimum yazi, altta altin monogram. Fiyat caption'da. -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="{{fontlar}}"><link rel="stylesheet" href="{{ortak}}">
+<style>
+  :root { --w: 1080px; --h: 1350px; }
+  .karart { position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(20,15,12,.35) 0%, rgba(20,15,12,0) 18%,
+                rgba(20,15,12,0) 58%, rgba(20,15,12,.78) 100%); }
+  .ust { position: absolute; top: 54px; left: 0; right: 0; text-align: center;
+    color: var(--krem); font-size: 19px; opacity: .9; }
+  .alt { position: absolute; left: 0; right: 0; bottom: 64px; text-align: center; color: var(--krem); }
+  .baslik { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 44px;
+    line-height: 1.15; opacity: .92; margin-bottom: 14px; padding: 0 120px; }
+  .ad { font-size: 21px; color: var(--altin-acik); margin-bottom: 34px; }
+  .cizgi { width: 70px; height: 1px; background: var(--altin); margin: 0 auto 30px; opacity: .8; }
+  .logo { height: 74px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.5)); }
+  body.story .ust { top: 130px; }
+  body.story .alt { bottom: 230px; }
+  body.story .baslik { font-size: 60px; padding: 0 90px; }
+  body.story .logo { height: 96px; }
+</style></head>
+<body><div class="kare">
+  <img class="foto" src="{{foto1}}">
+  <div class="karart"></div>
+  <div class="ust etiket">{{kategori}}</div>
+  <div class="alt">
+    <div class="baslik">{{baslik}}</div>
+    <div class="ad etiket">{{ad}}</div>
+    <div class="cizgi"></div>
+    <img class="logo" src="{{logo_altin}}">
+  </div>
+</div></body></html>

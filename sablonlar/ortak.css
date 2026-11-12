@@ -1,0 +1,21 @@
+:root {
+  --koyu: #1C1612; --kahve: #2B211B; --altin: #C9A24B; --altin-acik: #E6CC8A; --krem: #F4EFE6;
+  --serif: "Cormorant Garamond", "Cormorant", "Palatino Linotype", "Book Antiqua", Georgia, "DejaVu Serif", serif;
+  --sans: "Montserrat", "Segoe UI", "Helvetica Neue", Arial, "DejaVu Sans", sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: var(--w); height: var(--h); overflow: hidden; background: var(--koyu); }
+body { font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+.kare { position: relative; width: var(--w); height: var(--h); overflow: hidden; }
+.foto { width: 100%; height: 100%; object-fit: cover; display: block; }
+.etiket { font-family: var(--sans); font-weight: 600; letter-spacing: .32em; text-transform: uppercase; }
+.ustu-cizili { position: relative; display: inline-block; }
+.ustu-cizili::after { content: ""; position: absolute; left: -4%; right: -4%; top: 52%; height: 2px;
+  background: currentColor; transform: rotate(-6deg); }
+.gizli { display: none !important; }
+
+/* urun algilama: fotograf kirpilirken urun merkezde kalsin */
+img { object-position: var(--ox, 50%) var(--oy, 50%); }
+
+/* fiyatsiz icerik (tamamlanan projeler): fiyat, eski fiyat ve indirim rozetleri gorunmez */
+.fiyatsiz .fiyat, .fiyatsiz .rozet, .fiyatsiz .serit, .fiyatsiz .yeni, .fiyatsiz .eski { display: none !important; }

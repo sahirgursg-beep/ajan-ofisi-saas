@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<!-- FORMATLI REELS (1080x1920). Python her kare icin ciz(t) cagirir.
+     Format = cekim listesi (V.cekimler) + yazilar (V.yazilar) + istege bagli fiyat / geri sayim / kapanis.
+     Formatlar ofis/reels_formatlari.py icinde tanimlidir (fiyat tahmini, 3 sebep, detaylar, ritim, POV ...). -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="{{fontlar}}"><link rel="stylesheet" href="{{ortak}}">
+<style>
+:root { --w:1080px; --h:1920px; --zemin:{{t_zemin}}; --vurgu:{{t_vurgu}}; --vurgu-yazi:{{t_vurgu_yazi}}; --zemin-yazi:{{t_yazi}}; }
+.f-klasik    { --bf:"Cormorant Garamond",Georgia,"DejaVu Serif",serif; --gf:"Montserrat","Segoe UI","DejaVu Sans",sans-serif; --bt:none; --bo:1; }
+.f-modern    { --bf:"Playfair Display",Georgia,"DejaVu Serif",serif; --gf:"Inter","Segoe UI","DejaVu Sans",sans-serif; --bt:none; --bo:1; }
+.f-cesur     { --bf:"Bebas Neue",Impact,"DejaVu Sans Condensed",sans-serif; --gf:"Montserrat","Segoe UI","DejaVu Sans",sans-serif; --bt:uppercase; --bo:1.25; }
+.f-zarif     { --bf:"Marcellus",Georgia,"DejaVu Serif",serif; --gf:"Jost","Segoe UI","DejaVu Sans",sans-serif; --bt:uppercase; --bo:.85; }
+.f-editoryal { --bf:"DM Serif Display",Georgia,"DejaVu Serif",serif; --gf:"DM Sans","Segoe UI","DejaVu Sans",sans-serif; --bt:none; --bo:1.05; }
+body { font-family:var(--gf); background:#000; }
+.kare { position:relative; width:1080px; height:1920px; overflow:hidden; background:var(--zemin); }
+.katman { position:absolute; inset:0; overflow:hidden; visibility:hidden; will-change:transform,opacity,filter; }
+.katman img { position:absolute; left:50%; top:50%; height:100%; min-width:100%; transform-origin:center; will-change:transform; }
+.golge { position:absolute; inset:0; z-index:5; pointer-events:none;
+  background:linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 26%, rgba(0,0,0,0) 56%, rgba(0,0,0,.72) 100%); }
+#flas { position:absolute; inset:0; background:#fff; z-index:25; opacity:0; }
+#karart { position:absolute; inset:0; background:#000; z-index:6; opacity:0; }
+.serif { font-family:var(--bf); text-transform:var(--bt); }
+.kelime { display:inline-block; will-change:transform,opacity; }
+.yazi { position:absolute; left:80px; right:80px; z-index:12; color:#fff; visibility:hidden; text-shadow:0 4px 28px rgba(0,0,0,.5); }
+.yazi.ust { top:310px; } .yazi.orta { top:50%; transform:translateY(-50%); text-align:center; } .yazi.alt { bottom:330px; }
+.s-kanca { font-family:var(--bf); text-transform:var(--bt); font-size:calc(104px * var(--bo)); line-height:1.04; text-align:center; }
+.s-vurus { font-family:var(--bf); text-transform:var(--bt); font-size:calc(150px * var(--bo)); line-height:1; text-align:center; }
+.s-buyuk { font-family:var(--bf); text-transform:var(--bt); font-size:calc(92px * var(--bo)); line-height:1.05; }
+.s-madde { font-family:var(--bf); text-transform:var(--bt); font-size:calc(80px * var(--bo)); line-height:1.08; }
+.s-madde .no, .s-alt .no { display:block; font-family:var(--gf); font-size:26px; font-weight:800; letter-spacing:.3em; color:var(--vurgu); margin-bottom:20px; }
+.s-madde .no b { display:inline-flex; align-items:center; justify-content:center; width:74px; height:74px; border-radius:50%;
+  background:var(--vurgu); color:var(--vurgu-yazi); font-size:38px; letter-spacing:0; margin-right:18px; vertical-align:middle; }
+.s-alt { font-family:var(--bf); text-transform:var(--bt); font-size:calc(76px * var(--bo)); line-height:1.08; }
+.s-etiket { font-weight:800; letter-spacing:.24em; text-transform:uppercase; font-size:34px; text-align:center; }
+.s-etiket span { background:var(--vurgu); color:var(--vurgu-yazi); padding:14px 30px; border-radius:50px; text-shadow:none; }
+.s-soru { font-family:var(--gf); font-weight:800; font-size:96px; line-height:1.08; text-align:center; }
+.s-soru em { font-style:normal; color:var(--vurgu); }
+.s-pov { font-family:var(--gf); font-weight:700; font-size:70px; line-height:1.15; }
+.s-pov b { display:inline-block; background:#fff; color:#111; padding:4px 18px; border-radius:10px; margin-right:12px; text-shadow:none; font-weight:900; }
+/* geri sayim */
+#sayac { position:absolute; inset:0; z-index:14; display:flex; align-items:center; justify-content:center; visibility:hidden; }
+#sayac b { font-size:420px; font-weight:900; color:#fff; text-shadow:0 10px 60px rgba(0,0,0,.6); font-family:var(--gf); }
+/* fiyat */
+#fiyat { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:15;
+  color:#fff; text-align:center; padding:0 70px; visibility:hidden; }
+#fiyat .ad { font-family:var(--bf); text-transform:var(--bt); font-size:calc(84px * var(--bo)); line-height:1.02; margin-bottom:40px; }
+#fiyat .eski { position:relative; font-size:58px; opacity:.85; }
+#fiyat .eski i { position:absolute; left:-4%; top:52%; height:5px; background:var(--vurgu); width:0; transform:rotate(-7deg); transform-origin:left; }
+#fiyat .yeni { font-size:136px; font-weight:800; color:var(--vurgu); margin-top:14px; letter-spacing:-.01em; }
+#fiyat .ind { margin-top:30px; font-size:34px; font-weight:800; letter-spacing:.2em; background:var(--vurgu); color:var(--vurgu-yazi); padding:14px 30px; border-radius:50px; }
+/* ust logo */
+#logo-ust { position:absolute; top:100px; left:50%; height:140px; transform:translateX(-50%); z-index:20; filter:drop-shadow(0 2px 10px rgba(0,0,0,.5)); }
+/* ilerleme cubugu (liste formatlarinda) */
+#cubuk { position:absolute; left:80px; right:80px; top:272px; height:6px; z-index:21; display:flex; gap:10px; visibility:hidden; }
+#cubuk i { flex:1; background:rgba(255,255,255,.35); border-radius:4px; overflow:hidden; position:relative; }
+#cubuk i::after { content:""; position:absolute; inset:0; width:var(--d,0%); background:#fff; }
+/* kapanis */
+#son { position:absolute; inset:0; background:var(--zemin); z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--zemin-yazi); text-align:center; visibility:hidden; }
+#son .logo { height:360px; position:relative; }
+#son .logo img { height:360px; }
+#son .parilti { position:absolute; inset:0; overflow:hidden; mix-blend-mode:screen; }
+#son .parilti::before { content:""; position:absolute; top:-20%; bottom:-20%; width:30%; left:var(--px,-40%);
+  background:linear-gradient(100deg, transparent, rgba(255,240,200,.75), transparent); transform:skewX(-18deg); }
+#son .fiyat2 { margin-top:46px; font-size:76px; font-weight:800; color:var(--vurgu); }
+#son .cta { margin-top:40px; font-family:var(--bf); text-transform:var(--bt); font-size:calc(58px * var(--bo)); line-height:1.1; padding:0 100px; }
+#son .web { margin-top:30px; font-size:30px; letter-spacing:.12em; opacity:.85; }
+.gizli { display:none !important; }
+</style></head>
+<body class="{{f_sinif}}"><div class="kare">
+  <div id="katmanlar"></div>
+  <div id="karart"></div>
+  <div class="golge"></div>
+  <img id="logo-ust" src="{{logo_krem}}">
+  <div id="cubuk"></div>
+  <div id="yazilar"></div>
+  <div id="sayac"><b></b></div>
+  <div id="fiyat"><div class="ad">{{ad}}</div>
+    <div class="eski {{eski_gizle}}">{{eski_fiyat}}<i></i></div><div class="yeni">{{fiyat}}</div>
+    <div class="ind {{rozet_gizle}}">-{{indirim}}% TODAY</div></div>
+  <div id="son"><div class="logo"><img src="{{logo_son}}"><div class="parilti"></div></div>
+    <div class="fiyat2">{{fiyat}}</div><div class="cta">{{cta}}</div><div class="web">{{web}}</div></div>
+  <div id="flas"></div>
+</div>
+<script>
+const V = {{veri_json}};
+const FOTO = ["{{foto1}}", "{{foto2}}", "{{foto3}}", "{{foto4}}"];
+const $ = s => document.querySelector(s);
+const kl = x => Math.max(0, Math.min(1, x));
+const ar = (t, a, b) => kl((t - a) / (b - a));
+const io = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;
+const out = x => 1 - Math.pow(1 - x, 3);
+const back = x => { const c = 1.7, c3 = c + 1; return 1 + c3*Math.pow(x-1,3) + c*Math.pow(x-1,2); };
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+function gorunur(el, a) { el.style.opacity = a; el.style.visibility = a > 0.001 ? "visible" : "hidden"; }
+
+// --- katmanlar: her cekim kendi katmani (ayni foto farkli kadraj olabilir)
+const K = V.cekimler.map((c, i) => {
+  const d = document.createElement("div"); d.className = "katman";
+  d.innerHTML = `<img src="${FOTO[c.f % 4] || FOTO[0]}">`; $("#katmanlar").appendChild(d); return d;
+});
+// --- yazilar
+const Y = V.yazilar.map(y => {
+  const d = document.createElement("div"); d.className = `yazi ${y.konum || "alt"} s-${y.stil}`;
+  const kelimeler = esc(y.metin).split(" ").map(w => `<span class="kelime">${w}</span>`).join(" ");
+  const no = y.no ? (y.stil === "madde" ? `<span class="no"><b>${esc(y.no)}</b></span>` : `<span class="no">${esc(y.no)}</span>`) : "";
+  d.innerHTML = y.stil === "etiket" ? `<span>${esc(y.metin)}</span>` :
+                y.stil === "pov" ? `<b>POV</b>${kelimeler}` :
+                y.stil === "soru" ? kelimeler.replace(/(\?|👀)/g, "<em>$1</em>") : no + kelimeler;
+  $("#yazilar").appendChild(d); return d;
+});
+if (V.cubuk) { $("#cubuk").innerHTML = V.cubuk.map(() => "<i></i>").join(""); }
+
+const PAY = .06;
+function kutu(f) { const k = V.kutular[f % 4] || {x0:.15,y0:.35,x1:.85,y1:.88};
+  return {x0:Math.max(0,k.x0-PAY), x1:Math.min(1,k.x1+PAY), y0:Math.max(0,k.y0-PAY*1.4), y1:Math.min(1,k.y1+PAY*1.4)}; }
+function kamera(c, img, p) {
+  let z0 = c.z0 || 1.05, z1 = c.z1 || 1.15;
+  if (c.h === "zoom_out") [z0, z1] = [z1, z0];
+  let z = z0 + (z1 - z0) * io(p);
+  if (c.h === "punch") z = z1 * (1 + .14 * (1 - out(kl(p * 4))));        // vurusta hizli itme
+  if (c.h === "sabit") z = z0;
+  const k = kutu(c.f), Wd = img.offsetWidth * z, Hd = img.offsetHeight * z;
+  const mX = Math.max(0, (Wd - 1080) / 2), mY = Math.max(0, (Hd - 1920) / 2), gen = k.x1 - k.x0, yuk = k.y1 - k.y0;
+  const fx = c.mod === "sol" ? k.x0 + gen * .25 : c.mod === "sag" ? k.x1 - gen * .25 : (k.x0 + k.x1) / 2;
+  const fy = c.mod === "ust" ? k.y0 + yuk * .25 : c.mod === "alt" ? k.y1 - yuk * .25 : (k.y0 + k.y1) / 2;
+  let dx = -(fx - .5) * Wd, dy = -(fy - .5) * Hd;
+  if (c.h === "pan_sol") dx += (p - .5) * .6 * mX;
+  if (c.h === "pan_sag") dx -= (p - .5) * .6 * mX;
+  dx = Math.max(-mX, Math.min(mX, dx)); dy = Math.max(-mY, Math.min(mY, dy));
+  img.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${z})`;
+}
+function ciz(t) {
+  // aktif cekim + gecis
+  let ai = 0; V.cekimler.forEach((c, i) => { if (t >= c.a) ai = i; });
+  const flasA = [];
+  K.forEach((el, i) => {
+    const c = V.cekimler[i], son = i + 1 < V.cekimler.length ? V.cekimler[i + 1].a : V.sure;
+    const gs = c.gs || .3, p = ar(t, c.a, son);
+    let gor = (i === ai) || (i === ai - 1 && t - V.cekimler[ai].a < (V.cekimler[ai].gs || .3) && (V.cekimler[ai].gir || "kes") !== "kes");
+    el.style.visibility = gor ? "visible" : "hidden";
+    if (!gor) return;
+    kamera(c, el.querySelector("img"), Math.max(0, p));
+    el.style.zIndex = i === ai ? 2 : 1; el.style.transform = ""; el.style.opacity = 1; el.style.filter = "";
+    if (i === ai && i > 0) {
+      const g = ar(t, c.a, c.a + gs);
+      if (c.gir === "kaydir") el.style.transform = `translateX(${(1 - io(g)) * 100}%)`;
+      else if (c.gir === "kaydir_yukari") el.style.transform = `translateY(${(1 - io(g)) * 100}%)`;
+      else if (c.gir === "bulanik") { el.style.opacity = io(g); el.style.filter = `blur(${(1 - g) * 22}px)`; }
+      else if (c.gir === "zoom") { el.style.transform = `scale(${1.35 - .35 * out(g)})`; el.style.opacity = out(g); }
+      if (c.gir === "flas") flasA.push(1 - out(ar(t, c.a, c.a + .22)));
+    }
+  });
+  gorunur($("#flas"), flasA.length ? Math.max(...flasA) * .9 : 0);
+  // yazilar
+  V.yazilar.forEach((y, i) => {
+    const el = Y[i], a = ar(t, y.a, y.a + .25) * (1 - ar(t, y.b - .2, y.b));
+    gorunur(el, a);
+    if (a <= 0) return;
+    const ks = el.querySelectorAll(".kelime");
+    ks.forEach((w, j) => {
+      const q = y.efekt === "pop" ? back(ar(t, y.a + j * .06, y.a + j * .06 + .3)) : out(ar(t, y.a + j * .08, y.a + j * .08 + .4));
+      w.style.opacity = kl(q * 1.4);
+      w.style.transform = y.efekt === "pop" ? `scale(${.4 + .6 * q})` : `translateY(${(1 - q) * 46}px)`;
+    });
+    const no = el.querySelector(".no b"); if (no) no.style.transform = `scale(${back(ar(t, y.a, y.a + .35))})`;
+  });
+  // ilerleme cubugu
+  if (V.cubuk) { gorunur($("#cubuk"), ar(t, V.cubuk[0][0] - .2, V.cubuk[0][0]) * (1 - ar(t, V.cubuk[V.cubuk.length - 1][1], V.cubuk[V.cubuk.length - 1][1] + .2)));
+    [...$("#cubuk").children].forEach((el, i) => el.style.setProperty("--d", (ar(t, V.cubuk[i][0], V.cubuk[i][1]) * 100) + "%")); }
+  // geri sayim
+  if (V.sayac) { const [a, b] = V.sayac, adim = (b - a) / 3, n = 3 - Math.floor((t - a) / adim);
+    const ic = t >= a && t < b; gorunur($("#sayac"), ic ? 1 : 0);
+    if (ic) { $("#sayac b").textContent = n; const q = back(ar(t, a + (3 - n) * adim, a + (3 - n) * adim + .25));
+      $("#sayac b").style.transform = `scale(${.5 + .5 * q})`; } }
+  // fiyat
+  let kar = 0;
+  if (V.fiyat) { const [a, b] = V.fiyat, f = ar(t, a, a + .4);
+    kar = Math.max(kar, f * (1 - ar(t, b - .2, b)) * .62);
+    gorunur($("#fiyat"), f * (1 - ar(t, b - .25, b)));
+    $("#fiyat .ad").style.transform = `translateY(${(1 - out(ar(t, a, a + .5))) * 50}px)`;
+    $("#fiyat .eski i").style.width = (io(ar(t, a + .5, a + .9)) * 108) + "%";
+    const y = back(ar(t, a + .8, a + 1.25));
+    $("#fiyat .yeni").style.transform = `scale(${.6 + .4 * y})`; $("#fiyat .yeni").style.opacity = kl(ar(t, a + .8, a + 1.0));
+    $("#fiyat .ind").style.opacity = out(ar(t, a + 1.2, a + 1.5)); }
+  if (V.sayac && t >= V.sayac[0] && t < V.sayac[1]) kar = Math.max(kar, .45);
+  if (V.karart) V.karart.forEach(([a, b, d]) => { kar = Math.max(kar, ar(t, a, a + .3) * (1 - ar(t, b - .3, b)) * d); });
+  gorunur($("#karart"), kar);
+  // kapanis
+  const s = V.son, s5 = io(ar(t, s, s + .55));
+  gorunur($("#son"), t >= s ? 1 : 0); $("#son").style.transform = `translateY(${(1 - s5) * 100}%)`;
+  const l = out(ar(t, s + .25, s + .75));
+  $("#son .logo").style.opacity = l; $("#son .logo").style.transform = `scale(${.85 + .15 * l})`;
+  $("#son .parilti").style.setProperty("--px", (-40 + 180 * io(ar(t, s + .7, s + 1.5))) + "%");
+  [["#son .fiyat2", .55], ["#son .cta", .75], ["#son .web", .95]].forEach(([q, d]) => {
+    const o = out(ar(t, s + d, s + d + .45)); $(q).style.opacity = o; $(q).style.transform = `translateY(${(1 - o) * 30}px)`; });
+  const lu = V.logo_ust == null ? null : V.logo_ust;
+  gorunur($("#logo-ust"), lu === null ? 0 : ar(t, lu - .01, lu + .4) * (1 - ar(t, s - .2, s)));
+}
+window.ciz = ciz;
+</script>
+</body></html>

@@ -1,0 +1,102 @@
+{
+  "isletme": {
+    "ad": "Oak & Ember Living",
+    "sektor": "furniture",
+    "tanim": "a premium furniture showroom",
+    "urun_turu": "furniture",
+    "ulke": "Nigeria",
+    "ulke_kodu": "NG",
+    "sehirler": [
+      "Lagos",
+      "Abuja"
+    ],
+    "online_satis": false,
+    "satis_kanali": "Sales only happen in the showroom or by phone/DM, never tell people to buy online.",
+    "yonlendirme": "visit our showroom or send us a DM",
+    "hashtagler": [
+      "#OakAndEmberLiving",
+      "#LagosHomes",
+      "#AbujaHomes",
+      "#NigeriaInteriors",
+      "#HomeDecorNigeria",
+      "#LivingRoomIdeas",
+      "#FurnitureNigeria",
+      "#InteriorDesign"
+    ],
+    "proje_hashtagler": [
+      "#OakAndEmberLiving",
+      "#InteriorDesignNigeria",
+      "#LagosHomes",
+      "#HomeMakeover",
+      "#ProjectReveal"
+    ],
+    "carousel_maddeleri": [
+      "See it live in our showroom",
+      "Order by phone or DM",
+      "Friendly advice from our team"
+    ],
+    "proje_carousel_maddeleri": [
+      "Designed for this home",
+      "Made by our team",
+      "Visit our showroom"
+    ],
+    "faydalar": [
+      "Timeless design for your home",
+      "Comfort for the whole family",
+      "See it in our showroom today"
+    ],
+    "saat_dilimi": "Africa/Lagos",
+    "utc_ofset_saat": 1,
+    "saat_kisaltma": "WAT",
+    "mesai_bas": "08:00",
+    "mesai_bit": "19:00"
+  },
+  "marka": {
+    "ad": "OAK & EMBER LIVING",
+    "web": "oakandember.example",
+    "cta": "Visit our showroom or send us a DM",
+    "tarif": "brand colors: deep espresso and ember orange, simple wordmark logo",
+    "renk_koyu": "#1E1A17",
+    "renk_kahve": "#3A2A20",
+    "renk_altin": "#D9822B",
+    "renk_altin_acik": "#F0B47A",
+    "renk_acik": "#F6F0E8",
+    "logo": "marka/logo.png",
+    "logo_isleme": "",
+    "logo_cerceve": false
+  },
+  "urun_kaynagi_aciklama": "site: sitemap/sayfa taramasi; feed_url: XML katalog (en saglam). Faz 3'te Excel/elle/Shopify eklenecek.",
+  "site": "https://oakandember.example",
+  "feed_url": "",
+  "kategori_sayfalari": [],
+  "kategoriler": [
+    "living room",
+    "dining room",
+    "bedroom"
+  ],
+  "haric_kategoriler": [
+    "accessories"
+  ],
+  "para_birimi": "NGN",
+  "para_sembolu": "₦",
+  "ek_fiyat_isaretleri": [
+    "N"
+  ],
+  "site_para_birimi": "NGN",
+  "doviz_kurlari": {
+    "USD": 1500
+  },
+  "yuvarlama": 1000,
+  "fiyat_gosterimi": "indirimli",
+  "rakipler": [],
+  "haftalik_tema": {
+    "Monday": "New arrival spotlight",
+    "Tuesday": "Room makeover idea",
+    "Wednesday": "Comfort and quality details",
+    "Thursday": "Style tip for local homes",
+    "Friday": "Weekend store visit invitation",
+    "Saturday": "Family time at home",
+    "Sunday": "Relaxing Sunday mood"
+  },
+  "_aciklama": "Gelistirme ve test icin hayali musteri. Gercek bir isletme degildir."
+}

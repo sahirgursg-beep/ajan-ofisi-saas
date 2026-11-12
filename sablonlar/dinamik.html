@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<!-- DINAMIK SABLON: Sanat Yonetmeni'nin her gun yazdigi "tasarim tarifi" bu sayfanin siniflarini ve renklerini belirler.
+     Duzenler: tam_ekran, ust_foto_alt_panel, cerceveli, kemer, yan_panel, diyagonal
+     Motifler: yok, altin_cizgi, cift_cerceve, kose_susleri, daireler, grain
+     Fiyat:    rozet, serit, sade, etiket_kart          Fontlar: klasik, modern, cesur, zarif, editoryal -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="{{fontlar}}"><link rel="stylesheet" href="{{ortak}}">
+<style>
+:root { --w:1080px; --h:1350px; --zemin:{{t_zemin}}; --yazi:{{t_yazi}}; --vurgu:{{t_vurgu}}; --vurgu-yazi:{{t_vurgu_yazi}};
+  --panel:{{t_panel}}; --panel-yazi:{{t_panel_yazi}}; }
+/* ---------- font ciftleri ---------- */
+.f-klasik    { --bf:"Cormorant Garamond",Georgia,"DejaVu Serif",serif; --gf:"Montserrat","Segoe UI","DejaVu Sans",sans-serif; --bw:600; --bt:none; --bls:0; --bo:1; }
+.f-modern    { --bf:"Playfair Display",Georgia,"DejaVu Serif",serif; --gf:"Inter","Segoe UI","DejaVu Sans",sans-serif; --bw:700; --bt:none; --bls:-.01em; --bo:1; }
+.f-cesur     { --bf:"Bebas Neue",Impact,"Arial Narrow","DejaVu Sans Condensed",sans-serif; --gf:"Montserrat","Segoe UI","DejaVu Sans",sans-serif; --bw:400; --bt:uppercase; --bls:.02em; --bo:1.25; }
+.f-zarif     { --bf:"Marcellus","Trajan Pro",Georgia,"DejaVu Serif",serif; --gf:"Jost","Segoe UI","DejaVu Sans",sans-serif; --bw:400; --bt:uppercase; --bls:.06em; --bo:.82; }
+.f-editoryal { --bf:"DM Serif Display",Georgia,"DejaVu Serif",serif; --gf:"DM Sans","Segoe UI","DejaVu Sans",sans-serif; --bw:400; --bt:none; --bls:-.01em; --bo:1.05; }
+body { font-family: var(--gf); }
+.panel-zemin, .bant, .bant2, .kemer-iz, .karart { display:none; }
+.d-tam_ekran .karart, .d-ust_foto_alt_panel .panel-zemin, .d-yan_panel .panel-zemin,
+.d-diyagonal .bant, .d-diyagonal .bant2, .d-kemer .kemer-iz { display:block; }
+.kare { background: var(--zemin); color: var(--yazi); }
+.foto-kutu { position:absolute; overflow:hidden; }
+.foto-kutu img { width:100%; height:100%; object-fit:cover; display:block; filter: var(--filtre, none); }
+/* Urun rengi her zaman fotograftaki gibi kalmali: renk tonunu degistiren filtre YOK, sadece hafif isik/kontrast */
+.e-sicak { --filtre: brightness(1.03); }
+.e-dramatik { --filtre: contrast(1.05); }
+.e-serin { --filtre: none; }
+.logo { position:absolute; height:92px; z-index:5; filter:drop-shadow(0 2px 8px rgba(0,0,0,.35)); }
+.banner { position:absolute; z-index:6; font-weight:700; letter-spacing:.28em; text-transform:uppercase; font-size:20px; }
+.metin { position:absolute; z-index:4; }
+.kat { font-weight:600; letter-spacing:.3em; text-transform:uppercase; font-size:17px; color:var(--vurgu); margin-bottom:14px; }
+.baslik { font-family:var(--bf); font-style:italic; font-size:44px; line-height:1.12; opacity:.92; margin-bottom:16px; }
+.f-cesur .baslik, .f-zarif .baslik { font-style:normal; font-family:var(--gf); font-size:30px; letter-spacing:.04em; }
+.ad { font-family:var(--bf); font-weight:var(--bw); text-transform:var(--bt); letter-spacing:var(--bls);
+  font-size:calc(74px * var(--bo)); line-height:1.02; }
+.fiyat { display:flex; align-items:baseline; gap:22px; margin-top:24px; flex-wrap:wrap; }
+.eski { font-size:28px; opacity:.6; }
+.yeni { font-size:56px; font-weight:700; color:var(--vurgu); }
+.cta { position:absolute; z-index:5; font-weight:600; letter-spacing:.28em; text-transform:uppercase; font-size:15px; opacity:.8; }
+.merkez { text-align:center; } .merkez .fiyat { justify-content:center; }
+
+/* ---------- fiyat stilleri ---------- */
+.rozet { position:absolute; z-index:7; width:200px; height:200px; border-radius:50%; background:var(--vurgu); color:var(--vurgu-yazi);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 18px 40px rgba(0,0,0,.3); }
+.rozet b { font-size:66px; line-height:1; font-weight:800; letter-spacing:-.02em; } .rozet i { font-style:normal; font-size:17px; font-weight:700; letter-spacing:.3em; margin-top:6px; }
+.serit { position:absolute; z-index:7; background:var(--vurgu); color:var(--vurgu-yazi); font-weight:800; font-size:30px;
+  letter-spacing:.12em; padding:14px 90px; transform:rotate(45deg); top:70px; right:-80px; box-shadow:0 10px 24px rgba(0,0,0,.25); }
+.p-rozet .serit, .p-sade .serit, .p-sade .rozet, .p-serit .rozet, .p-etiket_kart .rozet, .p-etiket_kart .serit { display:none; }
+.p-etiket_kart .fiyat { background:#fff; color:#1C1612; padding:18px 26px; border-radius:14px; display:inline-flex; box-shadow:0 14px 30px rgba(0,0,0,.2); }
+.p-etiket_kart .yeni { color:#1C1612; }
+
+/* ---------- 1) TAM EKRAN ---------- */
+.d-tam_ekran .foto-kutu { inset:0; }
+.d-tam_ekran .karart { position:absolute; inset:0; z-index:2; background:linear-gradient(180deg, rgba(0,0,0,.42) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 48%, rgba(0,0,0,.82) 100%); }
+.d-tam_ekran .kare { color:#fff; }
+.d-tam_ekran .metin { left:70px; right:70px; bottom:110px; }
+.d-tam_ekran.p-rozet .metin { right:290px; }
+.d-tam_ekran .logo { top:54px; left:64px; }
+.d-tam_ekran .banner { top:66px; right:64px; color:#fff; }
+.d-tam_ekran .cta { left:70px; bottom:52px; color:#fff; }
+.d-tam_ekran .rozet { right:64px; bottom:360px; }
+
+/* ---------- 2) UST FOTO + ALT PANEL ---------- */
+.d-ust_foto_alt_panel .foto-kutu { top:0; left:0; right:0; height:64%; }
+.d-ust_foto_alt_panel .panel-zemin { position:absolute; left:0; right:0; bottom:0; top:64%; background:var(--panel); }
+.d-ust_foto_alt_panel .metin { left:70px; right:300px; top:calc(64% + 46px); color:var(--panel-yazi); }
+.d-ust_foto_alt_panel .logo { top:46px; left:56px; }
+.d-ust_foto_alt_panel .banner { top:0; left:0; right:0; padding:20px; background:var(--vurgu); color:var(--vurgu-yazi); text-align:center; }
+.d-ust_foto_alt_panel.banner-var .logo { top:90px; }
+.d-ust_foto_alt_panel .cta { left:70px; bottom:40px; color:var(--panel-yazi); }
+.d-ust_foto_alt_panel .rozet { right:70px; top:calc(64% - 100px); }
+
+/* ---------- 3) CERCEVELI ---------- */
+.d-cerceveli .foto-kutu { top:15%; left:86px; right:86px; height:48%; outline:1px solid var(--vurgu); outline-offset:12px; box-shadow:0 30px 60px rgba(0,0,0,.35); }
+.d-cerceveli .metin { left:80px; right:80px; top:calc(63% + 50px); }
+.d-cerceveli .logo { top:3.6%; left:50%; transform:translateX(-50%); height:104px; }
+.d-cerceveli .banner { top:calc(15% - 52px); left:0; right:0; text-align:center; color:var(--vurgu); }
+.d-cerceveli.banner-var .logo { top:2.6%; height:80px; }
+.d-cerceveli .cta { left:0; right:0; text-align:center; bottom:56px; }
+.d-cerceveli .rozet { right:56px; top:calc(63% - 120px); }
+
+/* ---------- 4) KEMER (arch pencere) ---------- */
+.d-kemer .foto-kutu { top:12%; left:170px; right:170px; height:50%; border-radius:400px 400px 0 0; box-shadow:0 30px 60px rgba(0,0,0,.3); }
+.d-kemer .kemer-iz { position:absolute; top:calc(12% - 18px); left:152px; right:152px; height:calc(50% + 18px); border:1.5px solid var(--vurgu); border-bottom:none; border-radius:420px 420px 0 0; z-index:1; }
+.d-kemer .metin { left:80px; right:80px; top:calc(62% + 34px); }
+.d-kemer .ad, .d-cerceveli .ad { font-size:calc(64px * var(--bo)); }
+.d-kemer .logo { top:2.4%; left:50%; transform:translateX(-50%); height:96px; }
+.d-kemer .banner { top:calc(12% + 26px); left:50%; transform:translateX(-50%); background:var(--vurgu); color:var(--vurgu-yazi); padding:12px 26px; white-space:nowrap; }
+.d-kemer .cta { left:0; right:0; text-align:center; bottom:52px; }
+.d-kemer .rozet { right:60px; top:calc(62% - 150px); }
+
+/* ---------- 5) YAN PANEL ---------- */
+.d-yan_panel .foto-kutu { top:0; bottom:0; right:0; width:60%; }
+.d-yan_panel .panel-zemin { position:absolute; top:0; bottom:0; left:0; width:40%; background:var(--panel); }
+.d-yan_panel .metin { left:56px; width:calc(40% - 90px); top:30%; color:var(--panel-yazi); }
+.d-yan_panel .ad { font-size:calc(60px * var(--bo)); }
+.d-yan_panel .yeni { font-size:44px; } .d-yan_panel .eski { font-size:24px; }
+.d-yan_panel .fiyat { flex-direction:column; gap:4px; align-items:flex-start; }
+.d-yan_panel .logo { top:56px; left:56px; }
+.d-yan_panel .banner { top:66px; right:40px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.5); }
+.d-yan_panel .cta { left:56px; bottom:56px; width:calc(40% - 90px); color:var(--panel-yazi); line-height:1.8; letter-spacing:.2em; }
+.d-yan_panel .rozet { left:calc(40% - 100px); bottom:200px; }
+body.story.d-yan_panel .foto-kutu { width:100%; height:58%; bottom:auto; }
+body.story.d-yan_panel .panel-zemin { width:100%; top:58%; }
+body.story.d-yan_panel .metin { width:auto; right:70px; left:70px; top:calc(58% + 70px); }
+body.story.d-yan_panel .cta { width:auto; bottom:120px; }
+body.story.d-yan_panel .rozet { left:auto; right:70px; bottom:auto; top:calc(58% - 100px); }
+
+/* ---------- 6) DIYAGONAL ---------- */
+.d-diyagonal .foto-kutu { inset:0; }
+.d-diyagonal .bant { position:absolute; left:0; right:0; bottom:0; height:44%; background:var(--panel); z-index:2;
+  clip-path:polygon(0 22%, 100% 0, 100% 100%, 0 100%); }
+.d-diyagonal .bant2 { position:absolute; left:0; right:0; bottom:0; height:46%; background:var(--vurgu); z-index:1;
+  clip-path:polygon(0 22%, 100% 0, 100% 3%, 0 25%); }
+.d-diyagonal .metin { left:70px; right:70px; bottom:120px; color:var(--panel-yazi); }
+.d-diyagonal .logo { top:54px; left:64px; filter:drop-shadow(0 2px 8px rgba(0,0,0,.5)); }
+.d-diyagonal .banner { top:66px; right:64px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.5); }
+.d-diyagonal .cta { left:70px; bottom:52px; color:var(--panel-yazi); }
+.d-diyagonal .rozet { right:70px; bottom:calc(44% - 40px); }
+
+/* ---------- urun algilamaya gore ---------- */
+.d-tam_ekran.yazi-ust .metin { bottom:auto; top:190px; right:70px; }
+.d-tam_ekran.yazi-ust .karart { background:linear-gradient(0deg, rgba(0,0,0,.25) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 45%, rgba(0,0,0,.8) 100%); }
+.d-tam_ekran.yazi-ust .rozet { bottom:auto; top:190px; }
+.d-tam_ekran.yazi-ust.p-rozet .metin { right:290px; }
+.rozet-sol .rozet { right:auto !important; left:64px; }
+body.story.d-tam_ekran.yazi-ust .metin { top:320px; }
+body.story.d-tam_ekran.yazi-ust .rozet { top:320px; }
+
+/* ---------- story ayarlari (Instagram arayuzu ust/alt 250px'i kapatir) ---------- */
+body.story .logo { top:130px; height:110px; }
+body.story.d-tam_ekran .metin, body.story.d-diyagonal .metin { bottom:300px; }
+body.story.d-tam_ekran .cta, body.story.d-diyagonal .cta { bottom:200px; }
+body.story.d-tam_ekran .rozet { bottom:auto; top:300px; }
+body.story.d-tam_ekran .banner, body.story.d-diyagonal .banner, body.story.d-yan_panel .banner { top:140px; }
+body.story.d-ust_foto_alt_panel .cta, body.story.d-cerceveli .cta, body.story.d-kemer .cta { bottom:150px; }
+body.story.d-cerceveli .foto-kutu { top:17%; height:44%; }
+body.story.d-kemer .foto-kutu { top:14%; height:50%; } body.story.d-kemer .kemer-iz { top:calc(14% - 18px); height:calc(50% + 18px); }
+body.story.d-kemer .metin { top:calc(64% + 50px); } body.story.d-kemer .rozet { top:calc(64% - 150px); }
+body.story .ad { font-size:calc(84px * var(--bo)); }
+
+/* ---------- motifler ---------- */
+.motif { position:absolute; inset:0; pointer-events:none; z-index:3; }
+.m-altin_cizgi .motif::before { content:""; position:absolute; left:50%; top:0; bottom:0; width:1px; background:linear-gradient(transparent, var(--vurgu) 20%, var(--vurgu) 80%, transparent); opacity:.0; }
+.m-altin_cizgi .metin::before { content:""; display:block; width:90px; height:2px; background:var(--vurgu); margin-bottom:22px; }
+.m-altin_cizgi .merkez::before, .m-altin_cizgi .metin.merkez::before { margin-left:auto; margin-right:auto; }
+.m-cift_cerceve .motif { inset:26px; border:2px solid var(--vurgu); }
+.m-cift_cerceve .motif::after { content:""; position:absolute; inset:12px; border:1px solid var(--vurgu); opacity:.55; }
+.m-kose_susleri .motif::before, .m-kose_susleri .motif::after { content:""; position:absolute; width:120px; height:120px; border:2px solid var(--vurgu); }
+.m-kose_susleri .motif::before { top:34px; left:34px; border-right:none; border-bottom:none; }
+.m-kose_susleri .motif::after { bottom:34px; right:34px; border-left:none; border-top:none; }
+.m-daireler .motif { z-index:1; background: radial-gradient(circle at 88% 10%, var(--vurgu) 0 150px, transparent 151px), radial-gradient(circle at 6% 96%, var(--vurgu) 0 230px, transparent 231px); opacity:.22; }
+.m-grain .motif { opacity:.09; z-index:8; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+</style></head>
+<body class="{{siniflar}}"><div class="kare">
+  <div class="panel-zemin"></div><div class="bant2"></div><div class="bant"></div>
+  <div class="kemer-iz"></div>
+  <div class="foto-kutu"><img src="{{foto1}}"></div>
+  <div class="karart"></div>
+  <div class="motif"></div>
+  <img class="logo" src="{{t_logo}}">
+  <div class="banner {{banner_gizle}}">{{t_banner}}</div>
+  <div class="metin {{t_hiza}}">
+    <div class="kat">{{kategori}}</div>
+    <div class="baslik">{{baslik}}</div>
+    <div class="ad">{{ad}}</div>
+    <div class="fiyat"><span class="eski ustu-cizili {{eski_gizle}}">{{eski_fiyat}}</span><span class="yeni">{{fiyat}}</span></div>
+  </div>
+  <div class="rozet {{rozet_gizle}}"><b>-{{indirim}}%</b><i>OFF</i></div>
+  <div class="serit {{rozet_gizle}}">{{indirim}}% OFF</div>
+  <div class="cta">{{cta}}</div>
+</div></body></html>

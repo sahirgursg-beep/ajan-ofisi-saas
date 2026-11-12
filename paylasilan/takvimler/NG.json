@@ -1,0 +1,36 @@
+{
+  "_aciklama": "Sanat Yonetmeni bu dosyayi okuyarak gune uygun tasarim yapar. Tarihler AA-GG (ay-gun). Yeni etkinlik ekleyebilir, degistirebilirsiniz (or. her yil degisen Ramazan/Kurban Bayrami, Anneler Gunu).",
+  "etkinlikler": [
+    {"ad": "Black Friday / Black November", "baslangic": "11-16", "bitis": "11-30", "banner": "BLACK FRIDAY",
+     "ruh_hali": "urgent, bold, high-contrast, deal-hunting", "palet": {"zemin": "#0E0E0E", "vurgu": "#C9A24B", "panel": "#141414"}},
+    {"ad": "Detty December", "baslangic": "12-01", "bitis": "12-31", "banner": "DETTY DECEMBER",
+     "ruh_hali": "festive, celebratory, hosting friends and family, glamorous evenings", "palet": {"zemin": "#123B2E", "vurgu": "#D4AF5A", "panel": "#0F2F25"}},
+    {"ad": "Christmas", "baslangic": "12-15", "bitis": "12-26", "banner": "CHRISTMAS SPECIAL",
+     "ruh_hali": "warm, family gathering, gifting, cozy lights", "palet": {"zemin": "#6B1E24", "vurgu": "#E2C27A", "panel": "#561820"}},
+    {"ad": "New Year", "baslangic": "12-27", "bitis": "01-06", "banner": "NEW YEAR, NEW HOME",
+     "ruh_hali": "fresh start, renewal, upgrade your home", "palet": {"zemin": "#1A1A2E", "vurgu": "#E6CC8A", "panel": "#16162A"}},
+    {"ad": "Valentine's Day", "baslangic": "02-01", "bitis": "02-14", "banner": "LOVE YOUR HOME",
+     "ruh_hali": "romantic, intimate, couples, bedroom focus", "palet": {"zemin": "#5E1A2B", "vurgu": "#F2C4C4", "panel": "#4A1522"}},
+    {"ad": "Workers' Day", "baslangic": "04-27", "bitis": "05-01", "banner": "YOU DESERVE COMFORT",
+     "ruh_hali": "rest, reward yourself, relaxation", "palet": "fotodan"},
+    {"ad": "Children's Day", "baslangic": "05-22", "bitis": "05-27", "banner": "FAMILY TIME",
+     "ruh_hali": "playful, family, kids rooms", "palet": "fotodan"},
+    {"ad": "Independence Day", "baslangic": "09-24", "bitis": "10-01", "banner": "HAPPY INDEPENDENCE",
+     "ruh_hali": "proud, celebratory, Nigerian green and white accents", "palet": {"zemin": "#0B5D3B", "vurgu": "#FFFFFF", "panel": "#094D31"}}
+  ],
+  "mevsimler": [
+    {"ad": "Harmattan", "aylar": [12, 1, 2], "ruh_hali": "warm textures, cozy, earthy tones"},
+    {"ad": "Rainy season", "aylar": [6, 7, 8, 9], "ruh_hali": "cozy indoors, movie nights, comfort"}
+  ],
+  "tasarim_trendleri": [
+    "quiet luxury: lots of space, minimal text, refined serif",
+    "warm minimalism: cream, beige, soft shadows",
+    "arches and curved shapes",
+    "earthy terracotta and clay tones",
+    "bold color blocking with one strong accent",
+    "editorial magazine layouts with big serif headlines",
+    "dark moody interiors with gold accents",
+    "japandi calm: natural wood, muted greens",
+    "high-contrast black and gold luxury"
+  ]
+}

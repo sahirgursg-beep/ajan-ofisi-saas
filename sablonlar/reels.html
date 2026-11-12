@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<!-- REKLAM REELS: 15 sn, 1080x1920. Python her kare icin ciz(t) cagirir ve ekran goruntusu alir.
+     Sahneler: 0 kanca | 1 urun | 2 detay-1 (silme gecisi) | 3 detay-2 (kemer maske) | 4 fiyat | 5 kapanis -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="{{fontlar}}"><link rel="stylesheet" href="{{ortak}}">
+<style>
+:root { --w:1080px; --h:1920px; --zemin:{{t_zemin}}; --vurgu:{{t_vurgu}}; --vurgu-yazi:{{t_vurgu_yazi}}; --zemin-yazi:{{t_yazi}}; }
+.f-klasik    { --bf:"Cormorant Garamond",Georgia,"DejaVu Serif",serif; --gf:"Montserrat","Segoe UI","DejaVu Sans",sans-serif; --bt:none; --bo:1; }
+.f-modern    { --bf:"Playfair Display",Georgia,"DejaVu Serif",serif; --gf:"Inter","Segoe UI","DejaVu Sans",sans-serif; --bt:none; --bo:1; }
+.f-cesur     { --bf:"Bebas Neue",Impact,"DejaVu Sans Condensed",sans-serif; --gf:"Montserrat","Segoe UI","DejaVu Sans",sans-serif; --bt:uppercase; --bo:1.25; }
+.f-zarif     { --bf:"Marcellus",Georgia,"DejaVu Serif",serif; --gf:"Jost","Segoe UI","DejaVu Sans",sans-serif; --bt:uppercase; --bo:.85; }
+.f-editoryal { --bf:"DM Serif Display",Georgia,"DejaVu Serif",serif; --gf:"DM Sans","Segoe UI","DejaVu Sans",sans-serif; --bt:none; --bo:1.05; }
+body { font-family:var(--gf); background:#000; }
+.kare { position:relative; width:1080px; height:1920px; overflow:hidden; background:var(--zemin); }
+.sahne { position:absolute; inset:0; overflow:hidden; will-change:clip-path,transform; }
+.sahne img { position:absolute; left:50%; top:50%; height:100%; min-width:100%; transform-origin:center; will-change:transform; }
+.golge-alt { position:absolute; left:0; right:0; bottom:0; height:55%; background:linear-gradient(180deg, transparent, rgba(0,0,0,.78)); }
+.golge-ust { position:absolute; left:0; right:0; top:0; height:22%; background:linear-gradient(0deg, transparent, rgba(0,0,0,.5)); }
+.serif { font-family:var(--bf); text-transform:var(--bt); }
+.etk { font-weight:700; letter-spacing:.32em; text-transform:uppercase; font-size:22px; }
+.kelime { display:inline-block; will-change:transform,opacity; }
+/* kanca */
+#kanca { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 90px; text-align:center; color:var(--zemin-yazi); }
+#kanca .yazi { font-size:calc(108px * var(--bo)); line-height:1.05; }
+#kanca .cizgi { width:0; height:4px; background:var(--vurgu); margin-top:44px; }
+/* ust logo (filigran) */
+#logo-ust { position:absolute; top:110px; left:50%; height:146px; transform:translateX(-50%); z-index:20; filter:drop-shadow(0 2px 10px rgba(0,0,0,.5)); }
+/* alt bant */
+.altbant { position:absolute; left:80px; right:80px; bottom:330px; color:#fff; z-index:10; }
+.altbant .etk { color:var(--vurgu); margin-bottom:18px; }
+.altbant .ad { font-size:calc(104px * var(--bo)); line-height:1; text-shadow:0 4px 24px rgba(0,0,0,.45); }
+.altbant .cubuk { height:4px; background:var(--vurgu); width:0; margin-top:28px; }
+.fayda { position:absolute; left:80px; right:80px; bottom:340px; color:#fff; z-index:10; font-size:calc(86px * var(--bo)); line-height:1.06; text-shadow:0 4px 24px rgba(0,0,0,.45); }
+.fayda .no { display:block; font-family:var(--gf); font-size:22px; font-weight:700; letter-spacing:.3em; color:var(--vurgu); margin-bottom:18px; }
+/* silme gecisi kenari */
+#kenar { position:absolute; top:0; bottom:0; width:10px; background:var(--vurgu); z-index:9; box-shadow:0 0 30px rgba(0,0,0,.4); }
+#kenar2 { position:absolute; left:0; right:0; height:10px; background:var(--vurgu); z-index:9; box-shadow:0 0 30px rgba(0,0,0,.4); visibility:hidden; }
+/* kemer cercevesi */
+#kemer-iz { position:absolute; left:110px; right:110px; top:330px; height:1080px; border:3px solid var(--vurgu); border-bottom:none; border-radius:440px 440px 0 0; z-index:9; }
+/* fiyat */
+#fiyat { position:absolute; left:0; right:0; top:0; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:12; color:#fff; text-align:center; padding:0 70px; }
+#fiyat .ad { font-size:calc(92px * var(--bo)); line-height:1.02; margin-bottom:46px; }
+#fiyat .eski { position:relative; font-size:60px; opacity:.8; }
+#fiyat .eski i { position:absolute; left:-4%; top:52%; height:5px; background:var(--vurgu); width:0; transform:rotate(-7deg); transform-origin:left; }
+#fiyat .yeni { font-size:140px; font-weight:800; color:var(--vurgu); margin-top:14px; letter-spacing:-.01em; }
+#rozet { position:absolute; right:80px; top:330px; width:260px; height:260px; border-radius:50%; background:var(--vurgu); color:var(--vurgu-yazi);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:13; box-shadow:0 20px 50px rgba(0,0,0,.4); }
+#rozet b { font-size:86px; font-weight:800; line-height:1; } #rozet span { font-size:22px; font-weight:700; letter-spacing:.3em; }
+/* kapanis */
+#son { position:absolute; inset:0; background:var(--zemin); z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--zemin-yazi); text-align:center; }
+#son .logo { height:380px; position:relative; }
+#son .parilti { position:absolute; inset:0; overflow:hidden; mix-blend-mode:screen; }
+#son .parilti::before { content:""; position:absolute; top:-20%; bottom:-20%; width:30%; left:var(--px,-40%);
+  background:linear-gradient(100deg, transparent, rgba(255,240,200,.75), transparent); transform:skewX(-18deg); }
+#son .cta { margin-top:70px; font-size:calc(64px * var(--bo)); line-height:1.1; padding:0 100px; }
+#son .web { margin-top:34px; font-size:30px; letter-spacing:.12em; opacity:.85; }
+#son .ayrac { width:0; height:3px; background:var(--vurgu); margin-top:56px; }
+.gizli { display:none !important; }
+/* urun alttaysa yazi ustte: */
+.altbant.ust-konum, .fayda.ust-konum { top:300px; bottom:auto; }
+.sahne.yazi-ustte .golge-ust { height:48%; background:linear-gradient(0deg, transparent, rgba(0,0,0,.72)); }
+.sahne.yazi-ustte .golge-alt { opacity:.35; }
+</style></head>
+<body class="{{f_sinif}}"><div class="kare">
+  <div class="sahne" id="s1"><img src="{{foto1}}"><div class="golge-ust"></div><div class="golge-alt"></div></div>
+  <div class="sahne" id="s2"><img src="{{foto2}}"><div class="golge-ust"></div><div class="golge-alt"></div></div>
+  <div class="sahne" id="s3"><img src="{{foto3}}"><div class="golge-ust"></div><div class="golge-alt"></div></div>
+  <div id="kenar"></div><div id="kenar2"></div><div id="kemer-iz"></div>
+  <div id="kanca"><div class="yazi serif" id="kanca-yazi"></div><div class="cizgi"></div></div>
+  <img id="logo-ust" src="{{logo_altin}}">
+  <div class="altbant" id="alt1"><div class="etk">{{kategori}}</div><div class="ad serif" id="ad1"></div><div class="cubuk"></div></div>
+  <div class="fayda serif" id="fayda1"><span class="no">01</span><span class="m"></span></div>
+  <div class="fayda serif" id="fayda2"><span class="no">02</span><span class="m"></span></div>
+  <div id="fiyat"><div class="ad serif">{{ad}}</div>
+    <div class="eski {{eski_gizle}}">{{eski_fiyat}}<i></i></div><div class="yeni">{{fiyat}}</div></div>
+  <div id="rozet" class="{{rozet_gizle}}"><b>-{{indirim}}%</b><span>OFF</span></div>
+  <div id="son"><div class="logo"><img src="{{logo_son}}" style="height:380px"><div class="parilti"></div></div>
+    <div class="ayrac"></div><div class="cta serif">{{cta}}</div><div class="web">{{web}}</div></div>
+</div>
+<script>
+const V = {{veri_json}};
+const $ = s => document.querySelector(s);
+const kel = (el, metin) => { el.innerHTML = metin.split(" ").map(w => `<span class="kelime">${w.replace(/</g,"&lt;")}</span>`).join(" "); };
+kel($("#kanca-yazi"), V.kanca); kel($("#ad1"), V.ad);
+kel($("#fayda1 .m"), V.fayda[0]); kel($("#fayda2 .m"), V.fayda[1]);
+const kl = (x) => Math.max(0, Math.min(1, x));
+const ar = (t, a, b) => kl((t - a) / (b - a));                         // t'nin [a,b] icindeki orani
+const io = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;    // easeInOutCubic
+const out = x => 1 - Math.pow(1 - x, 3);                             // easeOutCubic
+const back = x => { const c = 1.7, c3 = c + 1; return 1 + c3*Math.pow(x-1,3) + c*Math.pow(x-1,2); };
+function kelimeler(sec, t, bas, ara=.09, sure=.45) {
+  document.querySelectorAll(sec + " .kelime").forEach((k, i) => {
+    const p = out(ar(t, bas + i*ara, bas + i*ara + sure));
+    k.style.opacity = p; k.style.transform = `translateY(${(1-p)*60}px)`;
+  });
+}
+function gorunur(el, a) { el.style.opacity = a; el.style.visibility = a > 0.001 ? "visible" : "hidden"; }
+// foto hareketi: yon -1/1 yatay kaydirma, z yakinlasma
+// Urune gore kamera: V.kutular[i] = urunun fotograftaki kutusu (0-1). mod: orta | sol | sag (detay cekimi)
+const PAY = .06;
+function kutu(i) { const k = V.kutular[i] || {x0:.15,y0:.35,x1:.85,y1:.88};
+  return {x0:Math.max(0,k.x0-PAY), x1:Math.min(1,k.x1+PAY), y0:Math.max(0,k.y0-PAY*1.4), y1:Math.min(1,k.y1+PAY*1.4)}; }
+function kamera(i, img, p, yon, z0, z1, mod="orta") {
+  const z = z0 + (z1 - z0) * p, k = kutu(i);
+  const Wd = img.offsetWidth * z, Hd = img.offsetHeight * z;
+  const maksX = Math.max(0, (Wd - 1080) / 2), maksY = Math.max(0, (Hd - 1920) / 2);
+  const gen = k.x1 - k.x0;
+  const fx = mod === "sol" ? k.x0 + gen * .28 : mod === "sag" ? k.x1 - gen * .28 : (k.x0 + k.x1) / 2;
+  let dx = -(fx - .5) * Wd + yon * (p - .5) * .22 * maksX;
+  dx = Math.max(-maksX, Math.min(maksX, dx));
+  // yazi ustteyse urunu biraz asagi, alttaysa biraz yukari it (zoom payi kadar)
+  let dy = (YER[i] ? 1 : -1) * maksY * .2;
+  img.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${z})`;
+}
+// Her sahne icin yazi nereye: urunun ekrandaki dikey araligi alt yazi bandiyla mi, ust bantla mi daha az cakisiyor?
+const YER = [false, false, false];
+let yerHazir = false;
+function yerlesimHesapla() {
+  [0, 1, 2].forEach(i => {
+    const img = S[i].querySelector("img"), k = kutu(i), Hd = img.offsetHeight * 1.1;
+    const ust = (k.y0 - .5) * Hd + 960, alt = (k.y1 - .5) * Hd + 960;
+    const kesisim = (a, b) => Math.max(0, Math.min(alt, b) - Math.max(ust, a));
+    YER[i] = kesisim(1160, 1600) > kesisim(260, 700) + 40;   // altla daha cok cakisiyorsa yaziyi uste al
+    S[i].classList.toggle("yazi-ustte", YER[i]);
+  });
+  $("#alt1").classList.toggle("ust-konum", YER[0]);
+  $("#fayda1").classList.toggle("ust-konum", YER[1]);
+  $("#fayda2").classList.toggle("ust-konum", YER[2]);
+  yerHazir = true;
+}
+const S = [ $("#s1"), $("#s2"), $("#s3") ];
+function ciz(t) {
+  if (!yerHazir) yerlesimHesapla();
+  // ---- 0) KANCA 0 - 1.6
+  const kancaA = 1 - ar(t, 1.45, 1.75);
+  gorunur($("#kanca"), kancaA);
+  kelimeler("#kanca-yazi", t, .1, .1, .5);
+  $("#kanca .cizgi").style.width = (out(ar(t, .5, 1.2)) * 220) + "px";
+  // ---- 1) URUN 1.6 - 4.5 : merkezden daire acilis
+  const r1 = io(ar(t, 1.5, 2.2)) * 120;
+  S[0].style.clipPath = `circle(${r1}% at 50% 48%)`;
+  gorunur(S[0], t >= 1.5 && t < 7.4 ? 1 : 0);
+  kamera(0, S[0].querySelector("img"), ar(t, 1.5, 5.0), 1, 1.18, 1.06);
+  const a1 = ar(t, 2.1, 2.6) * (1 - ar(t, 4.1, 4.45));
+  gorunur($("#alt1"), a1 > 0 ? 1 : 0);
+  $("#alt1 .etk").style.opacity = out(ar(t, 2.1, 2.5)) * (1 - ar(t, 4.1, 4.45));
+  kelimeler("#ad1", t, 2.25, .08, .45);
+  document.querySelectorAll("#ad1 .kelime").forEach(k => { k.style.opacity *= (1 - ar(t, 4.1, 4.45)); });
+  $("#alt1 .cubuk").style.width = (out(ar(t, 2.6, 3.4)) * 260 * (1 - ar(t, 4.1, 4.45))) + "px";
+  // ---- 2) DETAY 1  4.5 - 7.4 : sagdan sola silme, altin kenar
+  const w2 = io(ar(t, 4.4, 5.05));
+  S[1].style.clipPath = `inset(0 0 0 ${(1 - w2) * 100}%)`;
+  gorunur(S[1], t >= 4.4 && t < 10.2 ? 1 : 0);
+  kamera(1, S[1].querySelector("img"), ar(t, 4.4, 7.6), -1, V.ayni ? 1.55 : 1.14, V.ayni ? 1.45 : 1.06, V.ayni ? "sol" : "orta");
+  const kenarA = w2 > 0 && w2 < 1 ? 1 : 0;
+  gorunur($("#kenar"), kenarA); $("#kenar").style.left = ((1 - w2) * 1080 - 5) + "px";
+  gorunur($("#fayda1"), ar(t, 5.0, 5.2) * (1 - ar(t, 6.9, 7.25)));
+  kelimeler("#fayda1 .m", t, 5.1, .08, .45); $("#fayda1 .no").style.opacity = out(ar(t, 5.0, 5.4));
+  // ---- 3) DETAY 2  7.4 - 10.2 : kemer maske asagidan acilir
+  const k3 = io(ar(t, 7.3, 8.1));
+  const kemerT = (1 - k3) * 100;
+  S[2].style.clipPath = k3 < 1 ? `inset(${kemerT}% 0 0 0)` : "none";
+  gorunur(S[2], t >= 7.3 ? 1 : 0);
+  kamera(2, S[2].querySelector("img"), ar(t, 7.3, 12.6), 1, V.ayni ? 1.6 : 1.16, V.ayni ? 1.42 : 1.06, V.ayni ? "sag" : "orta");
+  gorunur($("#kemer-iz"), 0);
+  // alttan yukari silmede altin kenar cizgisi
+  const kenar3 = k3 > 0 && k3 < 1;
+  gorunur($("#kenar2"), kenar3 ? 1 : 0); $("#kenar2").style.top = (kemerT / 100 * 1920 - 5) + "px";
+  gorunur($("#fayda2"), ar(t, 8.0, 8.2) * (1 - ar(t, 9.7, 10.05)));
+  kelimeler("#fayda2 .m", t, 8.1, .08, .45); $("#fayda2 .no").style.opacity = out(ar(t, 8.0, 8.4));
+  // ---- 4) FIYAT 10.2 - 12.6 : foto kararir+bulaniklasir, eski fiyat cizilir, yeni fiyat gelir
+  const f = ar(t, 10.0, 10.6);
+  S[2].querySelector("img").style.filter = `blur(${f * 16}px) brightness(${1 - f * .62})`;
+  gorunur($("#fiyat"), f * (1 - ar(t, 12.4, 12.7)));
+  $("#fiyat .ad").style.transform = `translateY(${(1 - out(ar(t, 10.2, 10.8))) * 50}px)`;
+  $("#fiyat .eski i").style.width = (io(ar(t, 10.8, 11.2)) * 108) + "%";
+  const y = back(ar(t, 11.1, 11.6));
+  $("#fiyat .yeni").style.transform = `scale(${.6 + .4 * y})`; $("#fiyat .yeni").style.opacity = kl(ar(t, 11.1, 11.35));
+  const rz = back(ar(t, 11.5, 11.95));
+  gorunur($("#rozet"), t > 11.5 && t < 12.7 ? 1 : 0); $("#rozet").style.transform = `scale(${rz}) rotate(${(1 - rz) * -30}deg)`;
+  // ---- 5) KAPANIS 12.6 - 15 : panel asagidan kayar, logo parlar
+  const s5 = io(ar(t, 12.55, 13.15));
+  gorunur($("#son"), t >= 12.55 ? 1 : 0); $("#son").style.transform = `translateY(${(1 - s5) * 100}%)`;
+  const l = out(ar(t, 13.0, 13.6));
+  $("#son .logo").style.opacity = l; $("#son .logo").style.transform = `scale(${.85 + .15 * l})`;
+  $("#son .parilti").style.setProperty("--px", (-40 + 180 * io(ar(t, 13.6, 14.4))) + "%");
+  $("#son .ayrac").style.width = (out(ar(t, 13.5, 14.0)) * 200) + "px";
+  $("#son .cta").style.opacity = out(ar(t, 13.7, 14.2)); $("#son .cta").style.transform = `translateY(${(1 - out(ar(t, 13.7, 14.2))) * 30}px)`;
+  $("#son .web").style.opacity = out(ar(t, 14.0, 14.4));
+  gorunur($("#logo-ust"), ar(t, 1.8, 2.3) * (1 - ar(t, 12.4, 12.6)));
+}
+window.ciz = ciz;
+</script>
+</body></html>

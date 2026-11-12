@@ -1,0 +1,17 @@
+# Musteri verisi ve sirlar depoya GIRMEZ (yalnizca profil.json sablonlari girer)
+musteriler/*/veri/
+musteriler/*/cikti/
+musteriler/*/projeler/
+musteriler/*/yedek/
+musteriler/*/marka/
+aktif_musteri.txt
+.env
+*.log
+__pycache__/
+.venv/
+.pytest_cache/
+paylasilan/muzik/
+paylasilan/ai_modeller/
+paylasilan/fontlar/
+paylasilan/demo_gorseller/
+sablonlar/_render_*.html

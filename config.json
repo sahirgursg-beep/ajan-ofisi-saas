@@ -1,0 +1,45 @@
+{
+  "_aciklama": "Platform varsayilanlari. Musteriye ozel her sey musteriler/<id>/profil.json icinde.",
+  "max_urun_tarama": 60,
+  "tekrar_etmeme_gun": 30,
+  "ollama_url": "http://localhost:11434",
+  "model": "qwen2.5:7b",
+  "max_revizyon": 2,
+  "video_sure_sn": 15,
+  "sunucu_port": 8780,
+  "tasarim_yonleri": "ABCE",
+  "sanat_modu": "dinamik",
+  "ai_gorsel": {
+    "aktif": true,
+    "netlestir": true,
+    "genislet": true,
+    "dikey_adet": 3,
+    "adim": 28
+  },
+  "haric_duzenler": [
+    "kemer"
+  ],
+  "yayin_saati": "18:00",
+  "yayin_hedefleri": [
+    "ig_post",
+    "ig_story",
+    "ig_reels",
+    "fb_post",
+    "fb_reels"
+  ],
+  "graph_versiyon": "v23.0",
+  "muzik": {
+    "otomatik": true,
+    "hedef_her_ruh": 6,
+    "tekrar_gun": 7
+  },
+  "yz": {
+    "saglayici": "ollama",
+    "yedek_saglayici": "",
+    "gemini_model": "gemini-2.5-flash",
+    "gemini_anahtar_ortam": "GEMINI_API_KEY",
+    "zaman_asimi_sn": 300
+  },
+  "sanat_modu_aciklama": "dinamik: Sanat Yonetmeni her gun yeni sablon tasarlar | sabit: A/B/C/E arasindan secer (D Kolaj kapali)",
+  "arayuz_dili": "en"
+}
