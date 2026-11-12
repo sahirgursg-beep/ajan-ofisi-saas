@@ -1,0 +1,40 @@
+# DigitalOcean App Platform: tam yonetilen (sunucu yok). Web paneli + isci, GitHub'dan.
+# Ilk kurulum: DigitalOcean > Apps > Create App > "Import from App Spec" ile bu dosya.
+# Guncelleme: testler gecince GitHub Actions yeni dagitimi baslatir (deploy_on_push kapali: test gecmeden canliya cikmaz).
+name: feedzync
+region: fra
+domains:
+  - domain: app.feedzync.com
+    type: PRIMARY
+    zone: feedzync.com
+envs:
+  - { key: SAAS_ORTAM, value: bulut }
+  - { key: SAAS_DEPO, value: supabase }
+  - { key: SAAS_TETIK, value: surekli }
+  - { key: SAAS_YEREL_GIRIS, value: "0" }
+  - { key: SAAS_GENEL_ADRES, value: https://app.feedzync.com }
+  - { key: AJAN_YZ_SAGLAYICI, value: gemini }
+  - { key: AJAN_AI_GORSEL, value: "0" }
+  - { key: SUPABASE_URL, type: SECRET }
+  - { key: SUPABASE_ANON_KEY, type: SECRET }
+  - { key: SUPABASE_SERVICE_ROLE_KEY, type: SECRET }
+  - { key: SAAS_SIFRELEME_ANAHTARI, type: SECRET }
+  - { key: SAAS_IMZA_ANAHTARI, type: SECRET }
+  - { key: META_APP_ID, type: SECRET }
+  - { key: META_APP_SECRET, type: SECRET }
+  - { key: GEMINI_API_KEY, type: SECRET }
+services:
+  - name: web
+    github: { repo: sahirgursg-beep/ajan-ofisi-saas, branch: main, deploy_on_push: false }
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    instance_size_slug: apps-s-1vcpu-1gb
+    instance_count: 1
+    health_check: { http_path: /saglik }
+workers:
+  - name: isci
+    github: { repo: sahirgursg-beep/ajan-ofisi-saas, branch: main, deploy_on_push: false }
+    dockerfile_path: Dockerfile
+    run_command: python -m saas.isci --surekli
+    instance_size_slug: apps-s-2vcpu-4gb
+    instance_count: 1

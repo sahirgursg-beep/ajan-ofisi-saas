@@ -30,3 +30,12 @@ jobs:
         run: |
           mkdir -p ~/.ssh && echo "$SSH_ANAHTAR" > ~/.ssh/id && chmod 600 ~/.ssh/id
           ssh -i ~/.ssh/id -o StrictHostKeyChecking=accept-new root@"$HOST" 'bash /opt/ajan-ofisi/deploy/vps/guncelle.sh'
+
+  digitalocean:
+    needs: test
+    runs-on: ubuntu-latest
+    if: ${{ vars.DO_APP_ID != '' }}
+    steps:
+      - uses: digitalocean/action-doctl@v2
+        with: { token: "${{ secrets.DO_TOKEN }}" }
+      - run: doctl apps create-deployment "${{ vars.DO_APP_ID }}" --wait
