@@ -118,13 +118,17 @@ async function basla() {
 $("#girisBtn").onclick = async () => {
   const eposta = $("#eposta").value.trim(), sifre = $("#sifre").value;
   try {
-    if (sb) { const { error } = await sb.auth.signInWithPassword({ email: eposta, password: sifre }); if (error) throw error; }
+    if (sb) { if (!eposta || !sifre) throw new Error("Enter your email and password.");
+              const { error } = await sb.auth.signInWithPassword({ email: eposta, password: sifre }); if (error) throw error; }
     else { const j = await api("/api/yerel-giris", "POST", { eposta }); belirtec = j.belirtec; localStorage.setItem("ajan_belirtec", belirtec); }
     $("#giris").classList.add("gizli"); await yukle();
   } catch (e) { $("#girisMesaj").textContent = e.message; }
 };
 $("#kayitBtn").onclick = async () => {
-  const { error } = await sb.auth.signUp({ email: $("#eposta").value.trim(), password: $("#sifre").value });
+  const eposta = $("#eposta").value.trim(), sifre = $("#sifre").value;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(eposta)) return ($("#girisMesaj").textContent = "Enter your email address.");
+  if (sifre.length < 8) return ($("#girisMesaj").textContent = "Choose a password of at least 8 characters.");
+  const { error } = await sb.auth.signUp({ email: eposta, password: sifre, options: { emailRedirectTo: location.origin } });
   $("#girisMesaj").textContent = error ? error.message : "Check your email to confirm your account, then sign in.";
 };
 function cikis() { if (sb) sb.auth.signOut(); localStorage.removeItem("ajan_belirtec"); belirtec = null; location.hash = ""; location.reload(); }
