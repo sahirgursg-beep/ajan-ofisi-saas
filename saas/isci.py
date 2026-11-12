@@ -118,6 +118,31 @@ def komutlar(tur, parametre, kok):
     return adimlar
 
 
+def _akit(komut, ortam, sure, mid):
+    """Alt sureci calistirir; ciktisini satir satir isci kaydina da yazar (DigitalOcean Runtime Logs'ta
+    ilerleme gorunsun). -> (cikis_kodu ya da None=zaman asimi, son satirlar)"""
+    import collections
+    import threading
+    son = collections.deque(maxlen=400)
+    p = subprocess.Popen(komut, cwd=str(ayar.KOK), env=ortam, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         text=True, encoding="utf-8", errors="replace", bufsize=1)
+
+    def oku():
+        for satir in p.stdout:
+            son.append(satir)
+            if satir.strip():
+                print(f"   [{mid}] {satir.rstrip()[:300]}", flush=True)
+    t = threading.Thread(target=oku, daemon=True)
+    t.start()
+    try:
+        kod = p.wait(timeout=sure)
+    except subprocess.TimeoutExpired:
+        p.kill()
+        kod = None
+    t.join(timeout=5)
+    return kod, list(son)
+
+
 def calistir(mid, tmp, paylasik, adimlar, sure_sn):
     ortam = {**os.environ, "AJAN_MUSTERI": mid, "AJAN_MUSTERILER_KOK": str(tmp / "musteriler"),
              "AJAN_PAYLASIK_KOK": str(paylasik), "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1"}
@@ -128,15 +153,13 @@ def calistir(mid, tmp, paylasik, adimlar, sure_sn):
     bitis = time.time() + sure_sn
     for komut in adimlar:
         kalan = max(30, bitis - time.time())
-        try:
-            r = subprocess.run(komut, cwd=str(ayar.KOK), env=ortam, capture_output=True, text=True,
-                               encoding="utf-8", errors="replace", timeout=kalan)
-            cikti.append(f"$ {' '.join(komut[1:])} -> {r.returncode}\n{r.stdout[-3000:]}{r.stderr[-1500:]}")
-            basari &= r.returncode == 0
-        except subprocess.TimeoutExpired:
-            cikti.append(f"$ {' '.join(komut[1:])} -> ZAMAN ASIMI ({int(kalan)} sn)")
+        kod, satirlar = _akit(komut, ortam, kalan, mid)
+        if kod is None:
+            cikti.append(f"$ {' '.join(komut[1:])} -> ZAMAN ASIMI ({int(kalan)} sn)\n" + "".join(satirlar)[-3000:])
             basari = False
             break
+        cikti.append(f"$ {' '.join(komut[1:])} -> {kod}\n" + "".join(satirlar)[-4500:])
+        basari &= kod == 0
     return basari, "\n".join(cikti)
 
 
