@@ -5,8 +5,7 @@ name: feedzync
 region: fra
 domains:
   - domain: app.feedzync.com
-    type: PRIMARY
-    zone: feedzync.com
+    type: PRIMARY          # DNS Hostinger'da kalir: app icin CNAME kaydini DigitalOcean verir
 envs:
   - { key: SAAS_ORTAM, value: bulut }
   - { key: SAAS_DEPO, value: supabase }
