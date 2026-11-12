@@ -316,6 +316,13 @@ BOS_BEKLE_SN = int(os.environ.get("SAAS_BOS_BEKLE_SN", "5"))
 
 def main():
     isci_adi = f"{socket.gethostname()}-{os.getpid()}"
+    eksik = ayar.kontrol()
+    if eksik:
+        # Hizli yeniden baslatma dongusune girmesin; kayitta ne eksik oldugu acikca gorunsun
+        gunluk("AYAR EKSIK, isci baslamiyor: " + ", ".join(eksik) +
+               " -> DigitalOcean: Settings > App-Level Environment Variables")
+        time.sleep(120)
+        return 1
     if "--surekli" in sys.argv:
         return surekli(isci_adi)
     bitis = time.time() + ayar.ISCI_EN_UZUN_DK * 60
