@@ -60,8 +60,10 @@ def butce_var(tahmini=0.0):
 def harca(tutar, ne=""):
     h = _harcamalar()
     h[_ay()] = round(float(h.get(_ay(), 0.0)) + tutar, 4)
-    h.setdefault("_son", [])
-    h["_son"] = (h["_son"] + [{"tarih": date.today().isoformat(), "ne": ne, "usd": round(tutar, 4)}])[-50:]
+    kalem = h.setdefault("_kalemler", {}).setdefault(_ay(), {})
+    k = kalem.setdefault(ne or "diger", {"adet": 0, "usd": 0.0})
+    k["adet"] += 1
+    k["usd"] = round(k["usd"] + tutar, 5)
     HARCAMA.parent.mkdir(parents=True, exist_ok=True)
     HARCAMA.write_text(json.dumps(h, ensure_ascii=False, indent=1), encoding="utf-8")
 

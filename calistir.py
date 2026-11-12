@@ -117,6 +117,14 @@ def main(plan_tarihi=None):
         Y.soyle("Kullanici", f"Bugun {len(uretilen)} icerik hazir: " + ", ".join(k.name for k in uretilen)
                 + ". 📤 Onay sekmesinde her biri ayri onay bekliyor.", "rapor")
     print("\nCiktilar:", *[str(k) for k in uretilen], sep="\n  ")
+    try:
+        from ofis import fal_ai
+        h = fal_ai._harcamalar()
+        kalem = (h.get("_kalemler") or {}).get(fal_ai._ay(), {})
+        print(f"\nBu ay yapay zeka harcamasi: ${fal_ai.bu_ay():.3f} / tavan ${fal_ai.tavan():.0f} :: "
+              + ", ".join(f"{k} {v['adet']}x ${v['usd']:.3f}" for k, v in kalem.items()))
+    except Exception:
+        pass
     time.sleep(1)
     return 0 if uretilen else 1
 

@@ -359,6 +359,29 @@ class SanatYonetmeni(Ajan):
 
 
 # ------------------------------------------------------------------
+METIN_ALANLARI = ("hook", "headline", "caption", "pov")
+LISTE_ALANLARI = ("hashtags", "reels_lines", "carousel_lines", "carousel_points")
+
+
+def taslak_duzelt(t):
+    """LLM cevabinda metin olmasi gereken alan liste, liste olmasi gereken alan metin gelebilir."""
+    if not isinstance(t, dict):
+        return t
+    for k in METIN_ALANLARI:
+        v = t.get(k)
+        if isinstance(v, (list, tuple)):
+            t[k] = ("\n" if k == "caption" else " ").join(str(x) for x in v if x)
+        elif v is not None and not isinstance(v, str):
+            t[k] = str(v)
+    for k in LISTE_ALANLARI:
+        v = t.get(k)
+        if isinstance(v, str):
+            t[k] = [x.strip() for x in re.split(r"[\n,]" if k == "hashtags" else r"\n", v) if x.strip()]
+        elif isinstance(v, (list, tuple)):
+            t[k] = [str(x) if not isinstance(x, dict) else " ".join(map(str, x.values())) for x in v if x]
+    return t
+
+
 class MetinYazari(Ajan):
     ad, unvan, emoji = "MetinYazari", "Metin Yazari", "✍️"
     sistem = (f"You are a copywriter for {musteri.ad()}, {musteri.tanim()}. "
@@ -394,7 +417,7 @@ class MetinYazari(Ajan):
         istem += "\n" + analiz.istem_ozeti() + kurallar.istem("metin")
         if geri_bildirim:
             istem += "\n\nFix these issues (from quality control or the business owner):\n- " + "\n- ".join(geri_bildirim)
-        cevap = self.dusun(istem, json_mod=True)
+        cevap = taslak_duzelt(self.dusun(istem, json_mod=True))
         if not cevap or "caption" not in cevap:
             cevap = self._sablon(urun)
         cevap["hashtags"] = [("#" + h.lstrip("#")).replace(" ", "") for h in cevap.get("hashtags", [])][:15]
@@ -408,6 +431,9 @@ class MetinYazari(Ajan):
         istem = (f"Post topic: {urun['ad']}\nContent pillar: {urun.get('kategori', '')}\n"
                  f"What it should say: {urun.get('aciklama', '')}\nAngle: {aci}\n"
                  f"Call to action: {AYAR['marka']['cta']}\n{analiz.istem_ozeti()}\n"
+                 "Write like a skilled local social media manager: specific, human, useful. Speak to the "
+                 "business's customers about their real problem, then show how this business helps. One idea per "
+                 "post. No generic filler ('in today's fast-paced world'), no hashtags inside the caption body.\n"
                  'Return JSON: {"hook": "<max 7 words, scroll-stopping>", '
                  '"headline": "<max 9 words for the image>", '
                  '"caption": "<3-6 short lines that give real value (tip, insight, story or invitation), end with the '
@@ -421,7 +447,7 @@ class MetinYazari(Ajan):
         istem += kurallar.istem("metin")
         if geri_bildirim:
             istem += "\n\nFix these issues:\n- " + "\n- ".join(geri_bildirim)
-        cevap = self.dusun(istem, json_mod=True)
+        cevap = taslak_duzelt(self.dusun(istem, json_mod=True))
         if not cevap or "caption" not in cevap:
             cevap = {"hook": urun["ad"][:50], "headline": urun["ad"][:60],
                      "caption": f"{urun['ad']}.\n{urun.get('aciklama', '')}\n\n{AYAR['marka']['cta']}.",
@@ -526,6 +552,18 @@ class KaliteKontrol(Ajan):
         for y in YASAKLI:
             if y in metin.lower():
                 notlar.append(f"Remove '{y}': {musteri.satis_kanali()}")
+        if urun.get("fikir"):
+            from . import marka_ozeti
+            gercek = " ".join(marka_ozeti.ozet().get("kanitlanmis_bilgiler") or []).lower()
+            butun = " ".join([metin, str(taslak.get("hook", "")), str(taslak.get("headline", ""))]
+                             + [str(x) for x in (taslak.get("reels_lines") or []) + (taslak.get("carousel_lines") or [])])
+            for sayi in re.findall(r"\d[\d,.]*\s*(?:%|x\b|percent|followers|clients|customers|sales|likes|"
+                                   r"views|years|k\b)", butun.lower()):
+                if sayi.split()[0].rstrip("%x") not in gercek:
+                    notlar.append(f"'{sayi}' is an invented number/result. Remove it or make the example clearly "
+                                  "hypothetical; never claim results we cannot prove.")
+            if re.search(r"customer spotlight|case study|testimonial|our client\b", butun.lower()):
+                notlar.append("Do not present an invented customer story or case study as real.")
         from . import kurallar
         tum_metin = " ".join([metin, taslak.get("hook", ""), taslak.get("headline", "")]
                              + [str(x) for x in taslak.get("reels_lines") or []] + [str(taslak.get("pov", ""))]
@@ -535,7 +573,9 @@ class KaliteKontrol(Ajan):
         # 2) LLM ile marka dili kontrolu - yorumsal
         if not notlar:
             cevap = self.dusun(
-                f"Product: {urun['ad']}\nDraft:\n{taslak}\n{kurallar.istem('metin')}\n"
+                f"Product/topic: {urun['ad']}\nDraft:\n{taslak}\n{kurallar.istem('metin')}\n"
+                f"{__import__('ofis.marka_ozeti', fromlist=['x']).istem_ozeti()}"
+                "Also reject any claim, number, customer story or result that is not in BUSINESS FACTS.\n"
                 "Check: is it clear, warm, premium, free of spelling mistakes, does it follow the brand rules above "
                 "(if any), and does it avoid exaggerated or "
                 "false claims (like 'best in the country', 'free delivery', discounts that were not given)? "

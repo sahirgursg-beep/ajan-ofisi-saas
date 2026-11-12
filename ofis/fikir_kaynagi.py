@@ -9,7 +9,7 @@ import hashlib
 import json
 import random
 
-from . import arastirma, gorsel_kaynak, llm, musteri, pano, sektor
+from . import arastirma, gorsel_kaynak, llm, marka_ozeti, musteri, pano, sektor
 from .ayarlar import AYAR
 
 TEKRAR_GUN = 60
@@ -32,21 +32,27 @@ def _fikir_listesi(adet):
     r = arastirma.rapor()
     havuz = [sektor.doldur(f) for f in (r.get("fikirler") or []) + p.get("fikirler", [])]
     kullanilan = pano.son_hazirlananlar(TEKRAR_GUN)
+    o = marka_ozeti.ozet()
     cevap = None
     if llm.hazir():
         cevap = llm.sor(
-            f"You are the content strategist for {musteri.ad()}, {musteri.tanim()}. Answer ONLY with valid JSON.",
-            f"{sektor.istem_ozeti()}{arastirma.istem_ozeti()}\nIdea bank:\n- " + "\n- ".join(havuz[:20])
-            + f"\n\nPick or write {adet} DIFFERENT post ideas for today that this business can publish without new "
-              "photos from the owner (we will use stock or AI imagery). Mix pillars; avoid ideas that need prices, "
-              "real customer names or specific facts we don't know. "
+            f"You are the content strategist for {musteri.ad()}, {musteri.tanim()}. You plan honest, useful "
+            "posts that make people want to work with or buy from THIS business. Answer ONLY with valid JSON.",
+            f"{marka_ozeti.istem_ozeti()}{sektor.istem_ozeti()}{arastirma.istem_ozeti()}\nIdea bank:\n- "
+            + "\n- ".join(havuz[:20])
+            + f"\n\nWrite {adet} DIFFERENT post ideas for today. Mix pillars (education/tips, behind the scenes, "
+              "how it works, invitation/offer, community). Each idea must be about THIS business and its own "
+              "offer, written for its customers. No invented customers, case studies, statistics or results. "
+              "The photo must show the business's own world (see VISUALS above) - e.g. a social media agency is "
+              "shown with phones, laptops, planning boards and content creation, never as a clothing shop. "
               'Return JSON: {"ideas": [{"title": "<short title>", "pillar": "<content pillar>", '
               '"angle": "<one sentence>", "details": "<2-3 sentences of what the post says>", '
-              '"stock_query": "<3-5 word Pexels search>", "ai_image_prompt": "<photorealistic scene, no text, '
-              'no logos, no recognisable people>"}]}', json_mod=True, sicaklik=0.8)
-    fikirler = [f for f in (cevap or {}).get("ideas", []) if isinstance(f, dict) and f.get("title")]
+              '"stock_query": "<3-5 word stock photo search showing the business\'s own world>", '
+              '"ai_image_prompt": "<photorealistic scene of the business\'s own world, no text, no logos, '
+              'no recognisable faces>"}]}', json_mod=True, sicaklik=0.7)
+    fikirler = [_duzle(f) for f in (cevap or {}).get("ideas", []) if isinstance(f, dict) and f.get("title")]
     if len(fikirler) < adet:     # yapay zeka yoksa / az verdiyse: bilgi bankasindan
-        stok = p.get("stok") or ["small business"]
+        stok = o.get("stok_terimleri") or p.get("stok") or ["small business"]
         for b in random.sample(havuz, len(havuz)):
             fikirler.append({"title": b, "pillar": random.choice(p["sutunlar"]), "angle": b, "details": b,
                              "stock_query": random.choice(stok),
@@ -59,6 +65,19 @@ def _fikir_listesi(adet):
         if len(out) >= adet:
             break
     return out
+
+
+def _metin(x):
+    if isinstance(x, (list, tuple)):
+        return " ".join(_metin(y) for y in x if y)
+    if isinstance(x, dict):
+        return " ".join(_metin(y) for y in x.values() if y)
+    return str(x or "").strip()
+
+
+def _duzle(f):
+    """Yapay zeka bazen alanlari liste/sozluk dondurur: hepsi duz metne."""
+    return {k: _metin(f.get(k)) for k in ("title", "pillar", "angle", "details", "stock_query", "ai_image_prompt")}
 
 
 def _gorseller(f, gunluk):

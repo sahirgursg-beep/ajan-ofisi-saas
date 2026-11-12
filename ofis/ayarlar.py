@@ -59,6 +59,10 @@ def yukle(musteri=None):
         ayar.setdefault("yz", {})["yedek_saglayici"] = os.environ["AJAN_YZ_YEDEK"]
     if os.environ.get("AJAN_AI_GORSEL") == "0":
         ayar.setdefault("ai_gorsel", {})["aktif"] = False
+    # "VISIT TO OUR WEBSITE" gibi tamami buyuk harf CTA -> cumle duzeni
+    cta = str((ayar.get("marka") or {}).get("cta") or "")
+    if cta.isupper() and len(cta) > 4:
+        ayar["marka"]["cta"] = cta[:1] + cta[1:].lower()
     # Eski anahtarla uyum: usd_ngn_kur -> doviz_kurlari
     if "usd_ngn_kur" in ayar and "USD" not in (ayar.get("doviz_kurlari") or {}):
         ayar.setdefault("doviz_kurlari", {})["USD"] = ayar["usd_ngn_kur"]

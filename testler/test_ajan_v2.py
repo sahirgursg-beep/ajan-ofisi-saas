@@ -404,3 +404,65 @@ def test_sektor_tanimdan_bulunur_sablon_kategorileri_yaniltmaz(isletme, monkeypa
     isletme(ad="FeedZYNC", tanim="AI AUTOMATED SOCIAL MEDIA MANAGER", sektor="")
     monkeypatch.setitem(ayarlar.AYAR, "kategoriler", ["living room", "dining room", "bedroom"])
     assert sektor.profil(yenile=True)["anahtar"] == "medya"
+
+
+# ---------------- marka ozeti / durustluk ----------------
+def test_marka_ozeti_siteden_gercekleri_cikarir_ve_ister(isletme, monkeypatch):
+    from ofis import marka_ozeti
+    marka_ozeti.YOL.unlink(missing_ok=True)
+    isletme(ad="FeedZync", tanim="AI social media manager")
+    monkeypatch.setitem(ayarlar.AYAR, "site", "https://feedzync.example")
+    html = ('<html><title>FeedZync</title><body><h1>AI agents run your Instagram</h1>'
+            '<a href="/services">Services</a><script>x()</script></body></html>')
+    http = SahteHttp({"/services": Yanit(), "feedzync.example": Yanit()})
+    http.cevaplar["/services"].text = "<html><body>Daily posts, Reels, captions</body></html>"
+    http.cevaplar["feedzync.example"].text = html
+    alinan = {}
+
+    def sor(sistem, mesaj, **k):
+        alinan["mesaj"] = mesaj
+        return {"ne_yapar": "AI team that creates and posts social media content", "sunulanlar": ["Daily posts", "Reels"],
+                "kanitlanmis_bilgiler": [["Daily posts"], "Reels"], "gorsel_dunyasi": "phones, laptops, content planning",
+                "gorselde_olmamali": "clothing or food as if sold", "stok_terimleri": ["social media planning"]}
+    monkeypatch.setattr(llm, "hazir", lambda: True)
+    monkeypatch.setattr(llm, "sor", sor)
+    o = marka_ozeti.ozet(oturum=http)
+    assert "AI agents run your Instagram" in alinan["mesaj"] and "Daily posts, Reels" in alinan["mesaj"]
+    assert "x()" not in alinan["mesaj"] and o["kanitlanmis_bilgiler"] == ["Daily posts", "Reels"]
+    s = marka_ozeti.istem_ozeti()
+    assert "never invent customers" in s and "VISUALS must NOT show: clothing" in s
+    marka_ozeti.YOL.unlink(missing_ok=True)
+
+
+def test_kalite_kontrol_uydurma_sonuc_ve_musteri_hikayesini_reddeder(isletme, monkeypatch):
+    from ofis import ajanlar, marka_ozeti, pano
+    pano.kur()
+    monkeypatch.setattr(marka_ozeti, "ozet", lambda *a, **k: {"kanitlanmis_bilgiler": ["Founded 2025"]})
+    KK = ajanlar.tum_ekip()["KaliteKontrol"]
+    taslak = {"hook": "40% more followers", "headline": "Grow faster", "caption": "Customer spotlight: boutique grew.",
+              "hashtags": ["#a"] * 8, "reels_lines": ["Real growth"], "carousel_lines": [], "carousel_points": []}
+    ok, notlar = KK.kontrol({"ad": "Growth tips", "fikir": True}, taslak)
+    assert not ok and any("invented number" in n for n in notlar) and any("case study" in n for n in notlar)
+
+
+def test_taslak_alanlari_duzeltilir():
+    from ofis.ajanlar import taslak_duzelt
+    t = taslak_duzelt({"hook": ["Fast", "posts"], "caption": ["Line 1", "Line 2"], "hashtags": "#a, #b",
+                       "reels_lines": "one\ntwo", "carousel_points": [{"t": "x"}]})
+    assert t["hook"] == "Fast posts" and t["caption"] == "Line 1\nLine 2" and t["hashtags"] == ["#a", "#b"]
+    assert t["reels_lines"] == ["one", "two"] and t["carousel_points"] == ["x"]
+
+
+
+def test_buyuk_harf_cta_duzeltilir(monkeypatch):
+    import json as _j
+    from ofis import ayarlar as a
+    yol = a.MUSTERILER / a.MUSTERI / "profil.json"
+    eski = yol.read_text(encoding="utf-8")
+    p = _j.loads(eski)
+    p["marka"]["cta"] = "VISIT TO OUR WEBSITE"
+    yol.write_text(_j.dumps(p), encoding="utf-8")
+    try:
+        assert a.yukle(a.MUSTERI)["marka"]["cta"] == "Visit to our website"
+    finally:
+        yol.write_text(eski, encoding="utf-8")

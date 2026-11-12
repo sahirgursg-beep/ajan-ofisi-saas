@@ -94,7 +94,7 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
-SURUM = "2026-11-12.model-yedek"
+SURUM = "2026-11-12.marka-ozeti"
 
 
 async def saglik(request):

@@ -94,7 +94,9 @@ def sor(sistem, mesaj, json_mod=False, sicaklik=0.7, oturum=None):
                 time.sleep(2 * (deneme + 1))
                 continue
             r.raise_for_status()
-            metin = (r.json()["choices"][0]["message"].get("content") or "").strip()
+            veri = r.json()
+            _maliyet_yaz(veri.get("usage") or {})
+            metin = (veri["choices"][0]["message"].get("content") or "").strip()
             return json_coz(metin) if json_mod else metin
         except Exception as e:
             print(f"  ! Yapay zeka hatasi: {str(e)[:200]}")
@@ -102,6 +104,19 @@ def sor(sistem, mesaj, json_mod=False, sicaklik=0.7, oturum=None):
             durum_metni = f"Yapay zeka isteği başarısız: {str(e)[:120]}"
             return None
     return None
+
+
+def _maliyet_yaz(kullanim):
+    """Token kullanimini aylik yapay zeka harcamasina ekler (fiyatlar USD / 1M token, ortamdan degistirilebilir)."""
+    try:
+        g = float(os.environ.get("AJAN_YZ_FIYAT_GIRDI", "0.25"))
+        c = float(os.environ.get("AJAN_YZ_FIYAT_CIKTI", "0.87"))
+        tutar = (kullanim.get("prompt_tokens", 0) * g + kullanim.get("completion_tokens", 0) * c) / 1_000_000
+        if tutar > 0:
+            from . import fal_ai
+            fal_ai.harca(tutar, "metin_yz")
+    except Exception:
+        pass
 
 
 def sifirla():

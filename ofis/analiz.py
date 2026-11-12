@@ -150,7 +150,8 @@ def istem_ozeti():
     """Diger ajanlarin istemine eklenen baglam: sektor profili + haftalik sektor arastirmasi + kendi performansimiz."""
     parca = []
     try:
-        from . import arastirma, sektor
+        from . import arastirma, marka_ozeti, sektor
+        parca.append(marka_ozeti.istem_ozeti())
         parca.append(sektor.istem_ozeti())
         parca.append(arastirma.istem_ozeti())
     except Exception as e:
