@@ -24,6 +24,7 @@ envs:
   - { key: META_APP_ID, type: SECRET }
   - { key: META_APP_SECRET, type: SECRET }
   - { key: AJAN_YZ_ANAHTAR, type: SECRET }
+  - { key: PIXABAY_API_KEY, type: SECRET }
   - { key: PEXELS_API_KEY, type: SECRET }
   - { key: AJAN_GORSEL_MODEL, value: openai-gpt-image-1 }
 services:

@@ -188,7 +188,7 @@ def test_gorsel_kaynagi_yoksa_fikir_uretilmez(isletme, monkeypatch):
     monkeypatch.setattr(fikir_kaynagi.pano, "son_hazirlananlar", lambda gun: set())
     mesajlar = []
     assert fikir_kaynagi.fikir_urunleri(2, gunluk=mesajlar.append) == []
-    assert any("PEXELS_API_KEY" in m for m in mesajlar)
+    assert any("PIXABAY_API_KEY" in m for m in mesajlar)
 
 
 def test_site_varsa_veri_var(monkeypatch):
@@ -220,7 +220,21 @@ class SahteHttp:
         return self._cevap(url)
 
 
+def test_pixabay_once_denenir_ve_indirilir(monkeypatch):
+    monkeypatch.setenv("PIXABAY_API_KEY", "pk")
+    monkeypatch.delenv("PEXELS_API_KEY", raising=False)
+    http = SahteHttp({
+        "pixabay.com/api": Yanit({"hits": [
+            {"id": 7, "user": "Kemi", "pageURL": "https://pixabay.com/p/7", "largeImageURL": "https://cdn/7.jpg"},
+            {"id": 8, "user": "Tolu", "pageURL": "https://pixabay.com/p/8", "largeImageURL": "https://cdn/8.jpg"}]}),
+        "https://cdn/": Yanit(icerik=b"pix")})
+    out = gorsel_kaynak.stok_ara("bakery bread", adet=2, oturum=http)
+    assert [k["kaynak"] for _, k in out] == ["pixabay", "pixabay"] and open(out[0][0], "rb").read() == b"pix"
+    assert http.istekler[0][2]["params"]["key"] == "pk" and http.istekler[0][2]["params"]["orientation"] == "vertical"
+
+
 def test_pexels_araması_indirir_ve_atif_bilgisi_doner(monkeypatch):
+    monkeypatch.delenv("PIXABAY_API_KEY", raising=False)
     monkeypatch.setenv("PEXELS_API_KEY", "test")
     http = SahteHttp({
         "api.pexels.com": Yanit({"photos": [
@@ -235,6 +249,7 @@ def test_pexels_araması_indirir_ve_atif_bilgisi_doner(monkeypatch):
 
 def test_anahtar_yoksa_gorsel_kaynaklari_sessizce_bos(monkeypatch):
     monkeypatch.delenv("PEXELS_API_KEY", raising=False)
+    monkeypatch.delenv("PIXABAY_API_KEY", raising=False)
     monkeypatch.delenv("AJAN_YZ_ANAHTAR", raising=False)
     assert gorsel_kaynak.stok_ara("x") == [] and gorsel_kaynak.yz_uret("x") is None
     assert not rotus_bulut.hazir()

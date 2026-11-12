@@ -98,7 +98,7 @@ def fikir_urunleri(adet=3, gunluk=print):
         if len(out) >= adet:
             break
     if not out:
-        gunluk("Gorsel kaynagi yok: PEXELS_API_KEY ya da yapay zeka gorsel uretimi gerekli.")
+        gunluk("Gorsel kaynagi yok: PIXABAY_API_KEY ya da yapay zeka gorsel uretimi gerekli.")
     return out
 
 
