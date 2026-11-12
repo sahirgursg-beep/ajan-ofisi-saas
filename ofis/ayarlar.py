@@ -52,6 +52,13 @@ def yukle(musteri=None):
     profil = json.loads(profil_yol.read_text(encoding="utf-8"))
     ayar = _derin_birlestir(taban, profil)
     ayar["musteri_id"] = musteri
+    # Bulut ortami ayarlari ortam degiskeniyle ezer (Cloud Run'da GPU yok, yapay zeka bulut API'si)
+    if os.environ.get("AJAN_YZ_SAGLAYICI"):
+        ayar.setdefault("yz", {})["saglayici"] = os.environ["AJAN_YZ_SAGLAYICI"]
+    if os.environ.get("AJAN_YZ_YEDEK") is not None and "AJAN_YZ_YEDEK" in os.environ:
+        ayar.setdefault("yz", {})["yedek_saglayici"] = os.environ["AJAN_YZ_YEDEK"]
+    if os.environ.get("AJAN_AI_GORSEL") == "0":
+        ayar.setdefault("ai_gorsel", {})["aktif"] = False
     # Eski anahtarla uyum: usd_ngn_kur -> doviz_kurlari
     if "usd_ngn_kur" in ayar and "USD" not in (ayar.get("doviz_kurlari") or {}):
         ayar.setdefault("doviz_kurlari", {})["USD"] = ayar["usd_ngn_kur"]

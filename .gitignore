@@ -15,3 +15,5 @@ paylasilan/ai_modeller/
 paylasilan/fontlar/
 paylasilan/demo_gorseller/
 sablonlar/_render_*.html
+.saas_yerel/
+.env

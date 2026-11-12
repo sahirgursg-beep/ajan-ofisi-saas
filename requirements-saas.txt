@@ -1,0 +1,8 @@
+# Bulut imaji: ajanlar + web/isci katmani
+-r requirements.txt
+starlette==1.7.0
+uvicorn[standard]==0.54.0
+pyjwt[crypto]==2.15.0
+cryptography==50.0.1
+python-multipart==0.0.32
+tzdata

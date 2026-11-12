@@ -1,0 +1,17 @@
+.git
+.venv
+.env
+.saas_yerel
+__pycache__
+.pytest_cache
+musteriler/*/veri
+musteriler/*/cikti
+musteriler/*/projeler
+musteriler/*/marka
+musteriler/*/yedek
+paylasilan/muzik
+paylasilan/fontlar
+paylasilan/ai_modeller
+paylasilan/demo_gorseller
+testler
+*.bat
