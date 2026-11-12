@@ -44,7 +44,7 @@ def test_kayit_hatali_form_ve_deneme_suresi(sunucu):
     r = requests.post(sunucu + "/api/musteri", headers=H, json={"isletme_adi": "X", "renk_koyu": "mavi"})
     assert r.status_code == 422 and "renk_koyu" in r.json()["alanlar"]
     m = requests.post(sunucu + "/api/musteri", headers=H, json=FORM).json()
-    assert m["durum"] == "deneme" and m["deneme_bitis"] and m["yayin_ayar"]["otomatik"] is False
+    assert m["durum"] == "deneme" and m["deneme_bitis"] and m["yayin_ayar"]["otomatik"] is True
     ikinci = requests.post(sunucu + "/api/musteri", headers=H, json=FORM).json()
     assert ikinci["id"] == m["id"] + "-2"
 

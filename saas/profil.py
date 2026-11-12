@@ -47,7 +47,7 @@ def _saat_dilimi(ad):
     try:
         tz = ZoneInfo(ad)
     except (ZoneInfoNotFoundError, ValueError):
-        raise ProfilHatasi({"saat_dilimi": "Gecersiz saat dilimi (or. Africa/Lagos)"})
+        raise ProfilHatasi({"saat_dilimi": "Invalid time zone (e.g. Africa/Lagos)"})
     an = datetime.now(tz)
     return {"saat_dilimi": ad, "utc_ofset_saat": an.utcoffset().total_seconds() / 3600,
             "saat_kisaltma": an.tzname() if an.tzname() and not an.tzname()[0] in "+-" else ad.split("/")[-1]}
@@ -57,27 +57,35 @@ def formdan(form, taban=None):
     """Panel formu -> tam profil. Eksik alanlar sablondan gelir. Hatali alanlar ProfilHatasi ile doner."""
     p = copy.deepcopy(taban or sablon())
     p.pop("_aciklama", None)
+    if taban is None:                       # yeni kayit: sablondaki ornek degerler musteriye tasinmasin
+        p["isletme"].update({"tanim": "", "sektor": "", "urun_turu": "", "sehirler": [], "hashtagler": []})
+        p["marka"].update({"tarif": "", "web": ""})
+        p["kategoriler"] = []
     hata = {}
     f = {k: (v.strip() if isinstance(v, str) else v) for k, v in (form or {}).items()}
     i, m = p["isletme"], p["marka"]
 
     ad = f.get("isletme_adi") or i.get("ad")
     if not ad or ad == "Brand Name" or len(ad) > 80:
-        hata["isletme_adi"] = "Isletme adi gerekli (en fazla 80 karakter)"
+        hata["isletme_adi"] = "Business name is required (max 80 characters)"
     else:
         i["ad"], m["ad"] = ad, f.get("marka_adi") or ad.upper()
     if f.get("tanim"):
-        i["tanim"] = f["tanim"][:120]
+        i["tanim"] = f["tanim"][:200]
     for k in ("sektor", "urun_turu", "ulke"):
         if f.get(k):
             i[k] = str(f[k])[:60]
     if f.get("ulke_kodu"):
         if not re.fullmatch(r"[A-Za-z]{2}", f["ulke_kodu"]):
-            hata["ulke_kodu"] = "Iki harfli ulke kodu (NG, GH, KE...)"
+            hata["ulke_kodu"] = "Two-letter country code (NG, GH, KE...)"
         else:
             i["ulke_kodu"] = f["ulke_kodu"].upper()
     if "sehirler" in f:
         i["sehirler"] = _liste(f["sehirler"], 6)
+    if f.get("sehir"):
+        i["sehirler"] = _liste(f["sehir"], 6)
+    if "platformlar" in f:
+        i["platformlar"] = [x for x in _liste(f["platformlar"], 4) if x in ("instagram", "facebook", "tiktok", "linkedin")]
     if "online_satis" in f:
         i["online_satis"] = bool(f["online_satis"])
     if f.get("satis_kanali"):
@@ -103,14 +111,14 @@ def formdan(form, taban=None):
             if SAAT.match(f[k]):
                 i[k] = f[k]
             else:
-                hata[k] = "SS:DD bicimi (08:00)"
+                hata[k] = "Use HH:MM (08:00)"
 
     for k in ("renk_koyu", "renk_kahve", "renk_altin", "renk_altin_acik", "renk_acik"):
         if f.get(k):
             if HEX.match(f[k]):
                 m[k] = f[k].upper()
             else:
-                hata[k] = "#RRGGBB bicimi"
+                hata[k] = "Use #RRGGBB"
     if f.get("web"):
         m["web"] = re.sub(r"^https?://", "", f["web"]).strip("/")[:80]
     if f.get("marka_tarif"):
@@ -121,7 +129,7 @@ def formdan(form, taban=None):
             if URL.match(f[k]):
                 p[k] = f[k]
             else:
-                hata[k] = "http(s):// ile baslayan adres"
+                hata[k] = "Must start with http:// or https://"
     if "kategoriler" in f:
         p["kategoriler"] = [x.lower() for x in _liste(f["kategoriler"], 20)]
     if "haric_kategoriler" in f:
@@ -131,7 +139,7 @@ def formdan(form, taban=None):
             if PARA.match(f[k].upper()):
                 p[k] = f[k].upper()
             else:
-                hata[k] = "Uc harfli para kodu (NGN, USD...)"
+                hata[k] = "Three-letter currency code (NGN, USD...)"
     if f.get("para_sembolu"):
         p["para_sembolu"] = f["para_sembolu"][:4]
     if f.get("kur"):
@@ -140,21 +148,26 @@ def formdan(form, taban=None):
             assert kur > 0
             p["doviz_kurlari"] = {p.get("site_para_birimi", "USD"): kur}
         except (ValueError, AssertionError):
-            hata["kur"] = "Pozitif sayi"
+            hata["kur"] = "Positive number"
     if f.get("yuvarlama"):
         try:
             p["yuvarlama"] = max(1, int(f["yuvarlama"]))
         except ValueError:
-            hata["yuvarlama"] = "Tam sayi"
+            hata["yuvarlama"] = "Whole number"
     if "rakipler" in f:
         p["rakipler"] = [x.lstrip("@").lower() for x in _liste(f["rakipler"], 10)]
 
+    urunlu = bool(p.get("feed_url") or (p.get("site") and p["site"] != "https://example.com"))
     if p.get("site_para_birimi") == p.get("para_birimi"):
         p["doviz_kurlari"] = {}
-    elif p.get("site_para_birimi") not in (p.get("doviz_kurlari") or {}):
-        hata.setdefault("kur", f"{p.get('site_para_birimi')} -> {p.get('para_birimi')} kuru gerekli")
+    elif urunlu and p.get("site_para_birimi") not in (p.get("doviz_kurlari") or {}):
+        hata.setdefault("kur", f"Exchange rate {p.get('site_para_birimi')} -> {p.get('para_birimi')} is required")
     if not (p.get("feed_url") or (p.get("site") and p["site"] != "https://example.com")):
-        hata.setdefault("site", "Urunlerin cekilecegi site ya da XML katalog adresi gerekli")
+        p["site"], p["urun_kaynagi"] = "", "fikir"      # site/katalog yok: icerik sektor bilgisi + arastirmadan
+    else:
+        p.pop("urun_kaynagi", None)
+    if not (i.get("tanim") or "").strip():
+        hata.setdefault("tanim", "Describe your business in one sentence (e.g. 'family restaurant serving Nigerian dishes')")
     if hata:
         raise ProfilHatasi(hata)
     return p
@@ -174,5 +187,5 @@ def form_gorunumu(p):
         "kategoriler": ", ".join(p.get("kategoriler", [])), "para_birimi": p.get("para_birimi"),
         "para_sembolu": p.get("para_sembolu"), "site_para_birimi": p.get("site_para_birimi"),
         "kur": next(iter((p.get("doviz_kurlari") or {}).values()), ""), "yuvarlama": p.get("yuvarlama"),
-        "rakipler": ", ".join(p.get("rakipler", [])),
+        "rakipler": ", ".join(p.get("rakipler", [])), "platformlar": ", ".join(i.get("platformlar", [])),
     }

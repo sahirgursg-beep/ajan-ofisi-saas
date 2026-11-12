@@ -4,6 +4,7 @@ Calistirma: uvicorn saas.web:app --host 0.0.0.0 --port 8800
 Her /api/musteri/<id>/... istegi: gecerli oturum + o musteriye uyelik sarttir (yazma icin sahip/editor).
 Bu surec ofis/ paketini ice aktarmaz; ajan isleri kuyruga yazilir, isci yapar.
 """
+import json
 import re
 from urllib.parse import quote
 from datetime import datetime, timedelta, timezone
@@ -50,10 +51,10 @@ def musteri_yetki(request, roller=("sahip", "editor", "izleyici")):
     k = kullanici(request)
     mid = request.path_params["mid"]
     if not depo().uye_mi(k["id"], mid, roller):
-        raise HTTPException(404, "Bulunamadi")          # baska musteri var mi yok mu bile soylenmez
+        raise HTTPException(404, "Not found")          # baska musteri var mi yok mu bile soylenmez
     m = depo().musteri_al(mid)
     if not m:
-        raise HTTPException(404, "Bulunamadi")
+        raise HTTPException(404, "Not found")
     return k, m
 
 
@@ -75,14 +76,19 @@ def musteri_ozeti(m, rol=None):
 
 def icerik_gorunumu(mid, ic, adresler):
     y = ic.get("yayin") or {}
+    try:
+        platformlar = json.loads((ic.get("ekler") or {}).get("platformlar.json") or "{}")
+    except ValueError:
+        platformlar = {}
     return {"klasor": ic["klasor"], "tur": ic.get("tur"), "meta": ic.get("meta") or {}, "yayin": y,
+            "platformlar": platformlar,
             "caption": y.get("caption") or ic.get("caption") or "", "surum": ic["surum"],
             "dosyalar": {ad: adresler.get(f"{mid}/cikti/{ic['klasor']}/{ad}") for ad in ic.get("dosyalar") or []}}
 
 
 def klasor_dogrula(k):
     if not KLASOR_DESENI.match(k or ""):
-        raise HTTPException(400, "Gecersiz icerik")
+        raise HTTPException(400, "Invalid content")
     return k
 
 
@@ -100,11 +106,11 @@ async def yapilandirma(request):
 
 async def yerel_giris(request):
     if not (ayar.YEREL_GIRIS and ayar.ORTAM != "bulut"):
-        return hata("Kapali", 404)
+        return hata("Not available", 404)
     g = await govde(request)
     eposta = str(g.get("eposta") or "").strip().lower()
     if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", eposta):
-        return hata("Gecerli bir e-posta yazin")
+        return hata("Enter a valid email")
     return JSONResponse({"belirtec": guvenlik.yerel_belirtec(eposta)})
 
 
@@ -124,24 +130,24 @@ async def musteri_olustur(request):
     k = kullanici(request)
     d = depo()
     if sum(1 for u in d.uyelikler(k["id"]) if u["rol"] == "sahip") >= 3:
-        return hata("Bir hesapla en fazla 3 isletme acilabilir", 403)
+        return hata("One account can create up to 3 businesses", 403)
     g = await govde(request)
     try:
         p = profil.formdan(g)
     except profil.ProfilHatasi as e:
-        return hata("Formda eksik ya da hatali alanlar var", 422, alanlar=e.alanlar)
+        return hata("Some fields need attention", 422, alanlar=e.alanlar)
     mevcut = {m["id"] for m in d.musteriler()}
     mid = profil.kimlik_uret(p["isletme"]["ad"], mevcut)
     bitis = (datetime.now(timezone.utc) + timedelta(days=ayar.DENEME_GUN)).isoformat(timespec="seconds")
     for _ in range(3):
         try:
             m = d.musteri_ekle({"id": mid, "ad": p["isletme"]["ad"], "profil": p, "durum": "deneme",
-                                "deneme_bitis": bitis, "yayin_ayar": {"otomatik": False}})
+                                "deneme_bitis": bitis, "yayin_ayar": {"otomatik": True}})   # az insan onayi: kalite kontrolden gecen kendiliginden yayinlanir
             break
         except Cakisma:
             mid = profil.kimlik_uret(p["isletme"]["ad"], mevcut | {mid})
     else:
-        return hata("Isletme olusturulamadi, tekrar deneyin", 409)
+        return hata("Could not create the business, please try again", 409)
     d.uyelik_ekle(k["id"], mid, "sahip", k.get("eposta"))
     return JSONResponse(musteri_ozeti(m, "sahip"), status_code=201)
 
@@ -157,7 +163,7 @@ async def profil_guncelle(request):
     try:
         p = profil.formdan(g, taban=m["profil"])
     except profil.ProfilHatasi as e:
-        return hata("Formda eksik ya da hatali alanlar var", 422, alanlar=e.alanlar)
+        return hata("Some fields need attention", 422, alanlar=e.alanlar)
     m = depo().musteri_guncelle(m["id"], profil=p, ad=p["isletme"]["ad"])
     return JSONResponse({"form": profil.form_gorunumu(m["profil"]), "ozet": musteri_ozeti(m)})
 
@@ -171,7 +177,7 @@ async def yayin_ayari(request):
     for k in ("mesai_bas", "mesai_bit", "uretim_saati"):
         if k in g:
             if not profil.SAAT.match(str(g[k])):
-                return hata(f"{k}: SS:DD bicimi")
+                return hata(f"{k}: use HH:MM")
             ya[k] = g[k]
     if "saatler" in g and isinstance(g["saatler"], dict):
         s = {t: v for t, v in g["saatler"].items() if t in ("post", "carousel", "reels") and profil.SAAT.match(str(v))}
@@ -201,9 +207,9 @@ async def icerik_karar(request):
     d = depo()
     ic = d.icerik_al(m["id"], klasor)
     if not ic:
-        return hata("Icerik bulunamadi", 404)
+        return hata("Content not found", 404)
     if "surum" in g and int(g["surum"]) != ic["surum"]:
-        return hata("Icerik bu arada degisti; sayfayi yenileyin", 409)
+        return hata("This content changed in the meantime; please refresh", 409)
     z, is_turu, is_param = tz(m), None, None
     try:
         y = ic.get("yayin") or {}
@@ -229,14 +235,14 @@ async def icerik_karar(request):
             y, is_turu = yayin_durum.tekrar_dene(y)
             is_param = {"klasor": klasor} if is_turu == "kaldir" else None
         else:
-            return hata("Bilinmeyen islem", 404)
+            return hata("Unknown action", 404)
     except yayin_durum.KararHatasi as e:
         return hata(str(e), 409)
     try:
         yeni = d.icerik_yaz(m["id"], {"klasor": klasor, "yayin": y,
                                       "caption": y.get("caption", ic.get("caption", ""))}, beklenen_surum=ic["surum"])
     except Cakisma:
-        return hata("Icerik bu arada degisti; sayfayi yenileyin", 409)
+        return hata("This content changed in the meantime; please refresh", 409)
     is_ = kuyruk.is_ekle(m["id"], is_turu, is_param or {}) if is_turu else None
     return JSONResponse({"yayin": y, "surum": yeni, "is": is_ and {"id": is_["id"], "tur": is_["tur"]}})
 
@@ -244,7 +250,7 @@ async def icerik_karar(request):
 async def uret(request):
     _, m = musteri_yetki(request, YAZAN)
     if m["durum"] in ("duraklatildi", "kapali"):
-        return hata("Abonelik duraklatildi", 402)
+        return hata("Your subscription is paused", 402)
     g = await govde(request)
     is_ = kuyruk.is_ekle(m["id"], "uret", {"demo": bool(g.get("demo")), "plansiz": bool(g.get("plansiz", True))})
     return JSONResponse({"is": is_}, status_code=202)
@@ -303,7 +309,7 @@ async def meta_sec(request):
     g = await govde(request)
     s = next((x for x in guvenlik.coz(m.get("meta_aday")) or [] if x["page_id"] == str(g.get("page_id"))), None)
     if not s:
-        return hata("Sayfa bulunamadi; baglantiyi yeniden baslatin", 404)
+        return hata("Page not found; please reconnect", 404)
     m = depo().musteri_guncelle(m["id"], meta_token=guvenlik.sifrele(s), meta_bilgi=meta_oauth.herkese_acik(s),
                                 meta_aday=None)
     return JSONResponse(musteri_ozeti(m))
@@ -320,7 +326,7 @@ async def zamanlayici_ucu(request):
     try:
         guvenlik.zamanlayici_dogrula(request.headers.get("x-zamanlayici-anahtari"))
     except guvenlik.YetkiHatasi:
-        return hata("Yetkisiz", 401)
+        return hata("Unauthorized", 401)
     return JSONResponse(zamanlayici.tur())
 
 
@@ -328,10 +334,10 @@ async def yerel_dosya(request):
     """Yalnizca yerel depo: imzali, sureli dosya adresi (Supabase'de bunu Storage yapar)."""
     d = depo()
     if not hasattr(d, "imzali_oku"):
-        return hata("Yok", 404)
+        return hata("Not found", 404)
     yol = d.imzali_oku(request.path_params["anahtar"], request.query_params.get("son", "0"),
                        request.query_params.get("imza", ""))
-    return FileResponse(yol) if yol else hata("Yok", 404)
+    return FileResponse(yol) if yol else hata("Not found", 404)
 
 
 async def panel(request):

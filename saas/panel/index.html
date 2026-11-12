@@ -42,6 +42,9 @@ main { max-width:1180px; margin:0 auto; padding:22px; }
 #giris { max-width:420px; margin:12vh auto; }
 .mesaj { position:fixed; right:18px; bottom:18px; background:#262b36; padding:12px 16px; border-radius:10px; max-width:380px; }
 @media (max-width:760px) { .ikili, .uclu { grid-template-columns:1fr; } nav { overflow-x:auto; } }
+.psekme.aktif { border-color:var(--vurgu); color:var(--vurgu); }
+details summary { margin-bottom:8px; }
+select { width:100%; padding:10px; background:var(--bg); color:var(--yazi); border:1px solid var(--cizgi); border-radius:8px; font:inherit; }
 </style>
 </head>
 <body>
@@ -82,6 +85,7 @@ main { max-width:1180px; margin:0 auto; padding:22px; }
 <div id="kurulum" class="gizli"><main><div class="kart" id="kurulumKart"></div></main></div>
 <div id="mesaj" class="mesaj gizli"></div>
 
+<footer class="soluk" style="text-align:center;font-size:12px;padding:24px">FeedZync · Stock photos by <a href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a> where credited</footer>
 <script type="module">
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -191,7 +195,31 @@ async function icerikCiz() {
   if (!v.icerikler.length) { el.innerHTML = `<div class="kart soluk">No content yet. ${MUSTERI.meta_bagli ? "Press “Generate today's content” or wait for the morning run." : "Connect your accounts first."}</div>`; return; }
   el.innerHTML = v.icerikler.map((x) => kart(x, v.simdi)).join("");
   el.querySelectorAll("[data-islem]").forEach((b) => (b.onclick = () => karar(b.closest(".icerik"), b.dataset.islem)));
+  platformBagla(el);
   el.querySelectorAll(".serit img").forEach((i) => (i.onclick = () => { i.closest(".icerik").querySelector(".ana").src = i.src; }));
+}
+const PLAT_AD = { instagram: "Instagram", facebook: "Facebook", tiktok: "TikTok", linkedin: "LinkedIn" };
+function platformMetni(p) { return ((p.caption || "") + (p.hashtags && p.hashtags.length ? "\n\n" + p.hashtags.join(" ") : "")).trim(); }
+function platformHtml(x, dos) {
+  const pl = x.platformlar || {}, ads = Object.keys(pl).filter((k) => PLAT_AD[k]);
+  if (!ads.length) return "";
+  const indir = Object.entries(dos).filter(([a]) => /\.(mp4|jpg|jpeg|png)$/i.test(a)).map(([a, u]) => `<a href="${esc(u)}" download="${esc(a)}" target="_blank">${esc(a)}</a>`).join(" · ");
+  const sekmeler = ads.map((k, n) => `<button class="ikincil psekme ${n ? "" : "aktif"}" data-p="${k}" type="button">${PLAT_AD[k]}${pl[k].mod === "manuel" ? " ✋" : ""}</button>`).join("");
+  const govde = ads.map((k, n) => { const p = pl[k];
+    return `<div class="pgovde ${n ? "gizli" : ""}" data-p="${k}">
+      ${p.mod === "manuel" ? `<p class="soluk">Post this one yourself until ${PLAT_AD[k]} approves automatic publishing: download the media, copy the text, paste it in the ${PLAT_AD[k]} app.</p>` : `<p class="soluk">Published automatically.</p>`}
+      ${p.baslik ? `<div><b>Title:</b> ${esc(p.baslik)}</div>` : ""}
+      ${(p.ekran_yazilari || []).length ? `<div><b>On-screen text:</b> ${p.ekran_yazilari.map(esc).join(" / ")}</div>` : ""}
+      <textarea rows="5" readonly class="pmetin">${esc(platformMetni(p))}</textarea>
+      <div class="satir" style="margin-top:6px"><button class="ikincil kopyala" type="button">Copy text</button>${p.mod === "manuel" && indir ? `<span class="soluk">Download: ${indir}</span>` : ""}</div></div>`; }).join("");
+  return `<label>Platform versions</label><div class="satir platformlar" style="gap:6px">${sekmeler}</div>${govde}`;
+}
+function platformBagla(el) {
+  el.querySelectorAll(".psekme").forEach((b) => (b.onclick = () => { const k = b.closest(".icerik");
+    k.querySelectorAll(".psekme").forEach((x) => x.classList.toggle("aktif", x === b));
+    k.querySelectorAll(".pgovde").forEach((g) => g.classList.toggle("gizli", g.dataset.p !== b.dataset.p)); }));
+  el.querySelectorAll(".kopyala").forEach((b) => (b.onclick = async () => { const t = b.closest(".pgovde").querySelector(".pmetin");
+    try { await navigator.clipboard.writeText(t.value); } catch { t.select(); document.execCommand("copy"); } bildir("Copied."); }));
 }
 function kart(x, simdi) {
   const y = x.yayin || {}, d = y.durum || "bekliyor", [ad, sinif] = DURUM[d] || [d, ""];
@@ -217,7 +245,8 @@ function kart(x, simdi) {
     <div class="satir" style="justify-content:space-between;margin-bottom:8px"><b>${esc((x.meta.urun || {}).ad || x.meta.baslik || x.klasor)}</b><span class="rozet ${sinif}">${esc(ad)}</span></div>
     ${medya}${serit}
     <div class="soluk" style="margin-top:8px">${esc((x.tur || "").toUpperCase())}${(x.meta.urun || {}).fiyat_metni ? " · " + esc(x.meta.urun.fiyat_metni) : ""}</div>
-    <label>Caption</label><textarea rows="5" class="metin" ${duzenlenir ? "" : "disabled"}>${esc(x.caption)}</textarea>
+    <label>Caption (Instagram)</label><textarea rows="5" class="metin" ${duzenlenir ? "" : "disabled"}>${esc(x.caption)}</textarea>
+    ${platformHtml(x, dos)}
     <div class="hedefler">${hedefler}</div>
     <label>Publish time (${esc(MUSTERI.saat_kisaltma || "")}) — empty = now</label>
     <input type="datetime-local" class="zaman" value="${esc(y.zaman || "")}" min="${esc(simdi)}" ${duzenlenir ? "" : "disabled"}>
@@ -273,37 +302,72 @@ async function baglantiCiz() {
 async function metaBaglan() { try { location.href = (await api(`/api/musteri/${MUSTERI.id}/meta/baglan`)).adres; } catch (e) { bildir(e.message); } }
 
 // ---------------- ayarlar / kurulum formu ----------------
-const ALANLAR = [
-  ["isletme_adi", "Business name"], ["tanim", "What you are, for the AI (e.g. “a premium furniture showroom”)"], ["ulke", "Country"], ["ulke_kodu", "Country code (NG, GH, KE…)"],
-  ["sehirler", "Cities (comma-separated)"], ["saat_dilimi", "Time zone (e.g. Africa/Lagos)"], ["cta", "Call to action (e.g. Visit our showroom or send us a DM)"],
-  ["site", "Website (products are read from here)"], ["feed_url", "Product XML/catalog feed (optional, most reliable)"], ["kategoriler", "Categories to post (comma-separated, empty = all)"],
-  ["para_birimi", "Your currency (NGN, GHS…)"], ["para_sembolu", "Currency symbol (₦)"], ["site_para_birimi", "Currency on your website"], ["kur", "Exchange rate (1 website currency = ? your currency)"],
-  ["yuvarlama", "Round prices to"], ["hashtagler", "Hashtags (comma-separated)"], ["rakipler", "Competitor/inspiration Instagram accounts"],
-  ["renk_koyu", "Brand dark colour (#RRGGBB)"], ["renk_altin", "Brand accent colour"], ["renk_acik", "Brand light colour"], ["web", "Website shown on posts"],
+const TEMEL = [
+  ["isletme_adi", "Business name", "e.g. Mama Put Kitchen"],
+  ["tanim", "What do you do? One sentence is enough", "e.g. family restaurant in Lekki serving Nigerian dishes"],
+  ["sehirler", "City", "e.g. Lagos"],
+  ["site", "Website (optional — no website? we create the content for you)", "https://"],
 ];
+const GELISMIS = [
+  ["ulke_kodu", "Country code (NG, GH, KE…)"], ["saat_dilimi", "Time zone (e.g. Africa/Lagos)"],
+  ["cta", "Call to action (e.g. Visit our showroom or send us a DM)"],
+  ["feed_url", "Product XML/catalog feed (optional, most reliable)"], ["kategoriler", "Categories to post (comma-separated, empty = all)"],
+  ["para_birimi", "Your currency (NGN, GHS…)"], ["para_sembolu", "Currency symbol (₦)"], ["site_para_birimi", "Currency on your website"],
+  ["kur", "Exchange rate (1 website currency = ? your currency)"], ["yuvarlama", "Round prices to"],
+  ["platformlar", "Platforms (instagram, facebook, tiktok, linkedin — empty = best for your sector)"],
+  ["hashtagler", "Your own hashtags (empty = we pick them)"], ["rakipler", "Competitor/inspiration Instagram accounts"],
+  ["renk_koyu", "Brand dark colour (#RRGGBB)"], ["renk_altin", "Brand accent colour"], ["renk_acik", "Brand light colour"],
+  ["web", "Website shown on posts"],
+];
+const ULKELER = {
+  Nigeria: { ulke_kodu: "NG", saat_dilimi: "Africa/Lagos", para_birimi: "NGN", para_sembolu: "₦", yuvarlama: 1000 },
+  Ghana: { ulke_kodu: "GH", saat_dilimi: "Africa/Accra", para_birimi: "GHS", para_sembolu: "GH₵", yuvarlama: 10 },
+  Kenya: { ulke_kodu: "KE", saat_dilimi: "Africa/Nairobi", para_birimi: "KES", para_sembolu: "KSh", yuvarlama: 100 },
+  "South Africa": { ulke_kodu: "ZA", saat_dilimi: "Africa/Johannesburg", para_birimi: "ZAR", para_sembolu: "R", yuvarlama: 10 },
+  Egypt: { ulke_kodu: "EG", saat_dilimi: "Africa/Cairo", para_birimi: "EGP", para_sembolu: "E£", yuvarlama: 10 },
+  "United Arab Emirates": { ulke_kodu: "AE", saat_dilimi: "Asia/Dubai", para_birimi: "AED", para_sembolu: "AED", yuvarlama: 1 },
+  "United Kingdom": { ulke_kodu: "GB", saat_dilimi: "Europe/London", para_birimi: "GBP", para_sembolu: "£", yuvarlama: 1 },
+  "United States": { ulke_kodu: "US", saat_dilimi: "America/New_York", para_birimi: "USD", para_sembolu: "$", yuvarlama: 1 },
+  Turkey: { ulke_kodu: "TR", saat_dilimi: "Europe/Istanbul", para_birimi: "TRY", para_sembolu: "₺", yuvarlama: 10 },
+};
+function alan([k, a, ph], f, hatalar) {
+  return `<div><label>${esc(a)}</label><input name="${k}" value="${esc(f[k] ?? "")}" placeholder="${esc(ph || "")}">${hatalar[k] ? `<div class="hata">${esc(hatalar[k])}</div>` : ""}</div>`;
+}
 function formHtml(f, hatalar = {}) {
-  return `<div class="ikili">${ALANLAR.map(([k, a]) => `<div><label>${esc(a)}</label><input name="${k}" value="${esc(f[k] ?? "")}">${hatalar[k] ? `<div class="hata">${esc(hatalar[k])}</div>` : ""}</div>`).join("")}</div>
-    <label class="satir" style="color:var(--yazi);margin-top:14px"><input type="checkbox" name="online_satis" style="width:auto" ${f.online_satis ? "checked" : ""}> We also sell online (otherwise posts never say “buy online”)</label>`;
+  const ulke = f.ulke || "Nigeria";
+  const secenek = Object.keys(ULKELER).concat(ULKELER[ulke] ? [] : [ulke]).map((u) => `<option ${u === ulke ? "selected" : ""}>${esc(u)}</option>`).join("");
+  const gelismisHata = GELISMIS.some(([k]) => hatalar[k]);
+  return `<div class="ikili">${TEMEL.map((x) => alan(x, f, hatalar)).join("")}
+      <div><label>Country</label><select name="ulke">${secenek}</select></div></div>
+    <label class="satir" style="color:var(--yazi);margin-top:14px"><input type="checkbox" name="online_satis" style="width:auto" ${f.online_satis ? "checked" : ""}> We also sell online (otherwise posts never say “buy online”)</label>
+    <details style="margin-top:14px" ${gelismisHata ? "open" : ""}><summary class="soluk" style="cursor:pointer">Advanced settings (optional — we fill these for you)</summary>
+      <div class="ikili">${GELISMIS.map((x) => alan(x, f, hatalar)).join("")}</div></details>`;
+}
+function ulkeBagla(el) {
+  const s = el.querySelector("select[name=ulke]"); if (!s) return;
+  s.onchange = () => { const d = ULKELER[s.value] || {}; Object.entries(d).forEach(([k, v]) => { const i = el.querySelector(`input[name=${k}]`); if (i) i.value = v; });
+    const sp = el.querySelector("input[name=site_para_birimi]"); if (sp && d.para_birimi) sp.value = d.para_birimi; };
 }
 function formOku(el) {
-  const g = {}; el.querySelectorAll("input[name]").forEach((i) => (g[i.name] = i.type === "checkbox" ? i.checked : i.value.trim()));
+  const g = {}; el.querySelectorAll("input[name], select[name]").forEach((i) => (g[i.name] = i.type === "checkbox" ? i.checked : i.value.trim()));
   Object.keys(g).forEach((k) => g[k] === "" && delete g[k]); return g;
 }
 async function ayarCiz(hatalar = {}, f = null) {
   const v = f ? { form: f } : await api(`/api/musteri/${MUSTERI.id}/profil`);
   $("#ayarKart").innerHTML = `<b>Business settings</b><p class="soluk">The agents use these in every caption, design and price.</p>${formHtml(v.form, hatalar)}
     <div class="satir" style="margin-top:16px"><button id="kaydet">Save</button></div>`;
+  ulkeBagla($("#ayarKart"));
   $("#kaydet").onclick = async () => {
     const g = formOku($("#ayarKart"));
     try { await api(`/api/musteri/${MUSTERI.id}/profil`, "PUT", g); bildir("Saved."); ME = await api("/api/ben"); MUSTERI = ME.musteriler.find((m) => m.id === MUSTERI.id); }
     catch (e) { if (e.alanlar) ayarCiz(e.alanlar, g); bildir(e.message); }
   };
 }
-function kurulum(hatalar = {}, f = { ulke: "Nigeria", ulke_kodu: "NG", saat_dilimi: "Africa/Lagos", para_birimi: "NGN", para_sembolu: "₦", site_para_birimi: "NGN", yuvarlama: 1000, cta: "Visit our store or send us a DM" }) {
+function kurulum(hatalar = {}, f = { ulke: "Nigeria", ...ULKELER.Nigeria, site_para_birimi: "NGN", cta: "Visit us or send us a DM" }) {
   $("#giris").classList.add("gizli"); $("#uygulama").classList.add("gizli"); $("#kurulum").classList.remove("gizli");
-  $("#kurulumKart").innerHTML = `<h2>Set up your business</h2><p class="soluk">${esc(ME.kullanici.eposta || "")} · Free trial starts now. You can change everything later.</p>${formHtml(f, hatalar)}
+  $("#kurulumKart").innerHTML = `<h2>Set up your business</h2><p class="soluk">${esc(ME.kullanici.eposta || "")} · Four answers are enough — our team researches your sector and does the rest. Free trial starts now.</p>${formHtml(f, hatalar)}
     <div class="satir" style="margin-top:16px"><button id="olustur">Create my office</button><button class="ikincil" id="cikis2">Sign out</button></div>`;
-  $("#cikis2").onclick = cikis;
+  ulkeBagla($("#kurulumKart")); $("#cikis2").onclick = cikis;
   $("#olustur").onclick = async () => {
     const g = formOku($("#kurulumKart"));
     try { const m = await api("/api/musteri", "POST", g); localStorage.setItem("ajan_musteri", m.id); location.hash = "musteri=" + m.id; await yukle(); sekme("baglanti"); }

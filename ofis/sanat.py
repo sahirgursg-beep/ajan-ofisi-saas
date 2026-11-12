@@ -231,7 +231,11 @@ def llm_istemi(urun, bglm, gecmis, ek_kisit=""):
         f"{kurallar.istem('gorsel')}"
         f"{__import__('ofis.analiz', fromlist=['x']).istem_ozeti()}\n\n"
         f"Design vocabulary (use ONLY these keys):\n{sozluk}\n\n"
-        f"Create today's NEW Instagram template for {musteri.tanim()} ({AYAR['marka'].get('tarif', 'use the brand colors')}). "
+        "You have studied the leading accounts of this sector (see the sector research above): build on their "
+        "visual trends and trending palettes, adapt them to this brand, never copy one account.\n"
+        + ("This post has NO price: never design around a price; let the photo and headline carry it.\n"
+           if not urun.get("fiyat") else "")
+        + f"Create today's NEW Instagram template for {musteri.tanim()} ({AYAR['marka'].get('tarif', 'use the brand colors')}). "
         "Palette: hex colors; use the event palette if one is active, "
         "otherwise invent a tasteful palette or use \"fotodan\" to take colors from the product photo. "
         "Banner: max 3 words, uppercase, only if it adds value (event, NEW IN, LIMITED OFFER) else empty.\n"

@@ -36,21 +36,21 @@ def _planlilari_iptale_al(y):
 def onayla(yayin, hedefler, zaman, metin, tz, kaynak="panel"):
     y = dict(yayin or {})
     if y.get("durum") in YAYINDA:
-        raise KararHatasi("Bu icerik zaten yayinlandi/yayinlaniyor")
+        raise KararHatasi("This content is already published or publishing")
     y["sonuc"] = {h: r for h, r in (y.get("sonuc") or {}).items() if not r.get("kaldirildi") and r.get("id")}
     if any(r.get("id") and not r.get("planli") for r in y["sonuc"].values()):
-        raise KararHatasi("Bu icerigin bir kismi zaten yayinda; once 'Kaldir' ya da 'Tekrar dene' kullanin")
+        raise KararHatasi("Part of this content is already live; use Remove or Retry first")
     _planlilari_iptale_al(y)
     hedefler = [h for h in (hedefler or []) if h in HEDEFLER]
     if not hedefler:
-        raise KararHatasi("En az bir yayin yeri secin")
+        raise KararHatasi("Choose at least one destination")
     if zaman:
         try:
             datetime.fromisoformat(zaman)
         except ValueError:
-            raise KararHatasi("Zaman bicimi YYYY-AA-GGTSS:DD olmali")
+            raise KararHatasi("Time must be YYYY-MM-DDTHH:MM")
     if not str(metin or "").strip():
-        raise KararHatasi("Metin bos olamaz")
+        raise KararHatasi("Caption cannot be empty")
     y.update({"durum": "onaylandi", "hedefler": hedefler, "zaman": zaman or "", "caption": str(metin)[:2200],
               "onay": {"zaman": _simdi(tz), "kaynak": kaynak}})
     y.pop("otomatik_kapali", None)
@@ -60,7 +60,7 @@ def onayla(yayin, hedefler, zaman, metin, tz, kaynak="panel"):
 def reddet(yayin, tz):
     y = dict(yayin or {})
     if y.get("durum") in ("yayinlaniyor", "yayinlandi"):
-        raise KararHatasi("Yayinlanmis icerik reddedilemez")
+        raise KararHatasi("Published content cannot be rejected")
     _planlilari_iptale_al(y)
     y.update({"durum": "reddedildi", "red_zamani": _simdi(tz)})
     y.pop("onay", None)
@@ -92,12 +92,12 @@ def kaldir_istegi(yayin, tz):
 def revize_iste(yayin, secenekler, not_metni, tz):
     y = dict(yayin or {})
     if y.get("durum") == "onaylandi":
-        raise KararHatasi("Once onayi geri alin, sonra revize isteyin")
+        raise KararHatasi("Put it on hold first, then request changes")
     if y.get("durum") not in ("bekliyor", "reddedildi", "hata", None):
-        raise KararHatasi(f"Bu icerik revize edilemez ({y.get('durum')})")
+        raise KararHatasi(f"This content cannot be revised ({y.get('durum')})")
     not_metni = str(not_metni or "").strip()[:500]
     if not secenekler and not not_metni:
-        raise KararHatasi("Bir secenek isaretleyin ya da not yazin")
+        raise KararHatasi("Tick an option or write a note")
     y.pop("onay", None)
     y.update({"durum": "revize_isteniyor", "onceki_durum": y.get("durum") or "bekliyor",
               "revize": {"secenekler": list(secenekler or [])[:8], "not": not_metni, "zaman": _simdi(tz)}})

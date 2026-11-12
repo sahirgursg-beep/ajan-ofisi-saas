@@ -37,7 +37,7 @@ def _jwks_istemci():
 def kullanici_dogrula(baslik):
     """'Bearer <jwt>' -> {"id", "eposta"}. Gecersizse YetkiHatasi."""
     if not baslik or not baslik.lower().startswith("bearer "):
-        raise YetkiHatasi("Giris gerekli")
+        raise YetkiHatasi("Sign-in required")
     belirtec = baslik.split(" ", 1)[1].strip()
     try:
         if ayar.YEREL_GIRIS and ayar.ORTAM != "bulut":
@@ -48,9 +48,9 @@ def kullanici_dogrula(baslik):
             anahtar = _jwks_istemci().get_signing_key_from_jwt(belirtec).key
             veri = jwt.decode(belirtec, anahtar, algorithms=["ES256", "RS256"], audience="authenticated")
     except jwt.PyJWTError as e:
-        raise YetkiHatasi(f"Gecersiz oturum: {e}")
+        raise YetkiHatasi(f"Invalid session: {e}")
     if not veri.get("sub"):
-        raise YetkiHatasi("Gecersiz oturum")
+        raise YetkiHatasi("Invalid session")
     return {"id": veri["sub"], "eposta": veri.get("email")}
 
 

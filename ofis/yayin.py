@@ -319,7 +319,7 @@ def meta_planla(klasor, gunluk=print):
         return y
     k = _yol(klasor)
     unix = datetime.fromisoformat(y["zaman"]).replace(tzinfo=YEREL).timestamp()
-    metin = _hashtag_siniri(y.get("caption") or caption(klasor))
+    metin = _hashtag_siniri(platform_metni(klasor, y, "facebook"))
     sonuc = y.setdefault("sonuc", {})
     kartlar = carousel_dosyalari(klasor)
     islem = {"fb_post": lambda: meta.fb_post(k / "post_1080x1350.jpg", metin, unix),
@@ -442,6 +442,18 @@ def zamani_gelenler():
     return out
 
 
+def platform_metni(klasor, y, platform):
+    """Facebook icin Facebook uzmaninin metni; kullanici panelde metni degistirdiyse onunki her yerde gecerli."""
+    from . import platformlar
+    taban = caption(klasor)
+    kullanici = (y.get("caption") or "").strip()
+    c_dosya = _yol(klasor) / "caption.txt"
+    orijinal = c_dosya.read_text(encoding="utf-8").strip() if c_dosya.exists() else ""
+    if kullanici and " ".join(kullanici.split()) != " ".join(orijinal.split()):
+        return kullanici
+    return platformlar.metin(_yol(klasor), platform) or taban
+
+
 def _hashtag_siniri(metin, en_fazla=30):
     kelimeler, sayac = [], 0
     for k in metin.split(" "):
@@ -466,17 +478,18 @@ def yayinla(klasor, gunluk=print):
     dosya = {"post": k / "post_1080x1350.jpg", "story": k / "story_1080x1920.jpg", "reels": k / "reels_1080x1920.mp4"}
     kartlar = carousel_dosyalari(klasor)
     metin = _hashtag_siniri(y.get("caption") or caption(klasor))
+    fb_metin = _hashtag_siniri(platform_metni(klasor, y, "facebook"))
     y["durum"] = "yayinlaniyor"
     _yaz(klasor, y)
     sonuc = y.get("sonuc", {})
     islem = {"ig_post": lambda: meta.ig_post(dosya["post"], metin),
              "ig_story": lambda: meta.ig_story(dosya["story"]),
              "ig_reels": lambda: meta.ig_reels(dosya["reels"], metin, deneme=deneme_mi(klasor)),
-             "fb_post": lambda: meta.fb_post(dosya["post"], metin),
+             "fb_post": lambda: meta.fb_post(dosya["post"], fb_metin),
              "fb_story": lambda: meta.fb_story(dosya["story"]),
-             "fb_reels": lambda: meta.fb_reels(dosya["reels"], metin),
+             "fb_reels": lambda: meta.fb_reels(dosya["reels"], fb_metin),
              "ig_carousel": lambda: meta.ig_carousel(kartlar, metin),
-             "fb_carousel": lambda: meta.fb_carousel(kartlar, metin)}
+             "fb_carousel": lambda: meta.fb_carousel(kartlar, fb_metin)}
     for h in y["hedefler"]:
         if sonuc.get(h, {}).get("id"):
             continue    # daha once basariyla yayinlanmis / Facebook'ta planli

@@ -147,13 +147,20 @@ def ogrenimler():
 
 
 def istem_ozeti():
-    """Diger ajanlarin istemine eklenecek kisa ingilizce ozet (yoksa bos)."""
+    """Diger ajanlarin istemine eklenen baglam: sektor profili + haftalik sektor arastirmasi + kendi performansimiz."""
+    parca = []
+    try:
+        from . import arastirma, sektor
+        parca.append(sektor.istem_ozeti())
+        parca.append(arastirma.istem_ozeti())
+    except Exception as e:
+        print("  ! sektor baglami eklenemedi:", e)
     o = ogrenimler()
-    if not o.get("n"):
-        return ""
-    f = lambda xs: ", ".join(f"{s['alan']}={s['deger']}" for s in xs) or "none yet"
-    return (f"Audience performance learnings from {o['n']} rated posts: PREFER {f(o.get('tercih', []))}; "
-            f"AVOID {f(o.get('kacin', []))}.")
+    if o.get("n"):
+        f = lambda xs: ", ".join(f"{s['alan']}={s['deger']}" for s in xs) or "none yet"
+        parca.append(f"Audience performance learnings from {o['n']} rated posts: PREFER {f(o.get('tercih', []))}; "
+                     f"AVOID {f(o.get('kacin', []))}.")
+    return "".join(x for x in parca if x)
 
 
 def ozellik_agirligi(alan, deger):

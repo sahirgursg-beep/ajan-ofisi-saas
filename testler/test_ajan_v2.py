@@ -1,0 +1,287 @@
+"""Ajan ekibi v2: sektor bilgisi, platform uzmanlari, arastirma, verisiz (fikir) mod, gorsel kaynaklari, bulut rotus."""
+import base64
+import io
+import json
+
+import pytest
+from PIL import Image
+
+from ofis import (arastirma, ayarlar, fikir_kaynagi, gorsel_kaynak, llm, musteri, platformlar, rotus_bulut, sektor,
+                  sektor_bilgi)
+
+
+@pytest.fixture(autouse=True)
+def yapay_zeka_yok(monkeypatch):
+    monkeypatch.setattr(llm, "hazir", lambda: False)
+    for y in (sektor.YOL, arastirma.RAPOR):
+        y.unlink(missing_ok=True)
+    yield
+    for y in (sektor.YOL, arastirma.RAPOR):
+        y.unlink(missing_ok=True)
+
+
+@pytest.fixture
+def isletme(monkeypatch):
+    def kur(**alanlar):
+        yeni = {**ayarlar.AYAR["isletme"], **alanlar}
+        monkeypatch.setitem(ayarlar.AYAR, "isletme", yeni)
+        return yeni
+    return kur
+
+
+class Yanit:
+    def __init__(self, veri=None, durum=200, icerik=b""):
+        self._veri, self.status_code, self.content, self.text = veri, durum, icerik, json.dumps(veri or {})
+
+    def json(self):
+        return self._veri
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+
+def _png_b64(w, h, renk=(200, 50, 50)):
+    b = io.BytesIO()
+    Image.new("RGB", (w, h), renk).save(b, "PNG")
+    return base64.b64encode(b.getvalue()).decode()
+
+
+# ---------------- sektor bilgisi ----------------
+def test_her_sektor_tam_ve_platform_agirliklari_gecerli():
+    zorunlu = {"ad", "kelimeler", "kitle", "ton", "sutunlar", "fikirler", "kancalar", "gorsel", "stok", "hashtag",
+               "platform"}
+    assert len(sektor_bilgi.SEKTORLER) >= 25 and "genel" in sektor_bilgi.SEKTORLER
+    for k, s in sektor_bilgi.SEKTORLER.items():
+        assert zorunlu <= set(s), k
+        assert s["sutunlar"] and s["fikirler"] and s["stok"], k
+        assert set(s["platform"]) == set(platformlar.SIRA), k
+        assert all(0 <= v <= 3 for v in s["platform"].values()), k
+
+
+@pytest.mark.parametrize("cumle,beklenen", [
+    ("family restaurant in Lekki serving jollof and small chops", "restoran"),
+    ("we are a law firm helping startups", "hukuk"),
+    ("hair salon and barber shop", "guzellik"),
+    ("fumigation and pest control services", "temizlik"),
+    ("", "genel"),
+    ("something nobody has heard of", "genel"),
+])
+def test_tek_cumleden_sektor_bulunur(cumle, beklenen):
+    assert sektor.kelime_ile_bul(cumle) == beklenen
+
+
+def test_sektor_profili_yapay_zekasiz_ve_onbellekli(isletme):
+    isletme(tanim="hair salon and barber shop", sektor="", sehirler=["Abuja"])
+    p = sektor.profil()
+    assert p["anahtar"] == "guzellik" and p["kaynak"] == "kelime"
+    assert json.loads(sektor.YOL.read_text())["_imza"] == p["_imza"]
+    assert "Abuja" in sektor.doldur("Best cuts in {city}")
+    assert "Sector:" in sektor.istem_ozeti()
+    isletme(tanim="restaurant and cafe")                     # tanim degisince profil yenilenir
+    assert sektor.profil()["anahtar"] == "restoran"
+
+
+def test_yapay_zeka_profili_tabanin_ustune_yazar(isletme, monkeypatch):
+    isletme(tanim="bakery selling cakes", sektor="")
+    monkeypatch.setattr(llm, "hazir", lambda: True)
+    monkeypatch.setattr(llm, "sor", lambda *a, **k: {"sektor": "restoran", "alt_sektor": "Bakery", "ton": "warm",
+                                                      "fikirler": ["Fresh bread at 7am in {city}"], "b2b": False})
+    p = sektor.profil(yenile=True)
+    assert p["anahtar"] == "restoran" and p["alt_sektor"] == "Bakery" and p["ton"] == "warm"
+    assert p["fikirler"][0] == "Fresh bread at 7am in {city}" and len(p["fikirler"]) > 1
+    assert p["kaynak"] == "yapay_zeka"
+
+
+# ---------------- platform uzmanlari ----------------
+TABAN = {"hook": "Your Sunday table, sorted", "headline": "Sunday table",
+         "caption": "Our oak dining table seats six. Visit us. Price ₦450,000.",
+         "hashtags": ["#oak", "#lagosliving", "#diningroom", "#homedecor", "#furniture", "#lagos", "#naija",
+                      "#interiors", "#homestyle", "#design", "#wood", "#table"], "reels_lines": ["Seats six", "Solid oak"]}
+
+
+def test_platform_surumleri_kurallara_uyar(isletme):
+    isletme(tanim="furniture showroom", sektor="mobilya", platformlar=[])
+    out = platformlar.uret({"ad": "Oak table", "fiyat_metni": "₦450,000"}, "family dinners", TABAN, "post")
+    assert set(out) <= set(platformlar.SIRA) and {"instagram", "facebook"} <= set(out)
+    for p, v in out.items():
+        k = platformlar.KURALLAR[p]
+        assert v["mod"] == k["mod"]
+        assert len(v["caption"]) <= k["metin_siniri"] and len(v["hashtags"]) <= k["hashtag"][1]
+    assert out["instagram"]["mod"] == "otomatik"
+    if "tiktok" in out:
+        assert out["tiktok"]["mod"] == "manuel" and out["tiktok"]["baslik"]
+        assert out["tiktok"]["ekran_yazilari"] == ["Seats six", "Solid oak"]
+    assert "comments" in out["facebook"]["caption"]
+
+
+def test_sektor_agirligi_sifir_olan_platform_atlanir_ama_secim_kazanir(isletme):
+    isletme(tanim="hair salon", sektor="guzellik", platformlar=[])
+    assert "linkedin" not in platformlar.aktif_platformlar()
+    isletme(platformlar=["linkedin", "instagram"])
+    assert platformlar.aktif_platformlar() == ["instagram", "linkedin"]
+
+
+def test_yapay_zeka_fiyati_bozarsa_onayli_metne_donulur(isletme, monkeypatch):
+    isletme(tanim="furniture showroom", sektor="mobilya", platformlar=["instagram", "linkedin"])
+    monkeypatch.setattr(llm, "hazir", lambda: True)
+    monkeypatch.setattr(llm, "sor", lambda *a, **k: {"hook": "x", "caption": "Now only ₦99,000!", "hashtags": ["a"]})
+    out = platformlar.uret({"ad": "Oak table", "fiyat_metni": "₦450,000"}, "", TABAN, "post")
+    assert "₦450,000" in out["instagram"]["caption"] and "99,000" not in out["instagram"]["caption"]
+    assert out["linkedin"]["mod"] == "manuel" and "₦450,000" in out["linkedin"]["caption"]
+
+
+def test_platform_metni_kaydedilir_ve_okunur(tmp_path):
+    platformlar.kaydet(tmp_path, {"facebook": {"caption": "Hello", "hashtags": ["#a", "#b"], "mod": "otomatik"}})
+    assert platformlar.metin(tmp_path, "facebook") == "Hello\n\n#a #b"
+    assert platformlar.metin(tmp_path, "tiktok") is None
+    assert platformlar.oku(tmp_path / "yok") == {}
+
+
+# ---------------- arastirma ----------------
+def test_arastirma_raporu_isteme_eklenir_ve_tazelik_kontrolu():
+    assert arastirma.eski_mi() and arastirma.istem_ozeti() == ""
+    from datetime import datetime, timedelta
+    arastirma.RAPOR.parent.mkdir(parents=True, exist_ok=True)
+    arastirma.RAPOR.write_text(json.dumps({
+        "tarih": datetime.now().isoformat(), "ozet": "Warm minimal interiors win.",
+        "gorsel_trendler": ["soft daylight"], "renk_paletleri": [{"ad": "Clay", "renkler": ["#C2703D", "#F3EDE4"]}],
+        "kacin": ["stock-looking collages"]}))
+    s = arastirma.istem_ozeti()
+    assert not arastirma.eski_mi()
+    assert "Warm minimal" in s and "soft daylight" in s and "#C2703D" in s and "stock-looking" in s
+    arastirma.RAPOR.write_text(json.dumps({"tarih": (datetime.now() - timedelta(days=9)).isoformat(), "ozet": "x"}))
+    assert arastirma.eski_mi()
+
+
+def test_arastirma_yapay_zekasiz_taban_bilgiyle_rapor_yazar(isletme):
+    isletme(tanim="restaurant", sektor="restoran", sehirler=["Lagos"])
+    r = arastirma.guncelle(gunluk=lambda *_: None, zorla=True)
+    assert r["ozet"] and r["fikirler"] and "{city}" not in " ".join(r["fikirler"])
+
+
+# ---------------- verisiz (fikir) mod ----------------
+def test_fikir_modu_fiyatsiz_urun_uretir_ve_tekrar_etmez(isletme, monkeypatch, tmp_path):
+    isletme(tanim="cleaning company", sektor="temizlik", sehirler=["Lagos"])
+    monkeypatch.setitem(ayarlar.AYAR, "urun_kaynagi", "fikir")
+    assert fikir_kaynagi.veri_yok_mu()
+    foto = tmp_path / "f.jpg"
+    Image.new("RGB", (800, 1000)).save(foto)
+    monkeypatch.setattr(gorsel_kaynak, "stok_ara", lambda *a, **k: [(str(foto), {"kaynak": "pexels", "fotografci": "Ada"})])
+    monkeypatch.setattr(gorsel_kaynak, "yz_uret", lambda *a, **k: None)
+    kullanilan = set()
+    monkeypatch.setattr(fikir_kaynagi.pano, "son_hazirlananlar", lambda gun: kullanilan)
+    out = fikir_kaynagi.fikir_urunleri(3, gunluk=lambda *_: None)
+    assert len(out) == 3 and len({u["url"] for u in out}) == 3
+    for u in out:
+        assert u["fikir"] and u["fiyat"] is None and u["fiyat_metni"] == "" and u["url"].startswith("fikir://")
+        assert u["gorseller"] == [str(foto)]
+    assert fikir_kaynagi.kaynak_notu(out[0]) == "Photo: Ada / Pexels"
+    kullanilan.update(u["url"] for u in out)
+    assert not {u["url"] for u in fikir_kaynagi.fikir_urunleri(3, gunluk=lambda *_: None)} & kullanilan
+
+
+def test_gorsel_kaynagi_yoksa_fikir_uretilmez(isletme, monkeypatch):
+    isletme(tanim="cleaning company", sektor="temizlik")
+    monkeypatch.setattr(gorsel_kaynak, "stok_ara", lambda *a, **k: [])
+    monkeypatch.setattr(gorsel_kaynak, "yz_uret", lambda *a, **k: None)
+    monkeypatch.setattr(fikir_kaynagi.pano, "son_hazirlananlar", lambda gun: set())
+    mesajlar = []
+    assert fikir_kaynagi.fikir_urunleri(2, gunluk=mesajlar.append) == []
+    assert any("PEXELS_API_KEY" in m for m in mesajlar)
+
+
+def test_site_varsa_veri_var(monkeypatch):
+    monkeypatch.setitem(ayarlar.AYAR, "urun_kaynagi", None)
+    monkeypatch.setitem(ayarlar.AYAR, "site", "https://shop.example.ng")
+    assert not fikir_kaynagi.veri_yok_mu()
+    monkeypatch.setitem(ayarlar.AYAR, "site", "")
+    monkeypatch.setitem(ayarlar.AYAR, "feed_url", "")
+    assert fikir_kaynagi.veri_yok_mu()
+
+
+# ---------------- gorsel kaynaklari ----------------
+class SahteHttp:
+    def __init__(self, cevaplar):
+        self.cevaplar, self.istekler = cevaplar, []
+
+    def _cevap(self, url):
+        for parca, y in self.cevaplar.items():
+            if parca in url:
+                return y
+        return Yanit({}, 404)
+
+    def get(self, url, **k):
+        self.istekler.append(("GET", url, k))
+        return self._cevap(url)
+
+    def post(self, url, **k):
+        self.istekler.append(("POST", url, k))
+        return self._cevap(url)
+
+
+def test_pexels_araması_indirir_ve_atif_bilgisi_doner(monkeypatch):
+    monkeypatch.setenv("PEXELS_API_KEY", "test")
+    http = SahteHttp({
+        "api.pexels.com": Yanit({"photos": [
+            {"id": 1, "photographer": "Ada", "url": "https://pexels.com/p/1", "src": {"large2x": "https://img/1.jpg"}},
+            {"id": 2, "photographer": "Bo", "url": "https://pexels.com/p/2", "src": {"large2x": "https://img/2.jpg"}}]}),
+        "https://img/": Yanit(icerik=b"jpgbytes")})
+    out = gorsel_kaynak.stok_ara("clean kitchen", adet=3, haric={"2"}, oturum=http)
+    assert len(out) == 1 and out[0][1]["fotografci"] == "Ada"
+    assert open(out[0][0], "rb").read() == b"jpgbytes"
+    assert http.istekler[0][2]["headers"]["Authorization"] == "test"
+
+
+def test_anahtar_yoksa_gorsel_kaynaklari_sessizce_bos(monkeypatch):
+    monkeypatch.delenv("PEXELS_API_KEY", raising=False)
+    monkeypatch.delenv("AJAN_YZ_ANAHTAR", raising=False)
+    assert gorsel_kaynak.stok_ara("x") == [] and gorsel_kaynak.yz_uret("x") is None
+    assert not rotus_bulut.hazir()
+
+
+def test_yapay_zeka_gorseli_b64_kaydedilir(monkeypatch):
+    monkeypatch.setenv("AJAN_YZ_ANAHTAR", "k")
+    http = SahteHttp({"/images/generations": Yanit({"data": [{"b64_json": _png_b64(8, 12)}]})})
+    yol = gorsel_kaynak.yz_uret("a bright clean kitchen", oturum=http)
+    assert Image.open(yol).size == (8, 12)
+    istek = http.istekler[0][2]
+    assert istek["json"]["model"] == "openai-gpt-image-1" and istek["headers"]["Authorization"] == "Bearer k"
+
+
+# ---------------- bulut rotus ----------------
+def test_netlestir_kucuk_gorseli_buyutur(tmp_path):
+    kucuk = tmp_path / "k.jpg"
+    Image.new("RGB", (400, 500), (90, 90, 90)).save(kucuk)
+    assert min(Image.open(rotus_bulut.netlestir(kucuk)).size) == 1080
+    buyuk = tmp_path / "b.jpg"
+    Image.new("RGB", (1080, 1350)).save(buyuk)
+    assert rotus_bulut.netlestir(buyuk) == str(buyuk)
+
+
+def test_dikey_genisletme_urunu_birebir_korur(tmp_path, monkeypatch):
+    monkeypatch.setenv("AJAN_YZ_ANAHTAR", "k")
+    monkeypatch.setattr(rotus_bulut, "_desteklenmiyor", False)
+    yatay = tmp_path / "y.jpg"
+    Image.new("RGB", (1200, 800), (10, 200, 10)).save(yatay)
+    http = SahteHttp({"/images/edits": Yanit({"data": [{"b64_json": _png_b64(1024, 1536, (0, 0, 255))}]})})
+    sonuc = Image.open(rotus_bulut.dikey_genislet(yatay, oturum=http))
+    assert sonuc.size == (1024, 1536)
+    assert sonuc.getpixel((512, 768))[1] > 150          # orta (urun) orijinal yesil
+    assert sonuc.getpixel((512, 20))[2] > 150           # ust kenar yapay zeka dolgusu
+    assert http.istekler[0][2]["files"]["mask"][0] == "mask.png"
+
+
+def test_dikey_genisletme_desteklenmiyorsa_bir_daha_denemez(tmp_path, monkeypatch):
+    monkeypatch.setenv("AJAN_YZ_ANAHTAR", "k")
+    monkeypatch.setattr(rotus_bulut, "_desteklenmiyor", False)
+    yatay = tmp_path / "y.jpg"
+    Image.new("RGB", (1200, 800)).save(yatay)
+    http = SahteHttp({"/images/edits": Yanit({"error": "unsupported"}, 404)})
+    assert rotus_bulut.dikey_genislet(yatay, oturum=http) is None
+    assert rotus_bulut.dikey_genislet(yatay, oturum=http) is None
+    assert len(http.istekler) == 1
+    dikey = tmp_path / "d.jpg"
+    Image.new("RGB", (800, 1200)).save(dikey)
+    monkeypatch.setattr(rotus_bulut, "_desteklenmiyor", False)
+    assert rotus_bulut.dikey_genislet(dikey, oturum=http) is None and len(http.istekler) == 1

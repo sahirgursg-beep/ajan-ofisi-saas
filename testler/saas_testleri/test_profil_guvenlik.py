@@ -55,3 +55,20 @@ def test_sifreleme_ve_state():
         guvenlik.imza_coz(govde[:-2] + "xx." + imza)
     with pytest.raises(guvenlik.YetkiHatasi):
         guvenlik.imza_coz(guvenlik.imzala({"mid": "m1"}, -1))
+
+
+def test_dort_alanla_kayit_sitesiz_fikir_modu():
+    p = profil.formdan({"isletme_adi": "Mama Put Kitchen", "tanim": "family restaurant serving Nigerian dishes",
+                        "sehirler": "Lagos", "ulke": "Nigeria"})
+    assert p["urun_kaynagi"] == "fikir" and p["site"] == ""
+    assert p["isletme"]["tanim"].startswith("family restaurant") and p["isletme"]["sehirler"] == ["Lagos"]
+    assert p["isletme"]["hashtagler"] == [] and p["kategoriler"] == []     # sablonun mobilya ornekleri tasinmaz
+
+
+def test_tanim_zorunlu_ve_platform_secimi_suzulur():
+    with pytest.raises(profil.ProfilHatasi) as e:
+        profil.formdan({"isletme_adi": "X Ltd"})
+    assert "tanim" in e.value.alanlar
+    p = profil.formdan({"isletme_adi": "X Ltd", "tanim": "law firm", "platformlar": "LinkedIn, myspace, facebook"})
+    assert p["isletme"]["platformlar"] == ["facebook"] or p["isletme"]["platformlar"] == ["linkedin", "facebook"]
+    assert profil.form_gorunumu(p)["platformlar"] in ("facebook", "linkedin, facebook")

@@ -214,6 +214,15 @@ def otomatik():
                 saglik.kontrol()
             except Exception as e:
                 print("saglik:", e)
+    if yayin.mesai_icinde() and simdi - d.get("arastirma_zaman", 0) > 6 * 3600:
+        d["arastirma_zaman"] = simdi    # haftalik sektor arastirmasi (eskiyse); 6 saatte bir kontrol edilir
+        _durum_yaz(d)
+        try:
+            from ofis import arastirma
+            if arastirma.eski_mi():
+                arastirma.guncelle(gunluk=lambda m: pano.yaz("SektorArastirmaci", "SanatYonetmeni", m, "rapor"))
+        except Exception as e:
+            print("arastirma:", e)
     if simdi < d.get("meta_bekle", 0):
         return                        # Meta engeli: bekleme suresi dolmadi
     yayin.mesaiye_uydur(gunluk=print)

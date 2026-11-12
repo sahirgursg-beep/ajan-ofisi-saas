@@ -46,6 +46,14 @@ def main(plan_tarihi=None):
         Y.soyle("Herkes", f"Haftalik plana gore {plan_gunu['tarih']} ({plan_gunu['gun']}) icin 3 icerik uretiyoruz: "
                 "post 12:00, carousel 15:00, Reels 18:30" + (f" — {plan_gunu['etkinlik']}" if plan_gunu.get("etkinlik") else "") + ".")
     Y.toplanti_ac(tema)
+    if not demo:
+        try:                     # ilk uretimde (ve haftada bir) sektor arastirmasi: istemler sektore gore sekillenir
+            from ofis import arastirma
+            if arastirma.eski_mi():
+                Y.soyle("Herkes", "Sektor arastirmacisi bu haftanin sektor raporunu hazirliyor...")
+                arastirma.guncelle(gunluk=lambda m: pano.yaz("SektorArastirmaci", "SanatYonetmeni", m, "rapor"))
+        except Exception as e:
+            print("arastirma:", e)
 
     adaylar = U.urunleri_getir(demo=demo)
     if not adaylar:
@@ -156,6 +164,11 @@ def _gorseller(urun, R):
         return yollar, [gorsel.ac(y) for y in yollar], []
     for g in urun["gorseller"][:3]:
         try:
+            from pathlib import Path as _P
+            if not str(g).startswith(("http://", "https://")) and _P(g).exists():   # stok / yapay zeka: yerelde hazir
+                gorsel.ac(g)
+                gorsel_yollari.append(g)
+                continue
             yol = urun_cekici.gorsel_indir(g, VERI / "gorsel_onbellek", hashlib.md5(g.encode()).hexdigest() + ".img")
             gorsel.ac(yol)
             gorsel_yollari.append(yol)
@@ -206,9 +219,20 @@ def _paketle(urun, gorsel_yollari, gorseller, dikey, taslak, yon, tema, aci, rev
     atif = ""
     if (klasor / "muzik.json").exists():   # CC BY muzik -> lisans geregi sanatci adi caption'a
         atif = _json.loads((klasor / "muzik.json").read_text(encoding="utf-8")).get("atif", "")
-    (klasor / "caption.txt").write_text(
-        taslak["caption"] + (("\n\n" + atif) if atif else "") + "\n\n" + " ".join(taslak.get("hashtags", [])),
-        encoding="utf-8")
+    # Platform uzmanlari: ayni icerik her platformda kendi diliyle (Instagram, Facebook, TikTok, LinkedIn)
+    from ofis import platformlar
+    try:
+        pl = platformlar.uret(urun, aci, taslak, tur)
+    except Exception as e:
+        print("  ! platform metinleri uretilemedi:", e)
+        pl = {}
+    if atif:
+        for v in pl.values():
+            v["caption"] = v["caption"] + "\n\n" + atif
+    platformlar.kaydet(klasor, pl)
+    ig = pl.get("instagram") or {"caption": taslak["caption"] + (("\n\n" + atif) if atif else ""),
+                                 "hashtags": taslak.get("hashtags", [])}
+    (klasor / "caption.txt").write_text(ig["caption"] + "\n\n" + " ".join(ig.get("hashtags", [])), encoding="utf-8")
     (klasor / "taslak.json").write_text(_json.dumps(taslak, ensure_ascii=False, indent=2), encoding="utf-8")
     rapor = [f"# Gunluk rapor — {datetime.now():%Y-%m-%d %H:%M}", "",
              f"- Tema: {tema}", f"- Urun: {urun['ad']} — {urun['fiyat_metni']}", f"- Aci: {aci}",
@@ -355,6 +379,9 @@ def hafta():
 def otomatik_plan():
     """Onumuzde planli gun kalmadiysa (ya da pazar gunu son 1 gun kaldiysa) gelecek haftayi kendiligindan planla."""
     import subprocess
+    from ofis import fikir_kaynagi
+    if fikir_kaynagi.veri_yok_mu() and "--demo" not in sys.argv:
+        return                    # urun listesi olmayan isletme: icerik her gun fikirlerden uretilir, urun plani yok
     from datetime import timedelta
     from ofis import plan
     yarin = (date.today() + timedelta(days=1)).isoformat()

@@ -66,10 +66,24 @@ class UrunSorumlusu(Ajan):
     def urunleri_getir(self, demo=False):
         from . import urun_cekici
         self.calis("Siteden urunleri cekiyorum...")
+        from . import fikir_kaynagi
         if demo:
             from .demo import demo_urunler
             urunler = demo_urunler()
             self.soyle("Yonetici", f"Demo modu: {len(urunler)} ornek urun hazirladim.")
+        elif fikir_kaynagi.veri_yok_mu():
+            # Urun sitesi/verisi olmayan isletme: icerigi sektor bilgisi + arastirma + yapay zeka saglar
+            self.calis("Bu isletmenin urun listesi yok; sektor arastirmasindan bugunun icerik fikirlerini hazirliyorum...")
+            urunler = fikir_kaynagi.fikir_urunleri(3, gunluk=lambda m: pano.durum(self.ad, "calisiyor", m))
+            self.tum_urunler = list(urunler)
+            if not urunler:
+                self.soyle("Yonetici", "Icerik fikri icin gorsel bulamadim (stok foto / yapay zeka kapali).", "hata")
+                pano.durum(self.ad, "hata", "Gorsel kaynagi yok")
+                return []
+            self.soyle("PazarlamaUzmani", f"Bugun icin {len(urunler)} icerik fikri ve gorselleri hazir: "
+                       + "; ".join(u["ad"] for u in urunler))
+            self.bitir()
+            return urunler
         else:
             try:
                 urunler = urun_cekici.urunleri_cek(lambda m: pano.durum(self.ad, "calisiyor", m))
@@ -352,6 +366,8 @@ class MetinYazari(Ajan):
         self.calis("Caption yaziyorum..." if not geri_bildirim else "Notlara gore duzeltiyorum...")
         if urun.get("proje"):
             return self._proje_yaz(urun, aci, geri_bildirim)
+        if urun.get("fikir"):
+            return self._fikir_yaz(urun, aci, geri_bildirim)
         istem = (f"Product: {urun['ad']}\nCategory: {urun.get('kategori', '')}\n"
                  f"Details: {urun.get('aciklama', '')[:300]}\nPrice: {urun['fiyat_metni']}\n"
                  f"Marketing angle: {aci}\nCall to action: {AYAR['marka']['cta']}\n\n"
@@ -370,8 +386,8 @@ class MetinYazari(Ajan):
                  'carousel_points appear on the last slide next to the price: only things that are surely true '
                  f'(e.g. {", ".join(musteri.carousel_maddeleri())}) - no invented specs, '
                  'no delivery or warranty promises.')
-        from . import kurallar
-        istem += kurallar.istem("metin")
+        from . import analiz, kurallar
+        istem += "\n" + analiz.istem_ozeti() + kurallar.istem("metin")
         if geri_bildirim:
             istem += "\n\nFix these issues (from quality control or the business owner):\n- " + "\n- ".join(geri_bildirim)
         cevap = self.dusun(istem, json_mod=True)
@@ -379,6 +395,37 @@ class MetinYazari(Ajan):
             cevap = self._sablon(urun)
         cevap["hashtags"] = [("#" + h.lstrip("#")).replace(" ", "") for h in cevap.get("hashtags", [])][:15]
         self.soyle("KaliteKontrol", f"Kanca: \"{cevap.get('hook', '')}\" — taslak hazir, kontrol eder misin?")
+        pano.durum(self.ad, "bekliyor", "Kalite kontrolu bekliyorum...")
+        return cevap
+
+    def _fikir_yaz(self, urun, aci, geri_bildirim=None):
+        """Urunsuz icerik (ipucu, hikaye, sektor bilgisi, davet): fiyat YOK, uydurma bilgi YOK."""
+        from . import analiz
+        istem = (f"Post topic: {urun['ad']}\nContent pillar: {urun.get('kategori', '')}\n"
+                 f"What it should say: {urun.get('aciklama', '')}\nAngle: {aci}\n"
+                 f"Call to action: {AYAR['marka']['cta']}\n{analiz.istem_ozeti()}\n"
+                 'Return JSON: {"hook": "<max 7 words, scroll-stopping>", '
+                 '"headline": "<max 9 words for the image>", '
+                 '"caption": "<3-6 short lines that give real value (tip, insight, story or invitation), end with the '
+                 'call to action. NO prices, NO invented facts, numbers, awards or customer names>", '
+                 f'"hashtags": ["<8-12 hashtags: niche + local {musteri.sehirler_metni()}>"], '
+                 '"reels_lines": ["<line 1, max 6 words>", "<line 2, max 6 words>"], '
+                 '"carousel_lines": ["<4 slide lines, max 7 words each: a mini guide or story>"], '
+                 '"carousel_points": ["<3 short takeaways, max 5 words each>"], '
+                 '"pov": "<POV line, max 10 words, starts with POV:>"}')
+        from . import kurallar
+        istem += kurallar.istem("metin")
+        if geri_bildirim:
+            istem += "\n\nFix these issues:\n- " + "\n- ".join(geri_bildirim)
+        cevap = self.dusun(istem, json_mod=True)
+        if not cevap or "caption" not in cevap:
+            cevap = {"hook": urun["ad"][:50], "headline": urun["ad"][:60],
+                     "caption": f"{urun['ad']}.\n{urun.get('aciklama', '')}\n\n{AYAR['marka']['cta']}.",
+                     "hashtags": musteri.hashtagler(), "reels_lines": [urun["ad"][:40], musteri.ad()],
+                     "carousel_lines": [urun["ad"][:50]], "carousel_points": musteri.carousel_maddeleri(),
+                     "pov": f"POV: you found {musteri.ad()}"}
+        cevap["hashtags"] = [("#" + h.lstrip("#")).replace(" ", "") for h in cevap.get("hashtags", [])][:15]
+        self.soyle("KaliteKontrol", f"Icerik metni: \"{cevap.get('hook', '')}\" — kontrol eder misin?")
         pano.durum(self.ad, "bekliyor", "Kalite kontrolu bekliyorum...")
         return cevap
 
@@ -552,7 +599,7 @@ class VideoEditoru(Ajan):
         hedef = klasor / "reels_1080x1920.mp4"
         foto_sayisi = len({str(g) for g in (gorsel_yollari or [])})
         bicim = reels_formatlari.sec(foto_sayisi, reels_format,
-                                     haric=["luks", "fiyat_tahmini"] if urun.get("proje") else None)
+                                     haric=["luks", "fiyat_tahmini"] if urun.get("proje") or not urun.get("fiyat_metni") else None)
         from . import muzik
         if muzik.ayar("otomatik", True):
             try:
@@ -570,7 +617,7 @@ class VideoEditoru(Ajan):
                                   lambda m: pano.durum(self.ad, "calisiyor", m), dikey_yollari=dikey,
                                   muzik_id=muzik_id, muzik_haric=muzik_haric, format_adi=bicim)
             except Exception as e:
-                if bicim == "luks" or urun.get("proje"):
+                if bicim == "luks" or urun.get("proje") or not urun.get("fiyat_metni"):
                     raise
                 self.soyle("Yonetici", f"'{bicim}' formati calismadi ({type(e).__name__}: {e}), lüks kurguya geciyorum.", "uyari")
                 bicim = "luks"
@@ -604,8 +651,13 @@ class Rotuscu(Ajan):
 
     def hazirla(self, urun, gorsel_yollari):
         """Doner: (netlestirilmis_yollar, dikey_yollar veya [])"""
-        from . import ai_gorsel, algila, marka
+        from . import ai_gorsel, algila, marka, rotus_bulut
+        if urun.get("fikir"):
+            self.bitir("Stok / yapay zeka gorselleri zaten hazir")
+            return list(gorsel_yollari), []
         hazir, aciklama = ai_gorsel.durum()
+        if not hazir and rotus_bulut.hazir():
+            return self._bulut(urun, gorsel_yollari)
         if not hazir:
             self.soyle("Yonetici", f"AI rotus atlandi: {aciklama}. Orijinal fotograflarla devam.", "uyari")
             self.bitir("AI kapali")
@@ -636,6 +688,30 @@ class Rotuscu(Ajan):
         ai_gorsel.bosalt()
         if dikey:
             self.soyle("VideoEditoru", f"{len(dikey)} fotografi dikey 9:16'ya tamamladim; Reels ve story'de kirpma yok.")
+        self.bitir()
+        return net, dikey
+
+
+    def _bulut(self, urun, gorsel_yollari):
+        """GPU yok: netlestirme yerelde, dikeye tamamlama bulut yapay zekasiyla (urun alani korunur)."""
+        from . import rotus_bulut
+        self.calis("Bulut rotus: fotograflari netlestiriyor, dikey formata tamamliyorum...")
+        net, dikey = [], []
+        for i, y in enumerate(gorsel_yollari[:3]):
+            try:
+                y2 = rotus_bulut.netlestir(y)
+                if y2 != y:
+                    self.soyle("Tasarimci", f"Fotograf {i + 1} kucuktu, buyutup netlestirdim.")
+                y = y2
+            except Exception as e:
+                self.soyle("Yonetici", f"Netlestirme hatasi ({type(e).__name__}: {e})", "uyari")
+            net.append(y)
+            if i < 2:
+                d = rotus_bulut.dikey_genislet(y, ipucu=urun.get("kategori", ""))
+                if d:
+                    dikey.append(d)
+        if dikey:
+            self.soyle("VideoEditoru", f"{len(dikey)} fotografi bulut yapay zekasiyla dikey 9:16'ya tamamladim (urune dokunmadan).")
         self.bitir()
         return net, dikey
 
