@@ -5,6 +5,7 @@ Her /api/musteri/<id>/... istegi: gecerli oturum + o musteriye uyelik sarttir (y
 Bu surec ofis/ paketini ice aktarmaz; ajan isleri kuyruga yazilir, isci yapar.
 """
 import json
+import os
 import re
 from urllib.parse import quote
 from datetime import datetime, timedelta, timezone
@@ -93,8 +94,15 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
+SURUM = "2026-11-12.fal"
+
+
 async def saglik(request):
-    return JSONResponse({"durum": "ok", "ortam": ayar.ORTAM, "depo": ayar.DEPO, "eksik": ayar.kontrol()})
+    var = lambda ad: bool(os.environ.get(ad, "").strip().lower() not in ayar.BOS)
+    return JSONResponse({"durum": "ok", "ortam": ayar.ORTAM, "depo": ayar.DEPO, "eksik": ayar.kontrol(),
+                         "surum": SURUM,
+                         "servisler": {"yapay_zeka": var("AJAN_YZ_ANAHTAR"), "fal": var("FAL_KEY"),
+                                       "pixabay": var("PIXABAY_API_KEY"), "pexels": var("PEXELS_API_KEY")}})
 
 
 async def yapilandirma(request):
