@@ -12,7 +12,9 @@ envs:
   - { key: SAAS_TETIK, value: surekli }
   - { key: SAAS_YEREL_GIRIS, value: "0" }
   - { key: SAAS_GENEL_ADRES, value: https://app.feedzync.com }
-  - { key: AJAN_YZ_SAGLAYICI, value: gemini }
+  - { key: AJAN_YZ_SAGLAYICI, value: openai }
+  - { key: AJAN_YZ_URL, value: "https://inference.do-ai.run/v1" }
+  - { key: AJAN_YZ_MODEL, value: llama3.3-70b-instruct }
   - { key: AJAN_AI_GORSEL, value: "0" }
   - { key: SUPABASE_URL, type: SECRET }
   - { key: SUPABASE_ANON_KEY, type: SECRET }
@@ -21,7 +23,7 @@ envs:
   - { key: SAAS_IMZA_ANAHTARI, type: SECRET }
   - { key: META_APP_ID, type: SECRET }
   - { key: META_APP_SECRET, type: SECRET }
-  - { key: GEMINI_API_KEY, type: SECRET }
+  - { key: AJAN_YZ_ANAHTAR, type: SECRET }
 services:
   - name: web
     github: { repo: sahirgursg-beep/ajan-ofisi-saas, branch: main, deploy_on_push: false }

@@ -70,7 +70,7 @@ ISCI_EN_UZUN_DK = int(al("SAAS_ISCI_EN_UZUN_DK", "50"))     # bir isci calismasi
 
 # ---- urun kurallari ----
 DENEME_GUN = int(al("SAAS_DENEME_GUN", "14"))
-VARSAYILAN_YZ = al("AJAN_YZ_SAGLAYICI", "gemini")
+VARSAYILAN_YZ = al("AJAN_YZ_SAGLAYICI", "openai")
 
 
 def kontrol():

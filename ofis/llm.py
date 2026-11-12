@@ -1,6 +1,7 @@
 """Yapay zeka katmani: ajanlar yalnizca bu modulu cagirir, hangi saglayicinin calistigini bilmez.
 
-config.json -> "yz": {"saglayici": "ollama" | "gemini", "yedek_saglayici": "" | "ollama" | "gemini"}
+config.json -> "yz": {"saglayici": "ollama" | "gemini" | "openai", "yedek_saglayici": ...}
+("openai" = OpenAI uyumlu her servis; bulutta DigitalOcean Serverless Inference)
 Siralama: ana saglayici hazirsa o; degilse yedek; ikisi de yoksa sor() None doner ve ajanlar
 sablon metinlerle devam eder (sistem her durumda calisir).
 
@@ -12,7 +13,7 @@ from importlib import import_module
 from .ayarlar import AYAR
 from .llm_ortak import json_coz  # noqa: F401  (eski kod llm.json_coz kullaniyor)
 
-SAGLAYICILAR = {"ollama": "ofis.llm_ollama", "gemini": "ofis.llm_gemini"}
+SAGLAYICILAR = {"ollama": "ofis.llm_ollama", "gemini": "ofis.llm_gemini", "openai": "ofis.llm_openai"}
 _ozel = {}          # testler / ileride eklentiler icin: ad -> nesne
 
 

@@ -46,7 +46,7 @@ if [[ ! -f .env ]]; then
   ayarla SAAS_SIFRELEME_ANAHTARI "$(python3 -c 'import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())')"
   ayarla SAAS_IMZA_ANAHTARI "$(python3 -c 'import secrets;print(secrets.token_urlsafe(48))')"
   sor SUPABASE_URL; sor SUPABASE_ANON_KEY; sor SUPABASE_SERVICE_ROLE_KEY gizli
-  sor META_APP_ID; sor META_APP_SECRET gizli; sor GEMINI_API_KEY gizli
+  sor META_APP_ID; sor META_APP_SECRET gizli; sor AJAN_YZ_ANAHTAR gizli
   chmod 600 .env
   echo "ONEMLI: .env icindeki SAAS_SIFRELEME_ANAHTARI'ni guvenli bir yere yedekleyin (kaybolursa Meta baglantilari yeniden kurulur)."
 fi

@@ -138,3 +138,43 @@ def test_gemini_kalici_hatada_none_ve_bir_sure_hazir_degil(gemini_anahtar):
     o = SahteOturum(SahteCevap(400, {"error": {"message": "bad"}}))
     assert llm_gemini.sor("s", "m", oturum=o) is None
     assert llm_gemini.hazir() is False
+
+
+# ---------------- OpenAI uyumlu (DigitalOcean) ----------------
+from ofis import llm_openai
+
+
+@pytest.fixture
+def openai_anahtar(monkeypatch):
+    monkeypatch.setenv("AJAN_YZ_ANAHTAR", "do-anahtar")
+    monkeypatch.setenv("AJAN_YZ_URL", "https://inference.ornek/v1")
+    monkeypatch.setattr(llm_openai, "_json_destek", True)
+    llm_openai.sifirla()
+    yield
+    llm_openai.sifirla()
+
+
+def _oai(metin):
+    return {"choices": [{"message": {"content": metin}}]}
+
+
+def test_openai_istek_ve_json(openai_anahtar):
+    o = SahteOturum(SahteCevap(200, _oai('{"index": 1}')))
+    assert llm_openai.sor("sis", "soru", json_mod=True, oturum=o) == {"index": 1}
+    i = o.istekler[0]
+    assert i["url"] == "https://inference.ornek/v1/chat/completions"
+    assert i["headers"]["Authorization"] == "Bearer do-anahtar"
+    assert i["json"]["messages"][0] == {"role": "system", "content": "sis"}
+    assert i["json"]["response_format"] == {"type": "json_object"}
+
+
+def test_openai_json_bicimi_desteklenmezse_onsuz_dener(openai_anahtar):
+    o = SahteOturum(SahteCevap(400, {"error": "response_format"}), SahteCevap(200, _oai('ok {"a": 2}')))
+    assert llm_openai.sor("s", "m", json_mod=True, oturum=o) == {"a": 2}
+    assert "response_format" not in o.istekler[1]["json"]
+
+
+def test_openai_anahtarsiz_hazir_degil(monkeypatch):
+    monkeypatch.delenv("AJAN_YZ_ANAHTAR", raising=False)
+    llm_openai.sifirla()
+    assert llm_openai.hazir() is False
