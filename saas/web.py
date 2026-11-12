@@ -73,7 +73,9 @@ def musteri_ozeti(m, rol=None):
             "meta": m.get("meta_bilgi") or {}, "meta_bagli": bool(m.get("meta_token")),
             "meta_secim_bekliyor": bool(m.get("meta_aday")), "saat_dilimi": i.get("saat_dilimi"),
             "saat_kisaltma": i.get("saat_kisaltma"), "para": (m.get("profil") or {}).get("para_sembolu"),
-            "yayin_ayar": m.get("yayin_ayar") or {}, "son_uretim": m.get("son_uretim")}
+            "yayin_ayar": m.get("yayin_ayar") or {}, "son_uretim": m.get("son_uretim"),
+            "logo_yuklendi": bool(((m.get("profil") or {}).get("marka") or {}).get("logo_yuklendi")),
+            "site": (m.get("profil") or {}).get("site") or ""}
 
 
 def icerik_gorunumu(mid, ic, adresler):
@@ -95,7 +97,7 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
-SURUM = "2026-11-12.marka-ozeti"
+SURUM = "2026-11-13.yeni-panel"
 
 
 async def saglik(request):

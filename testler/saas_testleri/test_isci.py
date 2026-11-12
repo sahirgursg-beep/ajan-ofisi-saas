@@ -42,7 +42,8 @@ def test_uctan_uca_uret_onayla_yayinla_kaldir(d, graph, monkeypatch, tmp_path):
     monkeypatch.setenv("AJAN_YZ_SAGLAYICI", "gemini")         # anahtar yok -> hazir degil -> sablon metinler
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     mid = "oak"
-    d.musteri_ekle({"id": mid, "ad": "Oak", "profil": profil.formdan(FORM), "durum": "deneme",
+    d.musteri_ekle({"id": mid, "ad": "Oak", "durum": "deneme",
+                    "profil": profil.formdan({**FORM, "mesai_bas": "00:00", "mesai_bit": "23:59"}),  # saatten bagimsiz
                     "yayin_ayar": {"otomatik": False},
                     "meta_token": guvenlik.sifrele({"page_id": "111", "page_token": "SAYFA111", "ig_id": "ig111",
                                                     "page_ad": "Oak Page", "ig_kullanici": "oakember"})})

@@ -17,7 +17,7 @@ def test_saglik_ve_yapilandirma(sunucu):
     y = requests.get(sunucu + "/api/yapilandirma").json()
     assert y["yerel_giris"] is True and "supabase_anon" in y and "SERVICE" not in str(y)
     r = requests.get(sunucu + "/")
-    assert r.status_code == 200 and "Agent Office" in r.text and r.headers["X-Frame-Options"] == "DENY"
+    assert r.status_code == 200 and "FeedZync" in r.text and r.headers["X-Frame-Options"] == "DENY"
 
 
 def test_girissiz_ve_yabanci_erisemez(sunucu, d):
