@@ -6,17 +6,18 @@ import json
 import pytest
 from PIL import Image
 
-from ofis import (arastirma, ayarlar, fikir_kaynagi, gorsel_kaynak, llm, musteri, platformlar, rotus_bulut, sektor,
+from ofis import (arastirma, ayarlar, fal_ai, fikir_kaynagi, gorsel_kaynak, llm, musteri, platformlar, rotus_bulut, sektor,
                   sektor_bilgi)
 
 
 @pytest.fixture(autouse=True)
 def yapay_zeka_yok(monkeypatch):
     monkeypatch.setattr(llm, "hazir", lambda: False)
-    for y in (sektor.YOL, arastirma.RAPOR):
+    monkeypatch.delenv("FAL_KEY", raising=False)
+    for y in (sektor.YOL, arastirma.RAPOR, fal_ai.HARCAMA):
         y.unlink(missing_ok=True)
     yield
-    for y in (sektor.YOL, arastirma.RAPOR):
+    for y in (sektor.YOL, arastirma.RAPOR, fal_ai.HARCAMA):
         y.unlink(missing_ok=True)
 
 
@@ -300,3 +301,54 @@ def test_dikey_genisletme_desteklenmiyorsa_bir_daha_denemez(tmp_path, monkeypatc
     Image.new("RGB", (800, 1200)).save(dikey)
     monkeypatch.setattr(rotus_bulut, "_desteklenmiyor", False)
     assert rotus_bulut.dikey_genislet(dikey, oturum=http) is None and len(http.istekler) == 1
+
+
+# ---------------- fal.ai ----------------
+def _jpg_bytes(w, h, renk):
+    b = io.BytesIO()
+    Image.new("RGB", (w, h), renk).save(b, "JPEG")
+    return b.getvalue()
+
+
+def test_fal_genisletme_dogru_istek_harcama_ve_urun_korunur(tmp_path, monkeypatch):
+    monkeypatch.setenv("FAL_KEY", "fk")
+    monkeypatch.delenv("AJAN_YZ_ANAHTAR", raising=False)
+    yatay = tmp_path / "y.jpg"
+    Image.new("RGB", (1200, 800), (10, 200, 10)).save(yatay)
+    http = SahteHttp({"fal.run/fal-ai/flux-2-pro/outpaint": Yanit({"images": [{"url": "https://cdn.fal/x.jpg"}]}),
+                      "cdn.fal": Yanit(icerik=_jpg_bytes(1024, 1536, (0, 0, 255)))})
+    assert rotus_bulut.hazir()
+    sonuc = Image.open(rotus_bulut.dikey_genislet(yatay, oturum=http))
+    assert sonuc.size == (1024, 1536) and sonuc.getpixel((512, 768))[1] > 150 and sonuc.getpixel((512, 20))[2] > 150
+    istek = http.istekler[0][2]
+    assert istek["headers"]["Authorization"] == "Key fk"
+    assert istek["json"]["image_url"].startswith("data:image/jpeg;base64,")
+    assert istek["json"]["expand_top"] + istek["json"]["expand_bottom"] + 683 == 1536
+    assert fal_ai.bu_ay() == pytest.approx(0.06)
+
+
+def test_fal_aylik_tavan_dolunca_ucretli_cagri_yapilmaz(tmp_path, monkeypatch):
+    monkeypatch.setenv("FAL_KEY", "fk")
+    monkeypatch.setenv("AJAN_YZ_AYLIK_TAVAN", "1")
+    fal_ai.harca(0.995, "test")
+    yatay = tmp_path / "y.jpg"
+    Image.new("RGB", (1200, 800)).save(yatay)
+    http = SahteHttp({})
+    assert rotus_bulut.dikey_genislet(yatay, oturum=http) is None
+    assert gorsel_kaynak.yz_uret("kitchen", oturum=http) is None
+    assert http.istekler == []
+
+
+def test_fal_gorsel_uretimi(monkeypatch):
+    monkeypatch.setenv("FAL_KEY", "fk")
+    http = SahteHttp({"fal.run/fal-ai/flux-2/flash": Yanit({"images": [{"url": "https://cdn.fal/g.jpg"}]}),
+                      "cdn.fal": Yanit(icerik=_jpg_bytes(1024, 1536, (200, 200, 0)))})
+    yol = gorsel_kaynak.yz_uret("a tidy bakery counter", oturum=http)
+    assert Image.open(yol).size == (1024, 1536)
+    assert http.istekler[0][2]["json"]["image_size"] == {"width": 1024, "height": 1536}
+    assert fal_ai.bu_ay() == pytest.approx(0.01)
+
+
+def test_genisletme_fiyati_belgeyle_uyumlu():
+    assert fal_ai.genisletme_fiyati((1024, 1024), (1024, 1024)) == pytest.approx(0.045)
+    assert fal_ai.genisletme_fiyati((1024, 683), (1024, 1536)) == pytest.approx(0.06)

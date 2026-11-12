@@ -11,6 +11,7 @@ import os
 
 import requests
 
+from . import fal_ai
 from .ayarlar import VERI
 
 ONBELLEK = VERI / "gorsel_onbellek"
@@ -32,7 +33,9 @@ def stok_hazir():
 
 
 def yz_hazir():
-    return bool(os.environ.get("AJAN_YZ_ANAHTAR", "").strip()) and os.environ.get("AJAN_GORSEL_URET", "1") != "0"
+    if os.environ.get("AJAN_GORSEL_URET", "1") == "0":
+        return False
+    return fal_ai.hazir() or bool(os.environ.get("AJAN_YZ_ANAHTAR", "").strip())
 
 
 def _indir(http, adres):
@@ -96,6 +99,16 @@ def yz_uret(istem, boyut="1024x1536", oturum=None):
     if not yz_hazir():
         return None
     http = oturum or requests
+    w, h = (int(x) for x in boyut.split("x"))
+    if fal_ai.hazir():
+        im = fal_ai.uret(istem, w, h, oturum=http)
+        if im is None:
+            return None
+        yol = _yol(istem + "fal" + boyut, ".jpg")
+        im.save(yol, quality=93)
+        return str(yol)
+    if not fal_ai.butce_var(0.07):
+        return None
     url = (os.environ.get("AJAN_GORSEL_URL") or os.environ.get("AJAN_YZ_URL") or "https://inference.do-ai.run/v1").rstrip("/")
     model = os.environ.get("AJAN_GORSEL_MODEL", "openai-gpt-image-1")
     r = http.post(url + "/images/generations", timeout=240,
@@ -112,4 +125,5 @@ def yz_uret(istem, boyut="1024x1536", oturum=None):
         yol.write_bytes(g.content)
     else:
         return None
+    fal_ai.harca(0.07, "gorsel_uretim_do")
     return str(yol)

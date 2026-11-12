@@ -14,6 +14,7 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageFilter
 
+from . import fal_ai
 from .ayarlar import VERI
 
 KLASOR = VERI / "rotus"
@@ -21,7 +22,9 @@ _desteklenmiyor = False
 
 
 def hazir():
-    return bool(os.environ.get("AJAN_YZ_ANAHTAR", "").strip()) and os.environ.get("AJAN_ROTUS_BULUT", "1") != "0"
+    if os.environ.get("AJAN_ROTUS_BULUT", "1") == "0":
+        return False
+    return fal_ai.hazir() or bool(os.environ.get("AJAN_YZ_ANAHTAR", "").strip())
 
 
 def netlestir(yol, hedef_kisa_kenar=1080):
@@ -48,7 +51,7 @@ def _png(im):
 def dikey_genislet(yol, kutu=None, ipucu="", oturum=None):
     """-> 1024x1536 dikey gorselin yolu ya da None (servis yok / desteklenmiyor / hata)."""
     global _desteklenmiyor
-    if _desteklenmiyor or not hazir():
+    if not hazir() or (_desteklenmiyor and not fal_ai.hazir()):
         return None
     kaynak = Image.open(yol).convert("RGB")
     if kaynak.height >= kaynak.width * 1.2:
@@ -62,6 +65,17 @@ def dikey_genislet(yol, kutu=None, ipucu="", oturum=None):
     maske = Image.new("RGBA", (W, H), (0, 0, 0, 0))   # seffaf = doldurulacak alan
     maske.paste(Image.new("RGBA", ic.size, (0, 0, 0, 255)), (0, y0))
     http = oturum or requests
+    if fal_ai.hazir():                               # fal.ai: dogrudan yukari/asagi genisletme
+        try:
+            sonuc = fal_ai.genislet(ic, y0, H - ic.height - y0, oturum=http)
+        except Exception as e:
+            print(f"  ! fal.ai rotus hatasi: {str(e)[:160]}")
+            sonuc = None
+        if sonuc is None:
+            return None
+        return _bitir(sonuc, ic, y0, yol)
+    if _desteklenmiyor or not fal_ai.butce_var(0.07):
+        return None
     url = (os.environ.get("AJAN_GORSEL_URL") or os.environ.get("AJAN_YZ_URL") or "https://inference.do-ai.run/v1").rstrip("/")
     model = os.environ.get("AJAN_GORSEL_MODEL", "openai-gpt-image-1")
     istem = ("Extend the photo naturally upward and downward to a vertical frame: continue the same room, floor, "
@@ -88,7 +102,12 @@ def dikey_genislet(yol, kutu=None, ipucu="", oturum=None):
     except Exception as e:
         print(f"  ! bulut rotus hatasi: {str(e)[:160]}")
         return None
-    sonuc = sonuc.resize((W, H), Image.LANCZOS)
+    fal_ai.harca(0.07, "rotus_genisletme_do")
+    return _bitir(sonuc, ic, y0, yol)
+
+
+def _bitir(sonuc, ic, y0, yol, W=1024, H=1536):
+    sonuc = sonuc.convert("RGB").resize((W, H), Image.LANCZOS)
     sonuc.paste(ic, (0, y0))                         # urun alani birebir orijinal
     KLASOR.mkdir(parents=True, exist_ok=True)
     cikti = KLASOR / f"dikey_{Path(yol).stem}.jpg"
