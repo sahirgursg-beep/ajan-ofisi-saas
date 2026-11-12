@@ -316,7 +316,7 @@ BOS_BEKLE_SN = int(os.environ.get("SAAS_BOS_BEKLE_SN", "5"))
 
 def main():
     isci_adi = f"{socket.gethostname()}-{os.getpid()}"
-    eksik = ayar.kontrol()
+    eksik = [e for e in ayar.kontrol() if not e.startswith("META_")]   # Meta henuz yoksa isci yine calisir
     if eksik:
         # Hizli yeniden baslatma dongusune girmesin; kayitta ne eksik oldugu acikca gorunsun
         gunluk("AYAR EKSIK, isci baslamiyor: " + ", ".join(eksik) +
