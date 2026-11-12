@@ -21,8 +21,12 @@ def _env_dosyasi():
 _env_dosyasi()
 
 
+BOS = {"", "-", "yok", "none", "bekliyor"}      # panelde zorunlu alan icin yazilan yer tutucular = tanimsiz
+
+
 def al(ad, varsayilan=None, zorunlu=False):
-    v = os.environ.get(ad, varsayilan)
+    v = os.environ.get(ad)
+    v = varsayilan if v is None or v.strip().lower() in BOS else v.strip()
     if zorunlu and not v:
         raise RuntimeError(f"Ortam degiskeni eksik: {ad}")
     return v
