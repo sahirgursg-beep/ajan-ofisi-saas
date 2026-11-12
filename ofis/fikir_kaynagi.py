@@ -30,7 +30,8 @@ def _adres(baslik):
 def _fikir_listesi(adet):
     p = sektor.profil()
     r = arastirma.rapor()
-    havuz = [sektor.doldur(f) for f in (r.get("fikirler") or []) + p.get("fikirler", [])]
+    from . import yuklemeler
+    havuz = [sektor.doldur(f) for f in yuklemeler.belge_fikirleri() + (r.get("fikirler") or []) + p.get("fikirler", [])]
     kullanilan = pano.son_hazirlananlar(TEKRAR_GUN)
     o = marka_ozeti.ozet()
     cevap = None

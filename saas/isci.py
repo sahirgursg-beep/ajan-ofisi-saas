@@ -28,7 +28,7 @@ from .depo import Cakisma, depo
 
 MEDYA = {".jpg", ".jpeg", ".png", ".mp4", ".webp"}
 EK_SINIRI = 300_000                       # bundan buyuk metin dosyasi icerik kaydina girmez
-VERI_HARIC = {"meta.json", "yayin.kilit", "gorsel_onbellek", "proje_onbellek", "yayinci_hata.log", "gunluk.log"}
+VERI_HARIC = {"meta.json", "yayin.kilit", "gorsel_onbellek", "proje_onbellek", "yukleme_onbellek", "yayinci_hata.log", "gunluk.log"}
 MEDYA_GEREKEN_DURUMLAR = {"onaylandi", "yayinlaniyor", "kismen", "hata", "kacirildi", "kaldiriliyor",
                           "kaldirma_hatasi", "revize_isteniyor"}
 ISCI_DURUMLARI = {"yayinlaniyor", "yayinlandi", "kismen", "hata", "kaldirildi", "kaldirma_hatasi", "kacirildi",
@@ -63,6 +63,8 @@ def indir(m, kok, tur, parametre):
     if baglanti:
         (veri / "meta.json").write_text(json.dumps(baglanti, ensure_ascii=False), encoding="utf-8")
 
+    yuklemeler_indir(d, mid, kok, tur)
+
     goruntu = {}
     hedef_klasor = (parametre or {}).get("klasor")
     for ic in d.icerikler(mid, 80):
@@ -82,7 +84,56 @@ def indir(m, kok, tur, parametre):
         goruntu[ic["klasor"]] = {"surum": ic["surum"], "yayin": ic.get("yayin") or {}, "meta": ic.get("meta") or {},
                                  "caption": ic.get("caption") or "", "ekler": ic.get("ekler") or {},
                                  "dosyalar": set(ic.get("dosyalar") or [])}
-    return {"icerik": goruntu, "pano_son": _pano_son_id(veri), "yayin_ayar": m.get("yayin_ayar") or {}}
+    return {"icerik": goruntu, "pano_son": _pano_son_id(veri), "yayin_ayar": m.get("yayin_ayar") or {},
+            "yuklemeler": _dizin_oku(kok)}
+
+
+YUKLEME_INDIR = 150        # en yeni ... dosya indirilir (eski/kullanilmislar gerekmez)
+
+
+def _dizin_oku(kok):
+    try:
+        return json.loads((kok / "yuklemeler" / "index.json").read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+
+def yuklemeler_indir(d, mid, kok, tur):
+    """Logo + panelden yuklenen dosyalar (yalnizca uretimde gerekenler)."""
+    if tur not in ("uret", "revize", "plan"):
+        return
+    d.dosya_indir(f"{mid}/yuklemeler/logo.png", kok / "marka" / "logo.png")
+    kayitlar = d.json_oku(f"{mid}/yuklemeler/index.json", [])
+    if not isinstance(kayitlar, list) or not kayitlar:
+        return
+    hedef = kok / "yuklemeler"
+    hedef.mkdir(parents=True, exist_ok=True)
+    (hedef / "index.json").write_text(json.dumps(kayitlar, ensure_ascii=False), encoding="utf-8")
+    gerekli = [k for k in sorted(kayitlar, key=lambda x: x.get("tarih", ""), reverse=True)
+               if k.get("dosya") and (not k.get("kullanim") or k.get("tur") == "belge")][:YUKLEME_INDIR]
+    for k in gerekli:
+        ad = Path(str(k["dosya"])).name
+        if ad and not ad.startswith("."):
+            d.dosya_indir(f"{mid}/yuklemeler/{ad}", hedef / ad)
+
+
+def yuklemeler_geri_yaz(d, mid, kok, eski):
+    """Isci analiz/kullanim bilgisini ekledi: depodaki GUNCEL dizinle birlestirip yazar
+    (is surerken panelden yuklenen ya da silinen dosyalar korunur)."""
+    yeni = _dizin_oku(kok)
+    if not yeni or yeni == eski:
+        return
+    isci = {k.get("id"): k for k in yeni if isinstance(k, dict)}
+    guncel = d.json_oku(f"{mid}/yuklemeler/index.json", [])
+    if not isinstance(guncel, list):
+        return
+    for k in guncel:
+        w = isci.get(k.get("id"))
+        if w:
+            for alan in ("analiz", "kullanim"):
+                if w.get(alan):
+                    k[alan] = w[alan]
+    d.json_yaz(f"{mid}/yuklemeler/index.json", guncel)
 
 
 def _pano_son_id(veri):
@@ -226,6 +277,11 @@ def geri_yaz(m, kok, goruntu, tur, basari):
         else:
             d.icerik_yaz(mid, kayit)
         yazilan += 1
+
+    try:
+        yuklemeler_geri_yaz(d, mid, kok, goruntu.get("yuklemeler") or [])
+    except Exception as e:
+        gunluk(f"yukleme dizini yazilamadi: {e}")
 
     # veri paketi (Meta anahtari ve onbellekler haric)
     paket = kok.parent / "_veri_yeni.tar.gz"

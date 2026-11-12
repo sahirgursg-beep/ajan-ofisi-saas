@@ -19,7 +19,8 @@ LISTE_ALANLARI = ("sutunlar", "fikirler", "kancalar", "stok", "hashtag")
 
 def _tanim_metni():
     i = musteri.bilgi()
-    return " | ".join(x for x in (i.get("ad"), i.get("tanim"), i.get("urun_turu"), i.get("sektor"),
+    return " | ".join(x for x in (i.get("ad"), i.get("tanim"), ", ".join(i.get("hizmetler") or []),
+                                  i.get("urun_turu"), i.get("sektor"),
                                   " ".join(AYAR.get("kategoriler") or [])) if x)
 
 
@@ -29,13 +30,8 @@ def _imza():
 
 def kelime_ile_bul(metin):
     """En cok anahtar kelime eslesen sektor; yoksa 'genel'."""
-    m = (metin or "").lower()
-    en_iyi, puan = "genel", 0
-    for k, s in sektor_bilgi.SEKTORLER.items():
-        p = sum(len(w) for w in s["kelimeler"] if re.search(r"(?<![a-z])" + re.escape(w.lower()) + r"(?![a-z])", m))
-        if p > puan:
-            en_iyi, puan = k, p
-    return en_iyi
+    from .sektor_isleri import tahmin
+    return tahmin(metin)
 
 
 def _yz_profil(taban_anahtar):
@@ -45,6 +41,7 @@ def _yz_profil(taban_anahtar):
         "You are a senior social media strategist who has run accounts for every kind of business. "
         "Answer ONLY with valid JSON.",
         f"Business: {i.get('ad')}\nDescription from the owner: {i.get('tanim') or '-'}\n"
+        f"What they offer (picked by the owner): {', '.join(i.get('hizmetler') or []) or '-'}\n"
         f"Location: {musteri.sehirler_metni()}, {i.get('ulke') or ''}\n"
         f"Sales channel: {musteri.satis_kanali()}\n\nKnown sector keys:\n{liste}\n\n"
         f"Keyword guess: {taban_anahtar}.\n"
@@ -75,7 +72,7 @@ def profil(yenile=False):
     if i.get("sektor") in sektor_bilgi.SEKTORLER:
         anahtar = i["sektor"]
     else:   # once sahibin tek cumlesi; bulunamazsa ad + kategoriler (sablondan kalan kategoriler yaniltmasin)
-        anahtar = kelime_ile_bul(f"{i.get('ad') or ''} {i.get('tanim') or ''}")
+        anahtar = kelime_ile_bul(f"{i.get('ad') or ''} {i.get('tanim') or ''} {' '.join(i.get('hizmetler') or [])}")
         if anahtar == "genel":
             anahtar = kelime_ile_bul(_tanim_metni())
     p = json.loads(json.dumps(sektor_bilgi.al(anahtar)))

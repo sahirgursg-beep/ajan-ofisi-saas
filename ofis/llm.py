@@ -75,6 +75,18 @@ def sor(sistem, mesaj, json_mod=False, sicaklik=0.7):
     return None
 
 
+def gor(sistem, mesaj, gorsel_yollari, json_mod=True):
+    """Gorselleri de inceleyen soru (destekleyen saglayicilar: gor() fonksiyonu olanlar). Yoksa None."""
+    for ad in _adlar():
+        s = _yukle(ad)
+        if not s or not s.hazir() or not hasattr(s, "gor"):
+            continue
+        cevap = s.gor(sistem, mesaj, gorsel_yollari, json_mod=json_mod)
+        if cevap is not None:
+            return cevap
+    return None
+
+
 def sifirla():
     for ad in _adlar():
         s = _yukle(ad)

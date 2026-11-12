@@ -55,7 +55,18 @@ def main(plan_tarihi=None):
         except Exception as e:
             print("arastirma:", e)
 
-    adaylar = U.urunleri_getir(demo=demo)
+    yuk = []
+    if not demo:
+        try:             # sahibin yukledigi fotograflar/belgeler: once incelenir, fotograflar her zaman once kullanilir
+            from ofis import yuklemeler
+            yuklemeler.incele(gunluk=lambda m: pano.yaz("UrunSorumlusu", "Yonetici", m))
+            yuk = yuklemeler.kaynak_urunleri(3)
+            if yuk:
+                Y.soyle("Herkes", f"Isletme sahibinin yukledigi {len(yuk)} fotograf grubu bugun once kullanilacak: "
+                        + "; ".join(u["ad"] for u in yuk))
+        except Exception as e:
+            print("yuklemeler:", e)
+    adaylar = U.urunleri_getir(demo=demo) or list(yuk)
     if not adaylar:
         Y.soyle("Herkes", "Urun olmadan devam edemiyoruz, bugunluk bu kadar.", "hata")
         return 1
@@ -96,6 +107,11 @@ def main(plan_tarihi=None):
             urun = aci = None          # proje icerigi cikmadiysa bu format normal urunle devam
         if slot and slot.get("urun"):
             urun, aci = P.plandan(dict(plan_gunu, urun=slot["urun"], aci=slot.get("aci", "")), adaylar, tum)
+        if not urun and yuk:
+            sec = [u for u in yuk if len(u["gorseller"]) >= 3] if tur == "carousel" else []
+            urun = (sec or yuk)[0]
+            yuk.remove(urun)
+            aci = urun.get("aci") or "Real photo from the business: show it honestly and warmly."
         if not urun:
             havuz = [u for u in adaylar if u["url"] not in kullanilan] or adaylar
             if tur == "carousel":
@@ -110,6 +126,9 @@ def main(plan_tarihi=None):
         if not klasor:
             continue
         uretilen.append(klasor)
+        if urun.get("yukleme"):
+            from ofis import yuklemeler
+            yuklemeler.kullanildi(urun, klasor)
         if plan_gunu:
             plan.icerik_guncelle(plan_gunu["tarih"], tur, klasor=klasor.name, urun=plan._ozet(urun))
     if uretilen:

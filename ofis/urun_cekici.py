@@ -217,7 +217,11 @@ def _jsonld(soup):
 
 
 def urun_sayfasi_oku(url):
-    soup = BeautifulSoup(_get(url).text, "html.parser")
+    return urun_html_oku(_get(url).text, url)
+
+
+def urun_html_oku(html, url):
+    soup = BeautifulSoup(html, "html.parser")
     ld = _jsonld(soup)
     urun = next((d for d in ld if "product" in str(d.get("@type", "")).lower()), None)
     meta = lambda p: (soup.find("meta", property=p) or soup.find("meta", attrs={"name": p}) or {}).get("content")
@@ -288,33 +292,75 @@ def kategori_uygun(urun):
     return not anahtarlar or any(k in metin for k in anahtarlar)
 
 
-def urunleri_cek(gunluk=print):
-    site = AYAR["site"]
+PLATFORM = VERI / "site_platformu.json"
+
+
+def _site_taramasi(site, gunluk):
+    gunluk("sitemap.xml aranıyor...")
+    linkler = sitemap_linkleri(site)
+    if not linkler:
+        gunluk("sitemap yok, sayfa linkleri taranıyor...")
+        linkler = sayfa_linkleri(site)
+    linkler.sort(key=lambda u: 0 if kategori_uygun({"url": u}) else 1)
+    gunluk(f"{len(linkler)} link bulundu, urun sayfalari okunuyor...")
     urunler = []
+    for u in linkler:
+        if len(urunler) >= AYAR.get("max_urun_tarama", 60):
+            break
+        try:
+            p = urun_sayfasi_oku(u)
+        except Exception:
+            p = None
+        if p and p["gorseller"]:
+            urunler.append(p)
+    return urunler
+
+
+def urunleri_cek(gunluk=print):
+    """Sira: XML feed -> platform entegrasyonu (Shopify/WooCommerce) -> sitemap/sayfa taramasi ->
+    gercek tarayici (JavaScript siteleri). Hangi yolun calistigi veri/site_platformu.json'a yazilir."""
+    from datetime import datetime
+    from . import entegrasyon
+    site = AYAR.get("site") or ""
+    urunler, yontem, platform = [], "", ""
+    try:     # bu hafta zaten taranip urun cikmadiysa (kurumsal/hizmet sitesi) her gun yeniden tarama
+        onceki = json.loads(PLATFORM.read_text(encoding="utf-8"))
+        if (not AYAR.get("feed_url") and onceki.get("site") == site and onceki.get("urun_sayisi") == 0
+                and (datetime.now() - datetime.fromisoformat(onceki["tarih"])).days < 7):
+            gunluk("Bu sitede urun listesi yok (son 7 gunde tarandi).")
+            return []
+    except Exception:
+        pass
     if AYAR.get("feed_url"):
         gunluk("XML feed okunuyor...")
-        urunler = feed_oku(AYAR["feed_url"])
-    else:
-        gunluk("sitemap.xml aranıyor...")
-        linkler = sitemap_linkleri(site)
-        if not linkler:
-            gunluk("sitemap yok, sayfa linkleri taranıyor...")
-            linkler = sayfa_linkleri(site)
-        # kategori kelimesi gecen linkleri one al
-        linkler.sort(key=lambda u: 0 if kategori_uygun({"url": u}) else 1)
-        gunluk(f"{len(linkler)} link bulundu, urun sayfalari okunuyor...")
-        for u in linkler:
-            if len(urunler) >= AYAR.get("max_urun_tarama", 60):
-                break
-            try:
-                p = urun_sayfasi_oku(u)
-            except Exception:
-                p = None
-            if p and p["gorseller"]:
-                urunler.append(p)
+        urunler, yontem = feed_oku(AYAR["feed_url"]), "xml"
+    if not urunler and site:
+        platform = entegrasyon.platform_bul(site)
+        try:
+            if platform == "shopify":
+                gunluk("Shopify magazasi: urunler okunuyor...")
+                urunler, yontem = entegrasyon.shopify_urunleri(site), "shopify"
+            elif platform == "woocommerce":
+                gunluk("WooCommerce magazasi: urunler okunuyor...")
+                urunler, yontem = entegrasyon.woocommerce_urunleri(site), "woocommerce"
+        except Exception as e:
+            gunluk(f"Entegrasyon okunamadi ({type(e).__name__}); site taramasina geciliyor.")
+    if not urunler and site:
+        urunler, yontem = _site_taramasi(site, gunluk), "site_tarama"
+    if not urunler and site:
+        gunluk("Klasik tarama urun bulamadi; gercek tarayiciyla inceleniyor...")
+        try:
+            urunler = entegrasyon.tarayici_ile_tara(site, urun_html_oku, gunluk=gunluk)
+            yontem = "tarayici"
+        except Exception as e:
+            gunluk(f"Tarayici taramasi basarisiz ({type(e).__name__}): {str(e)[:100]}")
+    PLATFORM.parent.mkdir(parents=True, exist_ok=True)
+    PLATFORM.write_text(json.dumps({"site": site, "platform": platform, "yontem": yontem if urunler else "",
+                                    "urun_sayisi": len(urunler), "tarih": datetime.now().isoformat(timespec="seconds")},
+                                   ensure_ascii=False), encoding="utf-8")
     TUM_ONBELLEK.parent.mkdir(parents=True, exist_ok=True)
     TUM_ONBELLEK.write_text(json.dumps(urunler, ensure_ascii=False), encoding="utf-8")
-    uygun = [u for u in urunler if kategori_uygun(u)]
+    uygun = [u for u in urunler if kategori_uygun(u) and u.get("stokta", True)]
     if urunler and not uygun:
         gunluk("! Kategori filtresi hic urun birakmadi, tum urunler kullaniliyor.")
         uygun = urunler

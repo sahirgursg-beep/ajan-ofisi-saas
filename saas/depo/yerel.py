@@ -206,6 +206,9 @@ class YerelDepo(Depo):
         hedef.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(yerel_yol, hedef)
 
+    def dosya_sil(self, anahtar):
+        self._yol(anahtar).unlink(missing_ok=True)
+
     def dosya_indir(self, anahtar, hedef):
         kaynak = self._yol(anahtar)
         if not kaynak.exists():

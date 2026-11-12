@@ -57,6 +57,30 @@ class Depo:
     def dosya_yukle(self, anahtar, yerel_yol, tip=None): raise NotImplementedError
     def dosya_indir(self, anahtar, hedef): raise NotImplementedError
     def dosya_adresi(self, anahtar, sure_sn=3600): raise NotImplementedError
+    def dosya_sil(self, anahtar): raise NotImplementedError
+
+    def json_oku(self, anahtar, varsayilan=None):
+        """Depodaki kucuk bir JSON dosyasi (yukleme dizini gibi)."""
+        import json
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as t:
+            yol = Path(t) / "x.json"
+            if not self.dosya_indir(anahtar, yol):
+                return varsayilan
+            try:
+                return json.loads(yol.read_text(encoding="utf-8"))
+            except ValueError:
+                return varsayilan
+
+    def json_yaz(self, anahtar, veri):
+        import json
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as t:
+            yol = Path(t) / "x.json"
+            yol.write_text(json.dumps(veri, ensure_ascii=False), encoding="utf-8")
+            self.dosya_yukle(anahtar, yol, "application/json")
 
     def dosya_adresleri(self, anahtarlar, sure_sn=3600):
         """Birden cok imzali adres (panelde gorseller). Arka uc toplu imzalayabiliyorsa onu kullanir."""

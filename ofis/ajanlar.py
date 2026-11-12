@@ -554,7 +554,9 @@ class KaliteKontrol(Ajan):
                 notlar.append(f"Remove '{y}': {musteri.satis_kanali()}")
         if urun.get("fikir"):
             from . import marka_ozeti
-            gercek = " ".join(marka_ozeti.ozet().get("kanitlanmis_bilgiler") or []).lower()
+            from . import yuklemeler
+            gercek = " ".join((marka_ozeti.ozet().get("kanitlanmis_bilgiler") or [])
+                              + yuklemeler.belge_gercekleri()).lower()
             butun = " ".join([metin, str(taslak.get("hook", "")), str(taslak.get("headline", ""))]
                              + [str(x) for x in (taslak.get("reels_lines") or []) + (taslak.get("carousel_lines") or [])])
             for sayi in re.findall(r"\d[\d,.]*\s*(?:%|x\b|percent|followers|clients|customers|sales|likes|"

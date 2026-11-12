@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from starlette.applications import Starlette
+from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -20,7 +21,7 @@ from starlette.responses import FileResponse, JSONResponse, RedirectResponse, Re
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
-from . import ayar, guvenlik, kuyruk, meta_oauth, profil, yayin_durum, zamanlayici
+from . import ayar, guvenlik, kuyruk, meta_oauth, profil, yayin_durum, yukleme, zamanlayici
 from .depo import Cakisma, depo
 
 PANEL = ayar.KOK / "saas" / "panel"
@@ -103,6 +104,93 @@ async def saglik(request):
                          "surum": SURUM,
                          "servisler": {"yapay_zeka": var("AJAN_YZ_ANAHTAR"), "fal": var("FAL_KEY"),
                                        "pixabay": var("PIXABAY_API_KEY"), "pexels": var("PEXELS_API_KEY")}})
+
+
+# ---------------------------------------------------------------- yuklemeler / logo / site kontrolu
+async def _form_dosyalari(request, en_fazla=20):
+    form = await request.form(max_files=en_fazla, max_fields=10, max_part_size=21 * 1024 * 1024)
+    dosyalar = []
+    for f in form.getlist("dosya"):
+        if hasattr(f, "read"):
+            dosyalar.append((f.filename or "dosya", await f.read()))
+    return form, dosyalar
+
+
+async def yukle(request):
+    _, m = musteri_yetki(request, YAZAN)
+    try:
+        form, dosyalar = await _form_dosyalari(request)
+    except Exception:
+        return hata("Upload at most 20 files at once (photos under 15 MB, documents under 20 MB)")
+    if not dosyalar:
+        return hata("Choose at least one file")
+    try:
+        yeni = await run_in_threadpool(yukleme.ekle, depo(), m["id"], dosyalar, str(form.get("not") or ""))
+    except yukleme.YuklemeHatasi as e:
+        return hata(str(e))
+    return JSONResponse({"eklenen": len(yeni), "dosyalar": await run_in_threadpool(yukleme.gorunum, depo(), m["id"])})
+
+
+async def yuklemeler(request):
+    _, m = musteri_yetki(request)
+    return JSONResponse({"dosyalar": await run_in_threadpool(yukleme.gorunum, depo(), m["id"])})
+
+
+async def yukleme_sil(request):
+    _, m = musteri_yetki(request, YAZAN)
+    ok = await run_in_threadpool(yukleme.sil, depo(), m["id"], request.path_params["kimlik"])
+    if not ok:
+        return hata("Not found", 404)
+    return JSONResponse({"dosyalar": await run_in_threadpool(yukleme.gorunum, depo(), m["id"])})
+
+
+async def logo_yukle(request):
+    _, m = musteri_yetki(request, YAZAN)
+    try:
+        _, dosyalar = await _form_dosyalari(request, 1)
+        if not dosyalar:
+            return hata("Choose your logo file")
+        palet = await run_in_threadpool(yukleme.logo_kaydet, depo(), m["id"], dosyalar[0][1])
+    except yukleme.YuklemeHatasi as e:
+        return hata(str(e))
+    except Exception:
+        return hata("Upload your logo as PNG or JPG (under 8 MB)")
+    p = dict(m["profil"])
+    marka = dict(p.get("marka") or {})
+    sablon = profil.sablon().get("marka", {})
+    if palet and all(marka.get(k) in (None, "", sablon.get(k)) for k in palet):   # renkleri kendisi secmediyse
+        marka.update(palet)
+    marka.update({"logo": "marka/logo.png", "logo_yuklendi": True, "logo_isleme": ""})
+    p["marka"] = marka
+    m = depo().musteri_guncelle(m["id"], profil=p)
+    adres = depo().dosya_adresi(f"{m['id']}/yuklemeler/logo.png")
+    return JSONResponse({"logo": adres, "renkler": {k: marka.get(k) for k in ("renk_koyu", "renk_altin", "renk_acik")},
+                         "ozet": musteri_ozeti(m)})
+
+
+async def logo_al(request):
+    _, m = musteri_yetki(request)
+    if not ((m.get("profil") or {}).get("marka") or {}).get("logo_yuklendi"):
+        return JSONResponse({"logo": None})
+    return JSONResponse({"logo": depo().dosya_adresi(f"{m['id']}/yuklemeler/logo.png")})
+
+
+async def site_kontrol(request):
+    kullanici(request)                      # yalnizca giris yapmis kullanicilar (acik vekil olmasin)
+    g = await govde(request)
+    from ofis import entegrasyon
+    return JSONResponse(await run_in_threadpool(entegrasyon.site_bilgisi, str(g.get("site") or "")[:200]))
+
+
+async def sektorler(request):
+    """Kayit formu icin sektorler ve her sektorde sunulan isler (oneri cipleri)."""
+    from ofis import sektor_isleri
+    return JSONResponse({"sektorler": sektor_isleri.liste()}, headers={"Cache-Control": "public, max-age=3600"})
+
+
+async def sektor_tahmin(request):
+    from ofis import sektor_isleri
+    return JSONResponse({"sektor": sektor_isleri.tahmin(request.query_params.get("metin", "")[:300])})
 
 
 async def yapilandirma(request):
@@ -367,11 +455,16 @@ async def guvenlik_basliklari(request, call_next):
 M = "/api/musteri/{mid}"
 routes = [
     Route("/", panel), Route("/saglik", saglik),
-    Route("/api/yapilandirma", yapilandirma), Route("/api/yerel-giris", yerel_giris, methods=["POST"]),
+    Route("/api/yapilandirma", yapilandirma), Route("/api/sektorler", sektorler),
+    Route("/api/sektor-tahmin", sektor_tahmin), Route("/api/yerel-giris", yerel_giris, methods=["POST"]),
     Route("/api/ben", ben), Route("/api/musteri", musteri_olustur, methods=["POST"]),
     Route(M + "/profil", profil_al), Route(M + "/profil", profil_guncelle, methods=["PUT"]),
     Route(M + "/yayin-ayar", yayin_ayari, methods=["PUT"]),
     Route(M + "/icerikler", icerik_listesi),
+    Route(M + "/yukle", yukle, methods=["POST"]), Route(M + "/yuklemeler", yuklemeler),
+    Route(M + "/yukleme/{kimlik}/sil", yukleme_sil, methods=["POST"]),
+    Route(M + "/logo", logo_yukle, methods=["POST"]), Route(M + "/logo", logo_al),
+    Route("/api/site-kontrol", site_kontrol, methods=["POST"]),
     Route(M + "/icerik/{klasor}/{islem}", icerik_karar, methods=["POST"]),
     Route(M + "/uret", uret, methods=["POST"]), Route(M + "/isler", is_listesi), Route(M + "/pano", pano),
     Route(M + "/meta/baglan", meta_baglan), Route(M + "/meta/adaylar", meta_adaylar),

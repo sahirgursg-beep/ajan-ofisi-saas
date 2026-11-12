@@ -4,3 +4,4 @@ Pillow
 numpy
 imageio-ffmpeg
 playwright
+pypdf

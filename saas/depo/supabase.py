@@ -150,6 +150,9 @@ class SupabaseDepo(Depo):
             self._istek("POST", f"/storage/v1/object/{self._nesne(anahtar)}", data=f,
                         headers={"Content-Type": tip, "x-upsert": "true"}, timeout=600)
 
+    def dosya_sil(self, anahtar):
+        self._istek("DELETE", f"/storage/v1/object/{self._nesne(anahtar)}", beklenen=(200, 204, 400, 404))
+
     def dosya_indir(self, anahtar, hedef):
         r = self.http.get(f"{self.url}/storage/v1/object/{self._nesne(anahtar)}", headers=self.baslik,
                           stream=True, timeout=600)

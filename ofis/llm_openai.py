@@ -106,6 +106,58 @@ def sor(sistem, mesaj, json_mod=False, sicaklik=0.7, oturum=None):
     return None
 
 
+_gorme_yok = False
+
+
+def _veri_uri(yol, kenar=896):
+    import base64
+    import io
+    from PIL import Image, ImageOps
+    im = ImageOps.exif_transpose(Image.open(yol)).convert("RGB")
+    im.thumbnail((kenar, kenar))
+    b = io.BytesIO()
+    im.save(b, "JPEG", quality=85)
+    return "data:image/jpeg;base64," + base64.b64encode(b.getvalue()).decode()
+
+
+def gor(sistem, mesaj, gorsel_yollari, json_mod=True, oturum=None):
+    """Gorsel + metin (OpenAI 'image_url' bicimi). Model gorsel kabul etmiyorsa None ve bir daha denemez.
+    AJAN_YZ_GORME_MODEL ile ayri bir gorsel model secilebilir (varsayilan: metin modeli)."""
+    global _gorme_yok
+    if _gorme_yok or not hazir():
+        return None
+    http = oturum or requests
+    icerik = [{"type": "text", "text": mesaj}]
+    for y in list(gorsel_yollari)[:4]:
+        try:
+            icerik.append({"type": "image_url", "image_url": {"url": _veri_uri(y)}})
+        except Exception as e:
+            print(f"  ! gorsel okunamadi {y}: {e}")
+    govde = {"model": os.environ.get("AJAN_YZ_GORME_MODEL") or model_adi(), "temperature": 0.2,
+             "messages": [{"role": "system", "content": sistem}, {"role": "user", "content": icerik}]}
+    if json_mod and _json_destek:
+        govde["response_format"] = {"type": "json_object"}
+    try:
+        r = http.post(_url() + "/chat/completions", json=govde, timeout=180,
+                      headers={"Authorization": f"Bearer {_anahtar()}"})
+        if r.status_code == 400 and "response_format" in govde:
+            govde.pop("response_format")
+            r = http.post(_url() + "/chat/completions", json=govde, timeout=180,
+                          headers={"Authorization": f"Bearer {_anahtar()}"})
+        if r.status_code in (400, 404, 415, 422):
+            _gorme_yok = True
+            print(f"  ! Model gorsel kabul etmiyor (HTTP {r.status_code}); gorsel inceleme kapali.")
+            return None
+        r.raise_for_status()
+        veri = r.json()
+        _maliyet_yaz(veri.get("usage") or {})
+        metin = (veri["choices"][0]["message"].get("content") or "").strip()
+        return json_coz(metin) if json_mod else metin
+    except Exception as e:
+        print(f"  ! Gorsel inceleme hatasi: {str(e)[:160]}")
+        return None
+
+
 def _maliyet_yaz(kullanim):
     """Token kullanimini aylik yapay zeka harcamasina ekler (fiyatlar USD / 1M token, ortamdan degistirilebilir)."""
     try:

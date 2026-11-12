@@ -32,7 +32,7 @@ def _site():
 
 def _imza():
     i = musteri.bilgi()
-    return hashlib.sha1(f"{i.get('ad')}|{i.get('tanim')}|{_site()}|v1".encode()).hexdigest()[:12]
+    return hashlib.sha1(f"{i.get('ad')}|{i.get('tanim')}|{i.get('hizmetler')}|{_site()}|v1".encode()).hexdigest()[:12]
 
 
 def _metin(html):
@@ -74,6 +74,14 @@ def site_metni(oturum=None, en_fazla=9000):
             parcalar.append(_metin(r.text)[1][:2500])
         except Exception:
             pass
+    if "wp-content" in r.text or "wp-json" in r.text:
+        try:
+            from . import entegrasyon
+            yazilar = entegrasyon.wordpress_yazilari(site, http, 8)
+            if yazilar:
+                parcalar.append("Recent blog posts:\n" + "\n".join(f"- {y['baslik']}: {y['ozet'][:200]}" for y in yazilar))
+        except Exception:
+            pass
     return "\n---\n".join(parcalar)[:en_fazla]
 
 
@@ -95,6 +103,7 @@ def ozet(yenile=False, oturum=None):
         "You are a brand strategist. You read what a business says about itself and write a factual brief "
         "for its social media team. Never invent anything. Answer ONLY with valid JSON.",
         f"Business name: {i.get('ad')}\nOwner's one-line description: {i.get('tanim') or '-'}\n"
+        f"What they offer (picked by the owner, trust this): {', '.join(i.get('hizmetler') or []) or '-'}\n"
         f"Location: {musteri.sehirler_metni()}, {i.get('ulke') or ''}\nSales channel: {musteri.satis_kanali()}\n"
         f"Website text (may be empty):\n{kaynak or '(no website text)'}\n\n"
         "Write the brief in English:\n"
@@ -136,14 +145,22 @@ def istem_ozeti():
     o = ozet()
     satirlar = ["\nBUSINESS FACTS (the only facts you may state about this business):",
                 f"- What it does: {o.get('ne_yapar') or musteri.tanim()}"]
-    if o.get("sunulanlar"):
-        satirlar.append(f"- Offers: {', '.join(o['sunulanlar'])}")
+    sunulan = list(dict.fromkeys((musteri.bilgi().get("hizmetler") or []) + (o.get("sunulanlar") or [])))
+    if sunulan:
+        satirlar.append(f"- Offers: {', '.join(sunulan[:12])}")
     if o.get("kime"):
         satirlar.append(f"- Customers: {o['kime']}")
     if o.get("farki"):
         satirlar.append(f"- Difference: {o['farki']}")
     if o.get("kanitlanmis_bilgiler"):
         satirlar.append(f"- Verified facts: {'; '.join(o['kanitlanmis_bilgiler'])}")
+    try:
+        from . import yuklemeler
+        belge = yuklemeler.belge_gercekleri()
+        if belge:
+            satirlar.append(f"- From the owner's documents: {'; '.join(belge)}")
+    except Exception:
+        pass
     satirlar.append("HONESTY RULES: never invent customers, case studies, testimonials, reviews, statistics, "
                     "percentages, follower counts, awards, prices or results. If a post needs an example, make it "
                     "clearly hypothetical ('Imagine a bakery that...') or give a practical tip instead.")

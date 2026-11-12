@@ -74,9 +74,18 @@ def formdan(form, taban=None):
         i["ad"], m["ad"] = ad, f.get("marka_adi") or ad.upper()
     if f.get("tanim"):
         i["tanim"] = f["tanim"][:200]
-    for k in ("sektor", "urun_turu", "ulke"):
+    for k in ("urun_turu", "ulke"):
         if f.get(k):
             i[k] = str(f[k])[:60]
+    if "sektor" in f:
+        from ofis.sektor_bilgi import SEKTORLER
+        i["sektor"] = f["sektor"] if f["sektor"] in SEKTORLER else ""
+    if "hizmetler" in f:
+        i["hizmetler"] = _liste(f["hizmetler"], 20)
+    if not (i.get("tanim") or "").strip() and i.get("hizmetler"):
+        from ofis.sektor_bilgi import SEKTORLER
+        tur = SEKTORLER.get(i.get("sektor") or "", {}).get("ad", "local business").split(",")[0].lower()
+        i["tanim"] = f"{tur} business offering {', '.join(i['hizmetler'][:4]).lower()}"[:200]
     if f.get("ulke_kodu"):
         if not re.fullmatch(r"[A-Za-z]{2}", f["ulke_kodu"]):
             hata["ulke_kodu"] = "Two-letter country code (NG, GH, KE...)"
@@ -169,7 +178,7 @@ def formdan(form, taban=None):
     else:
         p.pop("urun_kaynagi", None)
     if not (i.get("tanim") or "").strip():
-        hata.setdefault("tanim", "Describe your business in one sentence (e.g. 'family restaurant serving Nigerian dishes')")
+        hata.setdefault("tanim", "Describe your business in one sentence or pick what you offer")
     if hata:
         raise ProfilHatasi(hata)
     return p
@@ -190,4 +199,5 @@ def form_gorunumu(p):
         "para_sembolu": p.get("para_sembolu"), "site_para_birimi": p.get("site_para_birimi"),
         "kur": next(iter((p.get("doviz_kurlari") or {}).values()), ""), "yuvarlama": p.get("yuvarlama"),
         "rakipler": ", ".join(p.get("rakipler", [])), "platformlar": ", ".join(i.get("platformlar", [])),
+        "hizmetler": i.get("hizmetler", []), "logo": bool(m.get("logo_yuklendi")),
     }
