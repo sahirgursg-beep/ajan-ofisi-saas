@@ -352,3 +352,30 @@ def test_fal_gorsel_uretimi(monkeypatch):
 def test_genisletme_fiyati_belgeyle_uyumlu():
     assert fal_ai.genisletme_fiyati((1024, 1024), (1024, 1024)) == pytest.approx(0.045)
     assert fal_ai.genisletme_fiyati((1024, 683), (1024, 1536)) == pytest.approx(0.06)
+
+
+# ---------------- sablon kalintilari / site urun vermiyor ----------------
+def test_site_urun_vermezse_fikir_moduna_gecer(isletme, monkeypatch):
+    from ofis import ajanlar, pano, urun_cekici
+    pano.kur()
+    isletme(tanim="AI social media manager", sektor="")
+    monkeypatch.setitem(ayarlar.AYAR, "urun_kaynagi", None)
+    monkeypatch.setitem(ayarlar.AYAR, "site", "https://www.feedzync.example")
+    monkeypatch.setattr(urun_cekici, "urunleri_cek", lambda *a, **k: [])
+    sahte = [{"ad": "Idea", "url": "fikir://1", "fikir": True, "gorseller": ["x.jpg"]}]
+    monkeypatch.setattr(fikir_kaynagi, "fikir_urunleri", lambda *a, **k: sahte)
+    U = ajanlar.tum_ekip()["UrunSorumlusu"]
+    assert U.urunleri_getir() == sahte and U.tum_urunler == sahte
+
+
+def test_sablon_temalari_ve_etiketleri_baska_sektore_tasinmaz(isletme, monkeypatch):
+    from ofis import ajanlar
+    sb = musteri.sablon()
+    isletme(tanim="dental clinic", sektor="saglik", ad="Smile Dental",
+            hashtagler=list(sb["isletme"]["hashtagler"]), proje_hashtagler=[])
+    monkeypatch.setitem(ayarlar.AYAR, "haftalik_tema", sb["haftalik_tema"])
+    assert ajanlar.bugunun_temasi() in sektor.profil()["sutunlar"]
+    h = musteri.hashtagler()
+    assert h[0] == "#SmileDental" and "#BrandName" not in h and len(h) > 1
+    monkeypatch.setitem(ayarlar.AYAR, "haftalik_tema", {d: "Our own theme" for d in sb["haftalik_tema"]})
+    assert ajanlar.bugunun_temasi() == "Our own theme"

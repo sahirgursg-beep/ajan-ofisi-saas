@@ -61,6 +61,8 @@ def formdan(form, taban=None):
         p["isletme"].update({"tanim": "", "sektor": "", "urun_turu": "", "sehirler": [], "hashtagler": []})
         p["marka"].update({"tarif": "", "web": ""})
         p["kategoriler"] = []
+        p["isletme"]["proje_hashtagler"] = []
+        p.pop("haftalik_tema", None)            # mobilya temalari yerine sektor icerik sutunlari
     hata = {}
     f = {k: (v.strip() if isinstance(v, str) else v) for k, v in (form or {}).items()}
     i, m = p["isletme"], p["marka"]

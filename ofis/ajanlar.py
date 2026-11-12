@@ -63,6 +63,20 @@ class Yonetici(Ajan):
 class UrunSorumlusu(Ajan):
     ad, unvan, emoji = "UrunSorumlusu", "Urun Sorumlusu", "📦"
 
+    def _fikirden(self):
+        from . import fikir_kaynagi
+        self.calis("Sektor arastirmasindan bugunun icerik fikirlerini hazirliyorum...")
+        urunler = fikir_kaynagi.fikir_urunleri(3, gunluk=lambda m: pano.durum(self.ad, "calisiyor", m))
+        self.tum_urunler = list(urunler)
+        if not urunler:
+            self.soyle("Yonetici", "Icerik fikri icin gorsel bulamadim (stok foto / yapay zeka kapali).", "hata")
+            pano.durum(self.ad, "hata", "Gorsel kaynagi yok")
+            return []
+        self.soyle("PazarlamaUzmani", f"Bugun icin {len(urunler)} icerik fikri ve gorselleri hazir: "
+                   + "; ".join(u["ad"] for u in urunler))
+        self.bitir()
+        return urunler
+
     def urunleri_getir(self, demo=False):
         from . import urun_cekici
         self.calis("Siteden urunleri cekiyorum...")
@@ -73,17 +87,7 @@ class UrunSorumlusu(Ajan):
             self.soyle("Yonetici", f"Demo modu: {len(urunler)} ornek urun hazirladim.")
         elif fikir_kaynagi.veri_yok_mu():
             # Urun sitesi/verisi olmayan isletme: icerigi sektor bilgisi + arastirma + yapay zeka saglar
-            self.calis("Bu isletmenin urun listesi yok; sektor arastirmasindan bugunun icerik fikirlerini hazirliyorum...")
-            urunler = fikir_kaynagi.fikir_urunleri(3, gunluk=lambda m: pano.durum(self.ad, "calisiyor", m))
-            self.tum_urunler = list(urunler)
-            if not urunler:
-                self.soyle("Yonetici", "Icerik fikri icin gorsel bulamadim (stok foto / yapay zeka kapali).", "hata")
-                pano.durum(self.ad, "hata", "Gorsel kaynagi yok")
-                return []
-            self.soyle("PazarlamaUzmani", f"Bugun icin {len(urunler)} icerik fikri ve gorselleri hazir: "
-                       + "; ".join(u["ad"] for u in urunler))
-            self.bitir()
-            return urunler
+            return self._fikirden()
         else:
             try:
                 urunler = urun_cekici.urunleri_cek(lambda m: pano.durum(self.ad, "calisiyor", m))
@@ -96,9 +100,9 @@ class UrunSorumlusu(Ajan):
         for u in taze:  # fiyat hesabi: KOD yapar, LLM degil
             fiyat.hazirla(u)
         if not taze:
-            self.soyle("Yonetici", "Hic urun bulamadim! config.json'daki site/feed ayarina bakmak lazim.", "hata")
-            pano.durum(self.ad, "hata", "Urun bulunamadi")
-            return []
+            # Site urun listesi vermiyor (kurumsal site, hizmet isletmesi...): icerigi biz uretiriz
+            self.soyle("Yonetici", "Sitede urun listesi bulamadim; sektor bilgisinden icerik fikirlerine geciyorum.")
+            return self._fikirden()
         self.soyle("PazarlamaUzmani",
                    f"{len(taze)} aday urun var (son {AYAR.get('tekrar_etmeme_gun', 30)} gunde hazirlananlari cikardim). "
                    f"Fiyatlar {fiyat.yerel_para()} cinsine cevrildi.")
@@ -788,4 +792,9 @@ def tum_ekip():
 
 
 def bugunun_temasi():
-    return AYAR.get("haftalik_tema", {}).get(date.today().strftime("%A"), "Comfort for your home")
+    from . import musteri, sektor
+    temalar = AYAR.get("haftalik_tema") or {}
+    if temalar and temalar != musteri.sablon().get("haftalik_tema"):
+        return temalar.get(date.today().strftime("%A"), "Comfort for your home")
+    sutunlar = sektor.profil().get("sutunlar") or ["Behind the scenes"]
+    return sutunlar[date.today().toordinal() % len(sutunlar)]

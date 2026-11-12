@@ -5,7 +5,10 @@ profil.json'daki "isletme" bolumunden uretilir. Yeni bir sektor = yeni bir profi
 """
 from datetime import datetime, timedelta, timezone
 
-from .ayarlar import AYAR
+import json
+from functools import lru_cache
+
+from .ayarlar import AYAR, KOK
 
 VARSAYILAN = {
     "ad": "Your Brand",
@@ -63,9 +66,30 @@ def yasak_ifadeler():
     return [] if b["online_satis"] else [x.lower() for x in b["yasak_ifadeler"]]
 
 
+@lru_cache(maxsize=1)
+def sablon():
+    try:
+        return json.loads((KOK / "musteriler" / "_sablon" / "profil.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
 def hashtagler(proje=False):
+    """Musterinin hashtagleri; sablondan kalan ornekler (#BrandName, mobilya etiketleri) atilir,
+    yerine isletme adi + sektor etiketleri gelir."""
     b = bilgi()
-    return list((b["proje_hashtagler"] or b["hashtagler"]) if proje else b["hashtagler"])
+    liste = list((b["proje_hashtagler"] or b["hashtagler"]) if proje else b["hashtagler"])
+    sb = (sablon().get("isletme") or {})
+    ornek = {h.lower() for h in (sb.get("hashtagler") or []) + (sb.get("proje_hashtagler") or [])}
+    from . import sektor
+    if sektor.profil().get("anahtar") != "mobilya":
+        liste = [h for h in liste if h.lower() not in ornek]
+    else:
+        liste = [h for h in liste if h.lower() != "#brandname"]
+    if not liste:
+        marka = "#" + "".join(ch for ch in ad() if ch.isalnum())
+        liste = [marka] + ["#" + str(h).lstrip("#").replace(" ", "") for h in sektor.profil().get("hashtag", [])][:8]
+    return liste
 
 
 def carousel_maddeleri(proje=False):
