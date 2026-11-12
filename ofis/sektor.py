@@ -72,7 +72,12 @@ def profil(yenile=False):
         except Exception:
             pass
     i = musteri.bilgi()
-    anahtar = i.get("sektor") if i.get("sektor") in sektor_bilgi.SEKTORLER else kelime_ile_bul(_tanim_metni())
+    if i.get("sektor") in sektor_bilgi.SEKTORLER:
+        anahtar = i["sektor"]
+    else:   # once sahibin tek cumlesi; bulunamazsa ad + kategoriler (sablondan kalan kategoriler yaniltmasin)
+        anahtar = kelime_ile_bul(f"{i.get('ad') or ''} {i.get('tanim') or ''}")
+        if anahtar == "genel":
+            anahtar = kelime_ile_bul(_tanim_metni())
     p = json.loads(json.dumps(sektor_bilgi.al(anahtar)))
     p["anahtar"], p["kaynak"] = anahtar, "kelime"
     ozel = _yz_profil(anahtar) if llm.hazir() else None

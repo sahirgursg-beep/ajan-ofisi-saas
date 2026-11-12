@@ -379,3 +379,28 @@ def test_sablon_temalari_ve_etiketleri_baska_sektore_tasinmaz(isletme, monkeypat
     assert h[0] == "#SmileDental" and "#BrandName" not in h and len(h) > 1
     monkeypatch.setitem(ayarlar.AYAR, "haftalik_tema", {d: "Our own theme" for d in sb["haftalik_tema"]})
     assert ajanlar.bugunun_temasi() == "Our own theme"
+
+
+def test_model_kaldirilinca_otomatik_yedek_model(monkeypatch):
+    from ofis import llm_openai
+    monkeypatch.setenv("AJAN_YZ_ANAHTAR", "k")
+    monkeypatch.setenv("AJAN_YZ_MODEL", "llama3.3-70b-instruct")
+    monkeypatch.setattr(llm_openai, "_yedek_model", None)
+    monkeypatch.setattr(llm_openai, "_hazir", None)
+
+    class Http(SahteHttp):
+        def post(self, url, **k):
+            self.istekler.append(("POST", url, k))
+            if k["json"]["model"] == "llama3.3-70b-instruct":
+                return Yanit({"error": "model not found"}, 404)
+            return Yanit({"choices": [{"message": {"content": '{"ok": true}'}}]})
+    http = Http({"/models": Yanit({"data": [{"id": "openai-gpt-oss-120b"}, {"id": "llama-4-maverick"}]})})
+    assert llm_openai.sor("s", "m", json_mod=True, oturum=http) == {"ok": True}
+    assert llm_openai.model_adi() == "llama-4-maverick"
+    assert http.istekler[-1][2]["json"]["model"] == "llama-4-maverick"
+
+
+def test_sektor_tanimdan_bulunur_sablon_kategorileri_yaniltmaz(isletme, monkeypatch):
+    isletme(ad="FeedZYNC", tanim="AI AUTOMATED SOCIAL MEDIA MANAGER", sektor="")
+    monkeypatch.setitem(ayarlar.AYAR, "kategoriler", ["living room", "dining room", "bedroom"])
+    assert sektor.profil(yenile=True)["anahtar"] == "medya"

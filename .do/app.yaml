@@ -14,7 +14,7 @@ envs:
   - { key: SAAS_GENEL_ADRES, value: https://app.feedzync.com }
   - { key: AJAN_YZ_SAGLAYICI, value: openai }
   - { key: AJAN_YZ_URL, value: "https://inference.do-ai.run/v1" }
-  - { key: AJAN_YZ_MODEL, value: llama3.3-70b-instruct }
+  - { key: AJAN_YZ_MODEL, value: llama-4-maverick }
   - { key: AJAN_AI_GORSEL, value: "0" }
   - { key: SUPABASE_URL, type: SECRET }
   - { key: SUPABASE_ANON_KEY, type: SECRET }
