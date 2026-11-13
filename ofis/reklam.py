@@ -9,7 +9,7 @@ from . import algila, marka, musteri, tasarim
 
 SURE = 15.0
 FPS = 30
-YEDEK_FAYDALAR = musteri.faydalar()
+YEDEK_FAYDALAR = (musteri.faydalar() or list(musteri.bilgi().get("hizmetler") or [])[:2] or [musteri.ad()]) * 2
 
 
 def _ffmpeg():
@@ -49,7 +49,7 @@ def reklam_yap(urun, gorsel_yollari, taslak, tarif, hedef: Path, gunluk=print, d
     else:
         sablon_adi = "reels.html"
         v["veri_json"] = json.dumps({
-            "kanca": taslak.get("hook") or "Your home deserves this",
+            "kanca": taslak.get("hook") or __import__("ofis.dil", fromlist=["x"]).etiket("kanca"),
             "ad": urun["ad"], "fayda": faydalar, "ayni": farkli < 3,
             "kutular": [algila.urun_kutusu(marka.gorsel_hazirla(Path(g))) for g in
                         (list(gorsel_yollari) + list(gorsel_yollari[:1]) * 3)[:3]] if gorsel_yollari else [],

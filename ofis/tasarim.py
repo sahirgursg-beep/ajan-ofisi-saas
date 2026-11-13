@@ -55,7 +55,9 @@ def veri_hazirla(urun, gorseller, metin=None, tarif=None):
         "web": AYAR["marka"]["web"],
     }
     ind = urun.get("indirim_yuzde") or 0
-    v["buyuk_baslik"] = metin.get("buyuk_baslik") or (f"{ind}% OFF" if ind >= 5 else "NEW IN")
+    from . import dil
+    v["t_indirim"] = dil.etiket("indirim")
+    v["buyuk_baslik"] = metin.get("buyuk_baslik") or (f"{ind}% {dil.etiket('indirim')}" if ind >= 5 else dil.etiket("yeni"))
     if gorseller:
         tohum = sum(map(ord, urun["ad"]))
         v["vurgu"], v["vurgu_koyu"], v["vurgu_yazi"] = marka.vurgu_rengi(marka.gorsel_hazirla(Path(gorseller[0])), tohum)

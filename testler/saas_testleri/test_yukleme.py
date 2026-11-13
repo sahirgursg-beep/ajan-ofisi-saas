@@ -79,7 +79,7 @@ def test_logo_yukleme_renkleri_ve_profili_gunceller(sunucu, d):
 def test_sektor_onerileri_ve_tahmin(sunucu):
     s = requests.get(sunucu + "/api/sektorler").json()["sektorler"]
     restoran = next(x for x in s if x["anahtar"] == "restoran")
-    assert "Small chops & catering" in restoran["isler"] and s[-1]["anahtar"] == "genel"
+    assert "Finger food & catering" in restoran["isler"] and s[-1]["anahtar"] == "genel"
     assert requests.get(sunucu + "/api/sektor-tahmin", params={"metin": "we fix phones and laptops"}).json()["sektor"] == "elektronik"
 
 

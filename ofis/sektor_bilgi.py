@@ -77,7 +77,7 @@ SEKTORLER = dict([
        "Meet our chef", "Weekend vibes at {business}", "How we make it fresh every morning", "Tag who you'd share this with"],
       ["This is your sign to order", "Would you try this?", "The sound of this sizzle"],
       "close-up food shots, steam and texture, warm saturated colours, quick cuts, hands in frame",
-      ["delicious food plate", "restaurant interior", "chef cooking", "jollof rice", "coffee latte art", "pastries bakery"],
+      ["delicious food plate", "restaurant interior", "chef cooking", "local cuisine dish", "coffee latte art", "pastries bakery"],
       ["Foodie", "FoodLovers", "Restaurant", "EatLocal", "Delicious"], (3, 3, 3, 0),
       "Do not make health claims; show allergen info only if provided; alcohol content only for 18+ audiences."),
     S("otel", "Hotels, short-lets & hospitality",

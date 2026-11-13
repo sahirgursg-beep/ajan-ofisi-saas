@@ -51,9 +51,10 @@ ACIKLAMA = {
 
 # ---------------- trend baglami ----------------
 def _trend_dosyasi():
-    """Once musterinin kendi trendler.json'u, yoksa ulkesinin takvimi (paylasilan/takvimler/<ULKE>.json)."""
+    """Once musterinin kendi trendler.json'u, sonra ulkesinin takvimi, o da yoksa kuresel takvim (GLOBAL.json)."""
     kod = (musteri.bilgi().get("ulke_kodu") or "").upper()
-    for yol in (MUSTERI_KOK / "trendler.json", PAYLASIK / "takvimler" / f"{kod}.json"):
+    for yol in (MUSTERI_KOK / "trendler.json", PAYLASIK / "takvimler" / f"{kod}.json",
+                PAYLASIK / "takvimler" / "GLOBAL.json"):
         try:
             return json.loads(yol.read_text(encoding="utf-8"))
         except Exception:

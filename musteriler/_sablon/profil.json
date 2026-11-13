@@ -1,16 +1,13 @@
 {
-  "_aciklama": "Yeni musteri: bu klasoru musteriler/<musteri-id> olarak kopyalayin ve doldurun. Tum metinler musteriye donuk oldugu icin Ingilizce.",
+  "_aciklama": "Yeni musteri: bu klasoru musteriler/<musteri-id> olarak kopyalayin ve doldurun. Ulke, para birimi, saat dilimi ve dil kayit formunda ulke tablosundan (ofis/ulkeler.py) doldurulur.",
   "isletme": {
     "ad": "Brand Name",
     "sektor": "furniture",
     "tanim": "a premium furniture showroom",
     "urun_turu": "furniture",
-    "ulke": "Nigeria",
-    "ulke_kodu": "NG",
-    "sehirler": [
-      "Lagos",
-      "Abuja"
-    ],
+    "ulke": "",
+    "ulke_kodu": "",
+    "sehirler": [],
     "online_satis": false,
     "satis_kanali": "Sales only happen in the showroom or by phone/DM, never tell people to buy online.",
     "yonlendirme": "visit our showroom or send us a DM",
@@ -43,11 +40,12 @@
       "Comfort for the whole family",
       "See it in our showroom today"
     ],
-    "saat_dilimi": "Africa/Lagos",
-    "utc_ofset_saat": 1,
-    "saat_kisaltma": "WAT",
+    "saat_dilimi": "UTC",
+    "utc_ofset_saat": 0,
+    "saat_kisaltma": "UTC",
     "mesai_bas": "08:00",
-    "mesai_bit": "19:00"
+    "mesai_bit": "19:00",
+    "dil": "en"
   },
   "marka": {
     "ad": "BRAND NAME",
@@ -75,16 +73,12 @@
   "haric_kategoriler": [
     "accessories"
   ],
-  "para_birimi": "NGN",
-  "para_sembolu": "₦",
-  "ek_fiyat_isaretleri": [
-    "N"
-  ],
-  "site_para_birimi": "NGN",
-  "doviz_kurlari": {
-    "USD": 1500
-  },
-  "yuvarlama": 1000,
+  "para_birimi": "USD",
+  "para_sembolu": "$",
+  "ek_fiyat_isaretleri": [],
+  "site_para_birimi": "USD",
+  "doviz_kurlari": {},
+  "yuvarlama": 1,
   "fiyat_gosterimi": "indirimli",
   "rakipler": [],
   "haftalik_tema": {

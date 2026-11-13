@@ -486,3 +486,27 @@ def test_sablon_modu_sektore_uygun_font_secer(isletme):
     uygun = [f for f in fontlar.CIFTLER if fontlar.uygunluk(f, "Restaurants, cafes & food") == 3]
     assert len(set(secilen)) >= 8                                         # cesitlilik
     assert sum(f in uygun for f in secilen) / len(secilen) > len(uygun) / len(fontlar.CIFTLER)   # sektore yakisanlar one cikar
+
+
+# ---------------- kuresel: ulke, dil, takvim ----------------
+def test_ulke_tablosu_ve_dil_talimati(monkeypatch):
+    from ofis import dil, ulkeler
+    assert len(ulkeler.ULKELER) >= 60 and ulkeler.al("fr")["para"] == "EUR" and ulkeler.ada_gore("Japan")["dil"] == "ja"
+    from zoneinfo import ZoneInfo
+    for u in ulkeler.ULKELER.values():
+        ZoneInfo(u["saat_dilimi"])                      # gecerli saat dilimleri
+        assert u["dil"] in ulkeler.DILLER, u
+    monkeypatch.setitem(ayarlar.AYAR, "isletme", {**ayarlar.AYAR["isletme"], "dil": "fr"})
+    assert "French" in dil.talimat() and dil.etiket("yeni") == "NOUVEAU"
+    monkeypatch.setitem(ayarlar.AYAR, "isletme", {**ayarlar.AYAR["isletme"], "dil": "", "ulke_kodu": "BR"})
+    assert dil.kod() == "pt" and dil.etiket("detaylar") == "OS DETALHES"
+    monkeypatch.setitem(ayarlar.AYAR, "isletme", {**ayarlar.AYAR["isletme"], "dil": "xx"})
+    assert dil.etiket("indirim") == "OFF"                # bilinmeyen dil -> Ingilizce etiket
+
+
+def test_ulkesi_takvimi_olmayan_isletme_kuresel_takvimi_kullanir(isletme):
+    from datetime import date
+    from ofis import sanat
+    isletme(ulke_kodu="JP")
+    b = sanat.baglam(date(2026, 11, 25))
+    assert any(e["ad"] == "Black Friday" for e in b["etkinlikler"]) and b["trendler"]

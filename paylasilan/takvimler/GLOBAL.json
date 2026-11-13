@@ -1,0 +1,189 @@
+{
+ "_aciklama": "Kuresel takvim: ulkeye ozel dosya (or. NG.json) yoksa Sanat Yonetmeni bunu kullanir. Tarihler AA-GG. Banner'lar Ingilizce; isletmenin dili farkliysa yapay zeka kendi dilinde yazar.",
+ "etkinlikler": [
+  {
+   "ad": "New Year",
+   "baslangic": "12-27",
+   "bitis": "01-06",
+   "banner": "NEW YEAR",
+   "ruh_hali": "fresh start, goals, celebration",
+   "palet": {
+    "zemin": "#151A2E",
+    "vurgu": "#E6CC8A",
+    "panel": "#12162A"
+   }
+  },
+  {
+   "ad": "Valentine's Day",
+   "baslangic": "02-07",
+   "bitis": "02-14",
+   "banner": "VALENTINE'S",
+   "ruh_hali": "love, gifting, couples, warmth",
+   "palet": {
+    "zemin": "#5E1A2B",
+    "vurgu": "#F2C4C4",
+    "panel": "#4A1522"
+   }
+  },
+  {
+   "ad": "International Women's Day",
+   "baslangic": "03-06",
+   "bitis": "03-08",
+   "banner": "WOMEN'S DAY",
+   "ruh_hali": "celebrating women, empowerment, gratitude",
+   "palet": {
+    "zemin": "#3B1F4A",
+    "vurgu": "#F0B7D1",
+    "panel": "#2E1839"
+   }
+  },
+  {
+   "ad": "Earth Day",
+   "baslangic": "04-20",
+   "bitis": "04-22",
+   "banner": "EARTH DAY",
+   "ruh_hali": "sustainability, nature, care",
+   "palet": {
+    "zemin": "#17392A",
+    "vurgu": "#A9D18E",
+    "panel": "#123024"
+   }
+  },
+  {
+   "ad": "Mother's Day season",
+   "baslangic": "05-01",
+   "bitis": "05-12",
+   "banner": "FOR MUM",
+   "ruh_hali": "gratitude, family, tenderness, gifting",
+   "palet": {
+    "zemin": "#6A2E3E",
+    "vurgu": "#F3C9B8",
+    "panel": "#55242F"
+   }
+  },
+  {
+   "ad": "Summer",
+   "baslangic": "06-15",
+   "bitis": "08-31",
+   "banner": "SUMMER",
+   "ruh_hali": "bright, outdoor, energetic, holidays",
+   "palet": {
+    "zemin": "#0E4C68",
+    "vurgu": "#FFD166",
+    "panel": "#0B3D54"
+   }
+  },
+  {
+   "ad": "Back to school",
+   "baslangic": "08-20",
+   "bitis": "09-15",
+   "banner": "BACK TO SCHOOL",
+   "ruh_hali": "routines, fresh start, organised",
+   "palet": {
+    "zemin": "#1F3A5F",
+    "vurgu": "#F4B942",
+    "panel": "#18304E"
+   }
+  },
+  {
+   "ad": "Halloween",
+   "baslangic": "10-25",
+   "bitis": "10-31",
+   "banner": "HALLOWEEN",
+   "ruh_hali": "playful, spooky, bold orange and black",
+   "palet": {
+    "zemin": "#141414",
+    "vurgu": "#F28C28",
+    "panel": "#1E1E1E"
+   }
+  },
+  {
+   "ad": "Black Friday",
+   "baslangic": "11-20",
+   "bitis": "11-30",
+   "banner": "BLACK FRIDAY",
+   "ruh_hali": "urgent, bold, high-contrast, deal-hunting",
+   "palet": {
+    "zemin": "#0E0E0E",
+    "vurgu": "#C9A24B",
+    "panel": "#141414"
+   }
+  },
+  {
+   "ad": "Cyber Monday",
+   "baslangic": "12-01",
+   "bitis": "12-02",
+   "banner": "CYBER MONDAY",
+   "ruh_hali": "digital, neon, last chance",
+   "palet": {
+    "zemin": "#0B1026",
+    "vurgu": "#4CC9F0",
+    "panel": "#0A0E21"
+   }
+  },
+  {
+   "ad": "Holiday season",
+   "baslangic": "12-10",
+   "bitis": "12-26",
+   "banner": "HOLIDAY SEASON",
+   "ruh_hali": "warm, family gathering, gifting, lights",
+   "palet": {
+    "zemin": "#6B1E24",
+    "vurgu": "#E2C27A",
+    "panel": "#561820"
+   }
+  }
+ ],
+ "mevsimler": [
+  {
+   "ad": "Year start",
+   "aylar": [
+    1
+   ],
+   "ruh_hali": "clean, organised, new beginnings"
+  },
+  {
+   "ad": "Spring",
+   "aylar": [
+    3,
+    4,
+    5
+   ],
+   "ruh_hali": "fresh, light, pastel, growth"
+  },
+  {
+   "ad": "Summer",
+   "aylar": [
+    6,
+    7,
+    8
+   ],
+   "ruh_hali": "bright, sunny, high energy"
+  },
+  {
+   "ad": "Autumn",
+   "aylar": [
+    9,
+    10,
+    11
+   ],
+   "ruh_hali": "warm tones, cozy textures"
+  },
+  {
+   "ad": "Year end",
+   "aylar": [
+    12
+   ],
+   "ruh_hali": "festive, celebratory, reflective"
+  }
+ ],
+ "tasarim_trendleri": [
+  "bold oversized typography with one strong word",
+  "authentic, unpolished real photos",
+  "high-contrast colour blocking",
+  "editorial layouts with generous white space",
+  "playful stickers and hand-drawn accents",
+  "warm minimalism with soft shadows",
+  "retro-inspired type and grain"
+ ]
+}

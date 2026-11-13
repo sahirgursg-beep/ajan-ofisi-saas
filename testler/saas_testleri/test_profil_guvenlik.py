@@ -72,3 +72,13 @@ def test_tanim_zorunlu_ve_platform_secimi_suzulur():
     p = profil.formdan({"isletme_adi": "X Ltd", "tanim": "law firm", "platformlar": "LinkedIn, myspace, facebook"})
     assert p["isletme"]["platformlar"] == ["facebook"] or p["isletme"]["platformlar"] == ["linkedin", "facebook"]
     assert profil.form_gorunumu(p)["platformlar"] in ("facebook", "linkedin, facebook")
+
+
+def test_ulke_secimi_para_saat_ve_dili_doldurur():
+    p = profil.formdan({"isletme_adi": "Bloom", "tanim": "bakery", "ulke_kodu": "DE"})
+    i = p["isletme"]
+    assert (i["ulke"], i["saat_dilimi"], i["dil"]) == ("Germany", "Europe/Berlin", "de")
+    assert (p["para_birimi"], p["para_sembolu"], p["site_para_birimi"]) == ("EUR", "€", "EUR")
+    assert p["doviz_kurlari"] == {} and i["faydalar"] == [] and "showroom" not in (i.get("satis_kanali") or "")
+    p2 = profil.formdan({"ulke_kodu": "JP", "dil": "en"}, taban=p)
+    assert p2["para_birimi"] == "JPY" and p2["isletme"]["dil"] == "en" and p2["isletme"]["saat_dilimi"] == "Asia/Tokyo"

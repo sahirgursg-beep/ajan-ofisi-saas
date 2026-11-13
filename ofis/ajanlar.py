@@ -578,6 +578,7 @@ class KaliteKontrol(Ajan):
                 f"Product/topic: {urun['ad']}\nDraft:\n{taslak}\n{kurallar.istem('metin')}\n"
                 f"{__import__('ofis.marka_ozeti', fromlist=['x']).istem_ozeti()}"
                 "Also reject any claim, number, customer story or result that is not in BUSINESS FACTS.\n"
+                f"{__import__('ofis.dil', fromlist=['x']).talimat()}Reject the draft if it is not written in that language.\n"
                 "Check: is it clear, warm, premium, free of spelling mistakes, does it follow the brand rules above "
                 "(if any), and does it avoid exaggerated or "
                 "false claims (like 'best in the country', 'free delivery', discounts that were not given)? "
@@ -837,6 +838,6 @@ def bugunun_temasi():
     from . import musteri, sektor
     temalar = AYAR.get("haftalik_tema") or {}
     if temalar and temalar != musteri.sablon().get("haftalik_tema"):
-        return temalar.get(date.today().strftime("%A"), "Comfort for your home")
+        return temalar.get(date.today().strftime("%A"), "Behind the scenes")
     sutunlar = sektor.profil().get("sutunlar") or ["Behind the scenes"]
     return sutunlar[date.today().toordinal() % len(sutunlar)]

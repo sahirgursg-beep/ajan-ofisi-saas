@@ -315,6 +315,12 @@ async def sektorler(request):
     return JSONResponse({"sektorler": sektor_isleri.liste()}, headers={"Cache-Control": "public, max-age=3600"})
 
 
+async def ulkeler_ucu(request):
+    from ofis import ulkeler
+    return JSONResponse({"ulkeler": ulkeler.liste(), "diller": ulkeler.DILLER},
+                        headers={"Cache-Control": "public, max-age=86400"})
+
+
 async def sektor_tahmin(request):
     from ofis import sektor_isleri
     return JSONResponse({"sektor": sektor_isleri.tahmin(request.query_params.get("metin", "")[:300])})
@@ -588,7 +594,7 @@ M = "/api/musteri/{mid}"
 routes = [
     Route("/", panel), Route("/saglik", saglik),
     Route("/api/yapilandirma", yapilandirma), Route("/api/sektorler", sektorler),
-    Route("/api/sektor-tahmin", sektor_tahmin), Route("/api/yerel-giris", yerel_giris, methods=["POST"]),
+    Route("/api/sektor-tahmin", sektor_tahmin), Route("/api/ulkeler", ulkeler_ucu), Route("/api/yerel-giris", yerel_giris, methods=["POST"]),
     Route("/api/ben", ben), Route("/api/musteri", musteri_olustur, methods=["POST"]),
     Route(M + "/profil", profil_al), Route(M + "/profil", profil_guncelle, methods=["PUT"]),
     Route(M + "/yayin-ayar", yayin_ayari, methods=["PUT"]),

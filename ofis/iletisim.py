@@ -14,7 +14,7 @@ from .ayarlar import KOK, VERI
 
 KLASOR = VERI / "iletisim"
 KONULAR = {
-    "fiyat": r"\b(price|how much|hw much|hm+\b|cost|pp\b|pls price|amount|naira|₦|discount|promo)",
+    "fiyat": r"\b(price|how much|hw much|hm+\b|cost|pp\b|pls price|amount|naira|₦|discount|promo|prix|combien|precio|cuánto|cuanto|preço|quanto|preis|kosten|fiyat|kaç para|kac para|سعر|bei gani|harga)",
     "konum": r"\b(where|location|address|showroom|shop|store|located|visit)",
     "teslimat": r"\b(deliver|delivery|shipping|ship|transport|send to)",
     "odeme": r"\b(installment|instalment|pay small|payment plan|transfer|account number|pos\b|pay)",

@@ -47,7 +47,7 @@ def _saat_dilimi(ad):
     try:
         tz = ZoneInfo(ad)
     except (ZoneInfoNotFoundError, ValueError):
-        raise ProfilHatasi({"saat_dilimi": "Invalid time zone (e.g. Africa/Lagos)"})
+        raise ProfilHatasi({"saat_dilimi": "Invalid time zone (e.g. Europe/London)"})
     an = datetime.now(tz)
     return {"saat_dilimi": ad, "utc_ofset_saat": an.utcoffset().total_seconds() / 3600,
             "saat_kisaltma": an.tzname() if an.tzname() and not an.tzname()[0] in "+-" else ad.split("/")[-1]}
@@ -58,7 +58,10 @@ def formdan(form, taban=None):
     p = copy.deepcopy(taban or sablon())
     p.pop("_aciklama", None)
     if taban is None:                       # yeni kayit: sablondaki ornek degerler musteriye tasinmasin
-        p["isletme"].update({"tanim": "", "sektor": "", "urun_turu": "", "sehirler": [], "hashtagler": []})
+        p["isletme"].update({"tanim": "", "sektor": "", "urun_turu": "", "sehirler": [], "hashtagler": [],
+                             "faydalar": [], "carousel_maddeleri": [], "proje_carousel_maddeleri": [],
+                             "satis_kanali": "", "yonlendirme": "send us a message", "ulke": "", "ulke_kodu": ""})
+        p.update({"haric_kategoriler": [], "ek_fiyat_isaretleri": [], "doviz_kurlari": {}})
         p["marka"].update({"tarif": "", "web": ""})
         p["kategoriler"] = []
         p["isletme"]["proje_hashtagler"] = []
@@ -66,6 +69,23 @@ def formdan(form, taban=None):
     hata = {}
     f = {k: (v.strip() if isinstance(v, str) else v) for k, v in (form or {}).items()}
     i, m = p["isletme"], p["marka"]
+    # Ulke secilince para birimi, saat dilimi, dil ve yuvarlama ulkenin varsayilanlarindan (formda yazilan kazanir)
+    from ofis import ulkeler
+    u = ulkeler.al(f.get("ulke_kodu")) or ulkeler.ada_gore(f.get("ulke"))
+    if u and (taban is None or u["kod"] != i.get("ulke_kodu")):
+        i.update({"ulke": u["ad"], "ulke_kodu": u["kod"]})
+        i.update(_saat_dilimi(u["saat_dilimi"]))
+        i.setdefault("dil", u["dil"])
+        if taban is None or not f.get("dil"):
+            i["dil"] = u["dil"]
+        p.update({"para_birimi": u["para"], "para_sembolu": u["sembol"], "yuvarlama": u["yuvarlama"]})
+        if taban is None:
+            p["site_para_birimi"] = u["para"]
+    if f.get("dil"):
+        if f["dil"] in ulkeler.DILLER:
+            i["dil"] = f["dil"]
+        else:
+            hata["dil"] = "Unknown language"
 
     ad = f.get("isletme_adi") or i.get("ad")
     if not ad or ad == "Brand Name" or len(ad) > 80:
@@ -88,7 +108,7 @@ def formdan(form, taban=None):
         i["tanim"] = f"{tur} business offering {', '.join(i['hizmetler'][:4]).lower()}"[:200]
     if f.get("ulke_kodu"):
         if not re.fullmatch(r"[A-Za-z]{2}", f["ulke_kodu"]):
-            hata["ulke_kodu"] = "Two-letter country code (NG, GH, KE...)"
+            hata["ulke_kodu"] = "Two-letter country code (US, GB, NG...)"
         else:
             i["ulke_kodu"] = f["ulke_kodu"].upper()
     if "sehirler" in f:
@@ -150,7 +170,7 @@ def formdan(form, taban=None):
             if PARA.match(f[k].upper()):
                 p[k] = f[k].upper()
             else:
-                hata[k] = "Three-letter currency code (NGN, USD...)"
+                hata[k] = "Three-letter currency code (USD, EUR...)"
     if f.get("para_sembolu"):
         p["para_sembolu"] = f["para_sembolu"][:4]
     if f.get("kur"):
@@ -199,5 +219,5 @@ def form_gorunumu(p):
         "para_sembolu": p.get("para_sembolu"), "site_para_birimi": p.get("site_para_birimi"),
         "kur": next(iter((p.get("doviz_kurlari") or {}).values()), ""), "yuvarlama": p.get("yuvarlama"),
         "rakipler": ", ".join(p.get("rakipler", [])), "platformlar": ", ".join(i.get("platformlar", [])),
-        "hizmetler": i.get("hizmetler", []), "logo": bool(m.get("logo_yuklendi")),
+        "hizmetler": i.get("hizmetler", []), "logo": bool(m.get("logo_yuklendi")), "dil": i.get("dil") or "en",
     }

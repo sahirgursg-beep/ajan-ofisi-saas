@@ -9,7 +9,7 @@ panelden indirilip elle paylasilir (mod: "manuel").
 import json
 import re
 
-from . import llm, musteri, sektor
+from . import dil, llm, musteri, sektor
 
 KURALLAR = {
     "instagram": {
@@ -71,13 +71,14 @@ def _sablon(p, taban):
     """Yapay zeka yoksa: taban metinden kurallara uygun surum."""
     cta = musteri.bilgi().get("yonlendirme") or "send us a DM"
     c = taban.get("caption", "")
-    if p == "facebook":
+    ingilizce = dil.kod() == "en"
+    if p == "facebook" and ingilizce:
         c = c + f"\n\nWhat do you think? Tell us in the comments 👇"
     elif p == "tiktok":
         c = (taban.get("hook") or c.split("\n")[0])[:150]
     elif p == "linkedin":
-        c = (f"{taban.get('headline') or taban.get('hook') or ''}\n\n{c}\n\n"
-             f"Interested? {cta[:1].upper() + cta[1:]}.").strip()
+        c = (f"{taban.get('headline') or taban.get('hook') or ''}\n\n{c}"
+             + (f"\n\nInterested? {cta[:1].upper() + cta[1:]}." if ingilizce else "")).strip()
     return _temizle(p, {"caption": c}, taban)
 
 
@@ -93,7 +94,7 @@ def uret(urun, aci, taban, tur):
             cevap = llm.sor(
                 f"You are the {k['ad']} specialist of a social media team for {musteri.tanim()}. "
                 f"{musteri.satis_kanali()} Answer ONLY with valid JSON.",
-                f"Platform rules: {k['ilke']}\nFormat today: {k['formatlar'].get(tur or 'post')}\n"
+                f"Platform rules: {k['ilke']}\nFormat today: {k['formatlar'].get(tur or 'post')}\n{dil.talimat()}"
                 f"{sektor.istem_ozeti()}\nTopic: {urun['ad']}\nAngle: {aci}\n"
                 + (f"Exact price (use exactly, never change): {fiyat}\n" if fiyat else "No price for this content.\n")
                 + f"Approved base copy:\n{json.dumps({x: taban.get(x) for x in ('hook', 'headline', 'caption')}, ensure_ascii=False)}\n\n"

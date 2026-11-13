@@ -44,7 +44,8 @@ def senaryo(format_adi, taslak, urun, foto_sayisi):
     n = max(1, foto_sayisi)
     F = lambda i: i % n                       # elimizde kac foto varsa onun icinde don
     tek = n == 1
-    kanca = (taslak.get("hook") or "Your home deserves this").strip()
+    from . import dil
+    kanca = (taslak.get("hook") or dil.etiket("kanca")).strip()
     ad = urun["ad"]
     fiyatli = bool(urun.get("fiyat_metni"))
     S = {"cekimler": [], "yazilar": [], "sure": SURE, "logo_ust": 0}
@@ -57,7 +58,7 @@ def senaryo(format_adi, taslak, urun, foto_sayisi):
 
     if format_adi == "fiyat_tahmini":
         cek(0, 0, "zoom_in", z0=1.02, z1=1.12)
-        yaz(.1, 2.4, "Guess the price? 👀", "soru", "orta", "pop")
+        yaz(.1, 2.4, dil.etiket("fiyat_tahmin"), "soru", "orta", "pop")
         S["karart"] = [(0, 2.4, .35)]
         cek(2.4, 1, "punch", "flas", "sol" if tek else "orta", 1.2, 1.25)
         cek(4.2, 2, "pan_sag", "kaydir", "sag" if tek else "orta", 1.15, 1.2)
@@ -70,7 +71,7 @@ def senaryo(format_adi, taslak, urun, foto_sayisi):
 
     elif format_adi == "uc_sebep":
         cek(0, 0, "zoom_in", z0=1.02, z1=1.12)
-        yaz(.1, 2.3, "3 reasons you'll love this", "kanca", "orta", "pop")
+        yaz(.1, 2.3, dil.etiket("uc_sebep"), "kanca", "orta", "pop")
         S["karart"] = [(0, 2.3, .3), (2.3, 11.3, .28)]
         mods = ["sol", "sag", "alt"] if tek else ["orta", "orta", "orta"]
         for i, (sat, gir) in enumerate(zip(_satirlar(taslak, 3), ["kaydir", "kaydir", "kaydir"])):
@@ -84,7 +85,7 @@ def senaryo(format_adi, taslak, urun, foto_sayisi):
 
     elif format_adi == "detay_zoom":
         cek(0, 0, "zoom_out", z0=1.02, z1=1.18)
-        yaz(.1, 2.3, "THE DETAILS", "etiket", "ust", "pop")
+        yaz(.1, 2.3, dil.etiket("detaylar"), "etiket", "ust", "pop")
         yaz(.2, 2.3, kanca, "buyuk", "alt")
         satir = _satirlar(taslak, 4)
         kadraj = [("ust", 1), ("sol", 2), ("sag", 0), ("alt", 3)]

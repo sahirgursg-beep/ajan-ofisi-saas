@@ -17,7 +17,7 @@ def _kod(pb):
 
 
 def yerel_para():
-    return _kod(AYAR.get("para_birimi") or "NGN")
+    return _kod(AYAR.get("para_birimi") or "USD")
 
 
 def kur(kaynak):

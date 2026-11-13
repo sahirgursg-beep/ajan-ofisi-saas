@@ -200,7 +200,7 @@ footer { text-align:center; padding:26px; font-size:13px; color:var(--soluk); }
       <div class="birak" id="kutuphaneBirak" tabindex="0" role="button" aria-label="Add photos or files">
         <div class="ikon">+</div>
         <div class="yayil"><h3>Drop photos or documents here</h3><p class="soluk" style="margin:4px 0 0">JPG, PNG, WEBP photos · PDF, TXT, CSV documents</p></div>
-        <input id="notGir" placeholder="Optional note for these files, e.g. 'new arrivals' or 'Lekki kitchen project'" style="flex-basis:100%" onclick="event.stopPropagation()">
+        <input id="notGir" placeholder="Optional note for these files, e.g. 'new arrivals' or 'kitchen renovation project'" style="flex-basis:100%" onclick="event.stopPropagation()">
       </div>
       <div class="izgara" id="izgara"></div>
     </section>
@@ -544,11 +544,11 @@ async function hesapCiz() {
 async function metaBaglan() { try { location.href = (await api(`/api/musteri/${MUSTERI.id}/meta/baglan`)).adres; } catch (e) { bildir(e.message); } }
 
 const GELISMIS = [
-  ["cta", "What should people do?", "e.g. Visit our shop in Lekki or send us a DM"],
-  ["saat_dilimi", "Time zone", "Africa/Lagos"], ["ulke_kodu", "Country code", "NG"],
+  ["cta", "What should people do?", "e.g. Visit our shop or send us a message"],
+  ["saat_dilimi", "Time zone", "e.g. Europe/London"],
   ["feed_url", "Product feed (XML)", "Only if you have one"], ["kategoriler", "Only post these categories", "comma-separated, empty = all"],
-  ["para_birimi", "Your currency", "NGN"], ["para_sembolu", "Currency symbol", "₦"], ["site_para_birimi", "Currency on your website", "NGN"],
-  ["kur", "Exchange rate", "1 website currency = ? your currency"], ["yuvarlama", "Round prices to", "1000"],
+  ["para_birimi", "Your currency", "USD"], ["para_sembolu", "Currency symbol", "$"], ["site_para_birimi", "Currency on your website", "USD"],
+  ["kur", "Exchange rate", "1 website currency = ? your currency"], ["yuvarlama", "Round prices to", "1"],
   ["platformlar", "Platforms", "instagram, facebook, tiktok, linkedin — empty = best for your sector"],
   ["hashtagler", "Your own hashtags", "empty = we choose"], ["rakipler", "Accounts you admire (Instagram)", "comma-separated"],
   ["renk_koyu", "Dark colour", "#RRGGBB"], ["renk_altin", "Accent colour", "#RRGGBB"], ["renk_acik", "Light colour", "#RRGGBB"],
@@ -583,20 +583,20 @@ function formOku(el) {
 }
 
 // ---- ortak: isletme temel alanlari (sihirbaz ve ayarlar) ----
-const ULKELER = {
-  Nigeria: { ulke_kodu: "NG", saat_dilimi: "Africa/Lagos", para_birimi: "NGN", para_sembolu: "₦", yuvarlama: 1000 },
-  Ghana: { ulke_kodu: "GH", saat_dilimi: "Africa/Accra", para_birimi: "GHS", para_sembolu: "GH₵", yuvarlama: 10 },
-  Kenya: { ulke_kodu: "KE", saat_dilimi: "Africa/Nairobi", para_birimi: "KES", para_sembolu: "KSh", yuvarlama: 100 },
-  "South Africa": { ulke_kodu: "ZA", saat_dilimi: "Africa/Johannesburg", para_birimi: "ZAR", para_sembolu: "R", yuvarlama: 10 },
-  Egypt: { ulke_kodu: "EG", saat_dilimi: "Africa/Cairo", para_birimi: "EGP", para_sembolu: "E£", yuvarlama: 10 },
-  "United Arab Emirates": { ulke_kodu: "AE", saat_dilimi: "Asia/Dubai", para_birimi: "AED", para_sembolu: "AED", yuvarlama: 1 },
-  "United Kingdom": { ulke_kodu: "GB", saat_dilimi: "Europe/London", para_birimi: "GBP", para_sembolu: "£", yuvarlama: 1 },
-  "United States": { ulke_kodu: "US", saat_dilimi: "America/New_York", para_birimi: "USD", para_sembolu: "$", yuvarlama: 1 },
-  Turkey: { ulke_kodu: "TR", saat_dilimi: "Europe/Istanbul", para_birimi: "TRY", para_sembolu: "₺", yuvarlama: 10 } };
+let ULKE = null;
+async function ulkelerAl() { if (!ULKE) ULKE = await (await fetch("/api/ulkeler")).json(); return ULKE; }
+function ulkeTahmin(liste) {        // tarayicinin dil bolgesi (en-NG) ya da saat dilimi (Africa/Lagos)
+  const kodlar = new Set(liste.map((u) => u.kod));
+  for (const l of navigator.languages || [navigator.language]) { const r = (l.split("-")[1] || "").toUpperCase(); if (kodlar.has(r)) return r; }
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return (liste.find((u) => u.saat_dilimi === tz) || {}).kod || "US";
+}
 async function sektorlerAl() { if (!SEKTORLER) SEKTORLER = (await (await fetch("/api/sektorler")).json()).sektorler; return SEKTORLER; }
 async function temelForm(el, F, hatalar = {}, sadeceIs = false) {
   const sek = await sektorlerAl();
-  const ulke = F.ulke || "Nigeria";
+  const { ulkeler, diller } = await ulkelerAl();
+  const ulke = F.ulke_kodu || ulkeTahmin(ulkeler);
+  const dil = F.dil || (ulkeler.find((u) => u.kod === ulke) || {}).dil || "en";
   const secili = new Set(F.hizmetler || []);
   el.innerHTML = `${sadeceIs ? "" : alanHtml("isletme_adi", "Business name", F.isletme_adi, "e.g. Mama Put Kitchen", hatalar)}
     <label for="f-sektor">What kind of business is it?</label>
@@ -604,9 +604,10 @@ async function temelForm(el, F, hatalar = {}, sadeceIs = false) {
     <label>What do you offer? <span class="ipucu">Tap all that apply</span></label>
     <div class="cipler" id="cipler"></div>
     <input name="hizmet_diger" placeholder="Something else? Type it, separated by commas" style="margin-top:10px" value="${esc([...secili].filter((x) => !sek.some((s) => s.isler.includes(x))).join(", "))}">
-    ${alanHtml("tanim", "In one sentence, what makes you different?", F.tanim, "e.g. Family restaurant in Lekki, famous for party jollof", hatalar)}
-    ${sadeceIs ? "" : `<div class="ikili">${alanHtml("sehirler", "City", F.sehirler, "e.g. Lagos", hatalar)}
-      <div><label for="f-ulke">Country</label><select id="f-ulke" name="ulke">${Object.keys(ULKELER).concat(ULKELER[ulke] ? [] : [ulke]).map((u) => `<option ${u === ulke ? "selected" : ""}>${esc(u)}</option>`).join("")}</select></div></div>
+    ${alanHtml("tanim", "In one sentence, what makes you different?", F.tanim, "e.g. Family bakery known for sourdough and birthday cakes", hatalar)}
+    ${sadeceIs ? "" : `<div class="ikili">${alanHtml("sehirler", "City", F.sehirler, "e.g. Manchester", hatalar)}
+      <div><label for="f-ulke">Country</label><select id="f-ulke" name="ulke_kodu">${ulkeler.map((u) => `<option value="${u.kod}" ${u.kod === ulke ? "selected" : ""}>${esc(u.ad)}</option>`).join("")}</select></div></div>
+      <label for="f-dil">Posts are written in</label><select id="f-dil" name="dil">${Object.entries(diller).sort((a, b) => a[1].localeCompare(b[1])).map(([k, a]) => `<option value="${k}" ${k === dil ? "selected" : ""}>${esc(a)}</option>`).join("")}</select>
       <label class="satir" style="font-weight:500"><input type="checkbox" name="online_satis" style="width:auto" ${F.online_satis ? "checked" : ""}> Customers can also buy online</label>`}`;
   const sektorSec = $("#f-sektor", el);
   const cipCiz = () => {
@@ -624,8 +625,10 @@ async function temelForm(el, F, hatalar = {}, sadeceIs = false) {
     if (sektor && sektor !== "genel") { sektorSec.value = sektor; cipCiz(); bildir("We picked your business type. Tap what you offer."); }
   };
   const u = $("#f-ulke", el);
-  if (u) u.onchange = () => { const d = ULKELER[u.value] || {};
-    Object.entries({ ...d, site_para_birimi: d.para_birimi }).forEach(([k, v]) => { const i = document.querySelector(`input[name=${k}]`); if (i && v) i.value = v; }); };
+  if (u) u.onchange = () => { const d = ulkeler.find((x) => x.kod === u.value) || {};
+    if (d.dil && $("#f-dil", el)) $("#f-dil", el).value = d.dil;
+    Object.entries({ saat_dilimi: d.saat_dilimi, para_birimi: d.para, para_sembolu: d.sembol, site_para_birimi: d.para, yuvarlama: d.yuvarlama })
+      .forEach(([k, v]) => { const i = document.querySelector(`input[name=${k}]`); if (i && v) i.value = v; }); };
 }
 async function perdeArkasiCiz() {
   try {
@@ -638,7 +641,7 @@ async function perdeArkasiCiz() {
 
 // ======================= kurulum sihirbazi =======================
 // Adimlar: 1 isletme  2 web sitesi (burada isletme olusur)  3 logo ve fotograflar  4 hesaplar ve baslat
-const S = { adim: 1, form: { ulke: "Nigeria", ...ULKELER.Nigeria, site_para_birimi: "NGN", cta: "Visit us or send us a DM" }, mid: null, site: null };
+const S = { adim: 1, form: { cta: "Send us a message" }, mid: null, site: null };
 function adimCubugu() { return `<div class="adimlar" aria-label="Step ${S.adim} of 4">${[1, 2, 3, 4].map((i) => `<span class="${i <= S.adim ? "tamam" : ""}"></span>`).join("")}</div>`; }
 async function sihirbaz(hatalar = {}) {
   $("#giris").classList.add("gizli"); $("#uygulama").classList.add("gizli"); $("#kurulum").classList.remove("gizli");
@@ -649,7 +652,6 @@ async function sihirbaz(hatalar = {}) {
     await temelForm($("#temel"), S.form, hatalar);
     $("#ileri").onclick = () => {
       Object.assign(S.form, formOku($("#temel")));
-      const u = ULKELER[S.form.ulke]; if (u) Object.assign(S.form, u, { site_para_birimi: u.para_birimi });
       const h = {};
       if (!S.form.isletme_adi) h.isletme_adi = "Enter your business name";
       if (!S.form.tanim && !(S.form.hizmetler || []).length) h.tanim = "Pick what you offer or write one sentence";
