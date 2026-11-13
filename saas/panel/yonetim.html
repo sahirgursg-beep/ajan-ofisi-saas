@@ -8,15 +8,17 @@
 <link rel="icon" type="image/png" href="/panel/varliklar/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* Yonetim: musteri paneliyle ayni dil, daha yogun. Sarı = ilgilen, kirmizi = bozuk. */
 :root { --mist:#EEF2EE; --kart:#fff; --ink:#1B3B2E; --soluk:#5F6E66; --cizgi:#D9DFD8; --jade:#127F56; --jade-acik:#DDEFE5;
   --adacayi:#AAC7B1; --marigold:#F2B300; --marigold-acik:#FFF3CC; --kirmizi:#B4372B; --kirmizi-acik:#F9E1DE;
-  --baslik:"Bricolage Grotesque", "Figtree", system-ui, sans-serif; --govde:"Figtree", system-ui, sans-serif; }
+  --baslik:"Geist", system-ui, -apple-system, "Segoe UI", sans-serif; --govde:"Geist", system-ui, -apple-system, "Segoe UI", sans-serif; }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--mist); color:var(--ink); font:15px/1.45 var(--govde); }
-h1, h2, h3 { font-family:var(--baslik); margin:0; letter-spacing:-0.01em; }
+body { margin:0; background:var(--mist); color:var(--ink); font:15px/1.5 var(--govde); -webkit-font-smoothing:antialiased; }
+h1, h2, h3 { font-family:var(--baslik); margin:0; letter-spacing:-0.025em; }
+[dir=rtl] { --baslik:"IBM Plex Sans Arabic", "Geist", system-ui, sans-serif; --govde:"IBM Plex Sans Arabic", "Geist", system-ui, sans-serif; }
+[dir=rtl] h1, [dir=rtl] h2, [dir=rtl] h3 { letter-spacing:0; }
 a { color:var(--jade); }
 .gizli { display:none !important; }
 :focus-visible { outline:3px solid var(--marigold); outline-offset:2px; }
@@ -36,13 +38,24 @@ input, select { font:inherit; padding:9px 12px; border-radius:8px; border:1.5px 
 main { max-width:1280px; margin:0 auto; padding:6px clamp(16px,3vw,32px) 60px; }
 
 /* durum cumlesi + sayilar */
-.durum-cumle { font:800 clamp(26px,3.6vw,40px)/1.08 var(--baslik); letter-spacing:-0.02em; margin:10px 0 18px; max-width:28ch; }
+.durum-cumle { font:600 clamp(26px,3.6vw,40px)/1.08 var(--baslik); letter-spacing:-0.02em; margin:10px 0 18px; max-width:28ch; }
 .sayilar { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:10px; }
 .sayi { background:var(--kart); border-radius:14px; padding:14px 16px; }
-.sayi b { display:block; font:800 30px var(--baslik); letter-spacing:-0.02em; }
+.sayi b { display:block; font:600 30px var(--baslik); letter-spacing:-0.02em; }
 .sayi span { color:var(--soluk); font-size:13px; }
 .sayi.dikkat { background:var(--marigold-acik); }
 .sayi.kotu { background:var(--kirmizi-acik); }
+.ilgilen { background:#fff; border-radius:14px; margin:0 0 14px; overflow:hidden; }
+.ilgilen h3 { font-size:15px; padding:14px 16px 6px; }
+.ilgilen button.satir-is { display:flex; width:100%; gap:12px; align-items:center; text-align:left; background:none; color:var(--ink);
+  border-radius:0; padding:12px 16px; border-top:1px solid #edf1ed; font:500 15px var(--govde); }
+.ilgilen button.satir-is:hover { background:#f6f9f6; }
+.ilgilen .isaret { width:9px; height:9px; border-radius:50%; background:var(--marigold); flex:none; }
+.ilgilen .isaret.kotu { background:var(--kirmizi); }
+.ilgilen .git { margin-left:auto; color:var(--jade); font-weight:600; font-size:14px; }
+.ilgilen.temiz { padding:14px 16px; color:var(--jade); font-weight:600; }
+.sayi small { display:block; color:var(--soluk); font-size:12px; margin-top:2px; }
+.is-satiri { margin:10px 2px 0; }
 .servisler { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
 .servis { font-size:13px; padding:5px 11px; border-radius:999px; background:#fff; }
 .servis.yok { background:var(--kirmizi-acik); color:var(--kirmizi); }
@@ -93,7 +106,9 @@ pre { white-space:pre-wrap; font-size:12px; background:#f4f6f4; padding:10px; bo
   <main>
     <section id="s-musteriler">
       <h2 class="durum-cumle" id="cumle">Loading…</h2>
+      <div class="ilgilen" id="ilgilen"></div>
       <div class="sayilar" id="sayilar"></div>
+      <p class="soluk is-satiri" id="isSatiri"></p>
       <div class="servisler" id="servisler"></div>
       <div class="satir arac">
         <input id="ara" placeholder="Search business, owner email or city" style="flex:1;min-width:220px">
@@ -188,16 +203,31 @@ function ozetCiz() {
   $("#cumle").textContent = s.toplam === 0 ? "No customers yet." :
     `${s.toplam} business${s.toplam > 1 ? "es" : ""}, ${s.aktif} paying. ` + (sorun ? `${ii.hata} failed job${ii.hata === 1 ? "" : "s"} and ${o.deneme_bitiyor.length} trial${o.deneme_bitiyor.length === 1 ? "" : "s"} ending soon.` : "Everything is running.");
   const gelir = o.harcama_bu_ay, sabit = o.sabit_aylik;
-  $("#sayilar").innerHTML = [
-    ["Paying", s.aktif, ""], ["On trial", s.deneme, ""], ["Trials ending in 3 days", o.deneme_bitiyor.length, o.deneme_bitiyor.length ? "dikkat" : ""],
-    ["Paused or closed", s.duraklatildi + s.kapali, ""], ["Connected to Meta", `${o.meta_bagli}/${s.toplam}`, ""],
-    ["Jobs done (24 h)", ii.bitti, ""], ["Jobs failed (24 h)", ii.hata, ii.hata ? "kotu" : ""], ["Waiting in queue", o.kuyruk, o.kuyruk > 5 ? "dikkat" : ""],
-    ["Monthly revenue (paying)", "$" + o.musteriler.filter((m) => m.durum === "aktif").reduce((t, m) => t + (m.paket?.usd || 0), 0), ""],
-    ["AI spend this month", "$" + gelir.toFixed(2), ""], ["Fixed hosting / month", "$" + sabit.toFixed(0), ""],
-  ].map(([a, v, c]) => `<div class="sayi ${c}"><b>${esc(v)}</b><span>${esc(a)}</span></div>`).join("");
+  const mrr = o.musteriler.filter((m) => m.durum === "aktif").reduce((t, m) => t + (m.paket?.usd || 0), 0);
+  const marj = mrr - gelir - sabit;
+  // Yalnizca bugun dikkat isteyenler: her satir tek tikla ilgili musteriyi acar
   const AD = { AJAN_YZ_ANAHTAR: "Text AI", FAL_KEY: "fal.ai images", PIXABAY_API_KEY: "Pixabay photos", META_APP_ID: "Meta app" };
-  $("#servisler").innerHTML = Object.entries(o.servisler).map(([k, v]) => `<span class="servis ${v ? "" : "yok"}">${v ? "✓" : "✕"} ${AD[k] || k}</span>`).join("")
-    + `<span class="servis">Version ${esc(o.surum)}</span>`;
+  const isler = [];
+  Object.entries(o.servisler).filter(([, v]) => !v).forEach(([k]) => isler.push({ kotu: true, metin: `${AD[k] || k} is not set up (DigitalOcean environment variable)` }));
+  o.musteriler.filter((m) => m.son_is && m.son_is.durum === "hata").forEach((m) => isler.push({ kotu: true, mid: m.id, metin: `${m.ad}: last job failed (${IS_AD[m.son_is.tur] || m.son_is.tur})` }));
+  o.musteriler.filter((m) => o.deneme_bitiyor.includes(m.id)).forEach((m) => isler.push({ mid: m.id, metin: `${m.ad}: trial ends in ${Math.max(0, Math.ceil((new Date(m.deneme_bitis) - new Date()) / 864e5))} days` }));
+  o.musteriler.filter((m) => !m.meta_bagli && ["deneme", "aktif"].includes(m.durum) && (new Date() - new Date(m.olusturma)) > 2 * 864e5)
+    .forEach((m) => isler.push({ mid: m.id, metin: `${m.ad}: not connected to Instagram & Facebook after 2 days` }));
+  if (o.kuyruk > 5) isler.push({ metin: `${o.kuyruk} jobs waiting in the queue` });
+  $("#ilgilen").className = "ilgilen" + (isler.length ? "" : " temiz");
+  $("#ilgilen").innerHTML = isler.length ? `<h3>Needs you (${isler.length})</h3>` + isler.map((x) =>
+      `<button class="satir-is" ${x.mid ? `data-mid="${esc(x.mid)}"` : "disabled"}><span class="isaret ${x.kotu ? "kotu" : ""}"></span>${esc(x.metin)}${x.mid ? '<span class="git">Open</span>' : ""}</button>`).join("")
+    : "✓ Nothing needs you right now.";
+  $$("#ilgilen [data-mid]").forEach((b) => (b.onclick = () => detay(b.dataset.mid)));
+  $("#sayilar").innerHTML = [
+    ["Monthly revenue", "$" + mrr, `${s.aktif} paying`, ""],
+    ["On trial", s.deneme, o.deneme_bitiyor.length ? `${o.deneme_bitiyor.length} ending in 3 days` : "none ending soon", o.deneme_bitiyor.length ? "dikkat" : ""],
+    ["Instagram & Facebook", `${o.meta_bagli}/${s.toplam}`, "businesses connected", ""],
+    ["Margin this month", (marj < 0 ? "−$" : "$") + Math.abs(marj).toFixed(0), `AI $${gelir.toFixed(2)} · hosting $${sabit.toFixed(0)}`, marj < 0 ? "dikkat" : ""],
+  ].map(([a, v, alt, c]) => `<div class="sayi ${c}"><b>${esc(v)}</b><span>${esc(a)}</span><small>${esc(alt)}</small></div>`).join("");
+  $("#isSatiri").textContent = `Last 24 hours: ${ii.bitti} jobs done · ${ii.hata} failed · ${o.kuyruk} waiting · ${s.duraklatildi + s.kapali} paused or closed`;
+  const eksik = Object.values(o.servisler).filter((v) => !v).length;
+  $("#servisler").innerHTML = (eksik ? "" : `<span class="servis">✓ All services connected</span>`) + `<span class="servis">Version ${esc(o.surum)}</span>`;
   tabloCiz();
 }
 function tabloCiz() {
@@ -298,6 +328,8 @@ $("#kutSimdi").onclick = async () => {
 };
 
 basla().catch((e) => bildir(e.message, 8000));
+document.querySelectorAll("#giris input").forEach((i) => i.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); document.querySelector("#girisBtn")?.click(); } }));   // Enter = ana tus
 </script>
 </body>
 </html>

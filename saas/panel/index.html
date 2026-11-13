@@ -7,22 +7,24 @@
 <link rel="icon" type="image/png" href="/panel/varliklar/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* FeedZync — "the office runs itself". Mist ground, forest ink, jade = running, marigold = needs you. */
 :root {
   --mist:#EEF2EE; --kart:#FFFFFF; --ink:#1B3B2E; --adacayi:#AAC7B1; --soluk:#5F6E66; --cizgi:#D9DFD8;
   --jade:#127F56; --jade-acik:#DDEFE5; --marigold:#F2B300; --marigold-acik:#FFF3CC; --kirmizi:#B4372B; --kirmizi-acik:#F9E1DE;
   --r-kucuk:8px; --r:14px; --r-buyuk:22px;
-  --baslik:"Bricolage Grotesque", "Figtree", system-ui, sans-serif; --govde:"Figtree", system-ui, sans-serif;
+  --baslik:"Geist", system-ui, -apple-system, "Segoe UI", sans-serif; --govde:"Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 * { box-sizing:border-box; }
 html { -webkit-text-size-adjust:100%; }
-body { margin:0; background:var(--mist); color:var(--ink); font:16px/1.5 var(--govde); }
+body { margin:0; background:var(--mist); color:var(--ink); font:16px/1.55 var(--govde); -webkit-font-smoothing:antialiased; }
 a { color:var(--jade); }
-h1, h2, h3 { font-family:var(--baslik); margin:0; letter-spacing:-0.01em; }
-h2 { font-size:28px; line-height:1.15; font-weight:700; }
-h3 { font-size:19px; font-weight:700; }
+h1, h2, h3 { font-family:var(--baslik); margin:0; letter-spacing:-0.025em; }
+[dir=rtl] { --baslik:"IBM Plex Sans Arabic", "Geist", system-ui, sans-serif; --govde:"IBM Plex Sans Arabic", "Geist", system-ui, sans-serif; }
+[dir=rtl] h1, [dir=rtl] h2, [dir=rtl] h3 { letter-spacing:0; }
+h2 { font-size:28px; line-height:1.15; font-weight:600; }
+h3 { font-size:19px; font-weight:600; }
 p { margin:0 0 10px; }
 .soluk { color:var(--soluk); font-size:14px; }
 .gizli { display:none !important; }
@@ -55,7 +57,7 @@ main { max-width:1120px; margin:0 auto; padding:8px clamp(16px,4vw,40px) 60px; }
 
 /* ---------- ana sayfa: otopilot cumlesi ---------- */
 .otopilot { padding:28px 0 34px; }
-.otopilot h1 { font-size:clamp(34px,6vw,64px); line-height:1.02; font-weight:800; letter-spacing:-0.03em; max-width:16ch; }
+.otopilot h1 { font-size:clamp(34px,6vw,64px); line-height:1.02; font-weight:600; letter-spacing:-0.045em; max-width:16ch; }
 .otopilot h1 .nokta { display:inline-block; width:.42em; height:.42em; border-radius:50%; background:var(--jade); margin-left:.12em;
   vertical-align:.12em; box-shadow:0 0 0 0 rgba(18,127,86,.45); animation:nabiz 2.4s ease-out 1; }
 .otopilot.durdu h1 .nokta { background:var(--marigold); }
@@ -98,12 +100,14 @@ main { max-width:1120px; margin:0 auto; padding:8px clamp(16px,4vw,40px) 60px; }
 /* ---------- foto birakma alani ---------- */
 .birak { margin-top:28px; border:2px dashed #b7c4bb; border-radius:var(--r-buyuk); padding:26px; display:flex; gap:20px; align-items:center; flex-wrap:wrap; background:#f7f9f6; cursor:pointer; }
 .birak.ustunde { border-color:var(--jade); background:var(--jade-acik); }
-.birak .ikon { width:56px; height:56px; border-radius:16px; background:var(--jade); color:#fff; display:grid; place-items:center; font:800 30px var(--baslik); }
+.birak .ikon { width:56px; height:56px; border-radius:16px; background:var(--jade); color:#fff; display:grid; place-items:center; font:600 30px var(--baslik); }
 
 /* ---------- cekmece (icerik detayi) ---------- */
 .perde { position:fixed; inset:0; background:rgba(27,59,46,.45); z-index:20; }
 .cekmece { position:fixed; top:0; right:0; bottom:0; width:min(560px,100%); background:var(--mist); z-index:21; overflow-y:auto; padding:22px; }
-.cekmece .medya img, .cekmece .medya video { width:100%; border-radius:var(--r); display:block; background:#000; }
+.cekmece .medya img, .cekmece .medya video { width:100%; max-height:52vh; object-fit:contain; border-radius:var(--r); display:block; background:#e4e9e4; }
+/* karar tuslari her zaman gorunur: uzun gonderide asagi kaydirmak gerekmez */
+.cekmece .eylemler { position:sticky; bottom:-22px; margin:18px -22px -22px; padding:14px 22px 22px; background:linear-gradient(transparent, var(--mist) 22%); }
 .kaydir { display:flex; gap:8px; overflow-x:auto; margin-top:8px; }
 .kaydir img { width:72px; height:90px; object-fit:cover; border-radius:var(--r-kucuk); cursor:pointer; }
 .sekmeler { display:flex; gap:6px; margin:18px 0 8px; flex-wrap:wrap; }
@@ -115,7 +119,7 @@ main { max-width:1120px; margin:0 auto; padding:8px clamp(16px,4vw,40px) 60px; }
 .izgara { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; margin-top:16px; }
 .dosya { background:var(--kart); border-radius:var(--r); overflow:hidden; box-shadow:inset 0 0 0 1px var(--cizgi); position:relative; }
 .dosya .resim { aspect-ratio:1; background:#dfe5df center/cover no-repeat; }
-.dosya .belge { aspect-ratio:1; display:grid; place-items:center; font:800 26px var(--baslik); color:var(--soluk); }
+.dosya .belge { aspect-ratio:1; display:grid; place-items:center; font:600 26px var(--baslik); color:var(--soluk); }
 .dosya .bilgi { padding:8px 10px 10px; font-size:13px; }
 .dosya .bilgi b { display:block; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dosya .sil { position:absolute; top:6px; right:6px; padding:6px 10px; font-size:12px; background:rgba(255,255,255,.92); color:var(--kirmizi); }
@@ -125,7 +129,7 @@ main { max-width:1120px; margin:0 auto; padding:8px clamp(16px,4vw,40px) 60px; }
 .adimlar { display:flex; gap:6px; margin:6px 0 28px; }
 .adimlar span { flex:1; height:6px; border-radius:999px; background:var(--cizgi); }
 .adimlar span.tamam { background:var(--jade); }
-.sihirbaz h2 { font-size:clamp(28px,4.5vw,40px); font-weight:800; letter-spacing:-0.02em; }
+.sihirbaz h2 { font-size:clamp(28px,4.5vw,40px); font-weight:600; letter-spacing:-0.02em; }
 .cipler { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
 .cip { background:#fff; color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--cizgi); padding:9px 14px; font-weight:500; font-size:14px; }
 .cip[aria-pressed="true"] { background:var(--jade); color:#fff; box-shadow:none; }
@@ -142,13 +146,13 @@ details > summary { cursor:pointer; font-weight:600; }
 .paketler { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px; margin-top:14px; }
 .paket { border-radius:var(--r); padding:16px; box-shadow:inset 0 0 0 1.5px var(--cizgi); }
 .paket.secili { box-shadow:inset 0 0 0 2px var(--jade); background:var(--jade-acik); }
-.paket .fiyat { font:800 30px var(--baslik); margin:6px 0 2px; } .paket .fiyat small { font:500 14px var(--govde); color:var(--soluk); }
+.paket .fiyat { font:600 30px var(--baslik); margin:6px 0 2px; } .paket .fiyat small { font:500 14px var(--govde); color:var(--soluk); }
 .paket ul { padding-left:18px; margin:10px 0; font-size:14px; }
 .pano div { padding:8px 0; border-bottom:1px solid var(--cizgi); font-size:14px; }
 
 /* ---------- giris ---------- */
 .giris { max-width:440px; margin:9vh auto; padding:0 18px; }
-.giris h1 { font-size:46px; font-weight:800; letter-spacing:-0.03em; line-height:1; }
+.giris h1 { font-size:46px; font-weight:600; letter-spacing:-0.03em; line-height:1; }
 .giris .vaat { font-size:19px; margin:14px 0 22px; }
 
 .mesaj { position:fixed; left:50%; transform:translateX(-50%); bottom:22px; background:var(--ink); color:#fff; padding:13px 18px; border-radius:999px; z-index:30; max-width:92vw; }
@@ -377,8 +381,10 @@ function zamanOf(x) {
   const gun = (x.klasor.match(/^\d{4}-\d{2}-\d{2}/) || [new Date().toISOString().slice(0, 10)])[0];
   return `${gun}T${SLOT[x.tur] || "12:00"}`;
 }
+const bakmaliMi = (x) => ((x.yayin || {}).durum || "bekliyor") === "bekliyor" && (x.meta.kk_uyari || []).length > 0;
 function durumYazi(x) {
   const d = (x.yayin || {}).durum || "bekliyor";
+  if (bakmaliMi(x)) return ["Needs a quick look", "dikkat"];      // kalite kontrol isaretledi: otomatik gitmez
   if (d === "bekliyor" && !((MUSTERI.yayin_ayar || {}).otomatik && MUSTERI.meta_bagli)) return ["Waiting for you", "dikkat"];
   return DURUM[d] || [d, ""];
 }
@@ -415,12 +421,28 @@ async function anaCiz() {
   if (!MUSTERI.logo_yuklendi) kartlar.push(`<div class="bekleyen"><div class="yayil"><b>Add your logo</b><div class="soluk">We put it on your designs and take your brand colours from it.</div></div><button class="kucuk" data-logo>Upload logo</button></div>`);
   const sorunlu = ICERIK.filter((x) => ["hata", "kismen", "kacirildi", "kaldirma_hatasi"].includes((x.yayin || {}).durum));
   if (sorunlu.length) kartlar.push(`<div class="bekleyen kotu"><div class="yayil"><b>${DIL === "en" ? `${sorunlu.length} post${sorunlu.length > 1 ? "s" : ""} could not go out` : T("{n} could not go out", { n: sorunlu.length })}</b><div class="soluk">${T("Open it and press Try again.")}</div></div><button class="kucuk" data-ac="${esc(sorunlu[0].klasor)}">Open</button></div>`);
+  // Kalite kontrolun isaretledigi (otomatik gitmeyecek) gonderiler: tek tusla bakilir
+  const bak = ICERIK.filter((x) => bakmaliMi(x) && zamanOf(x) >= simdi);
+  if (bak.length) kartlar.push(`<div class="bekleyen"><div class="yayil"><b>${esc(T("{n} need a quick look", { n: bak.length }))}</b><div class="soluk">${T("The quality check wants you to confirm something before these go out.")}</div></div><button class="ana kucuk" data-ac="${esc(bak[0].klasor)}">${T("Open")}</button></div>`);
+  // Bagli ama otopilot kapali: bekleyen gonderilerin hepsi tek dokunusla onaylanir
+  const onaysiz = bagli && !oto ? ICERIK.filter((x) => ((x.yayin || {}).durum || "bekliyor") === "bekliyor" && !bakmaliMi(x) && zamanOf(x) >= simdi) : [];
+  if (onaysiz.length >= 2) kartlar.push(`<div class="bekleyen"><div class="yayil"><b>${esc(T("{n} posts are waiting for you", { n: onaysiz.length }))}</b><div class="soluk">${T("Approve them all at once. They go out at their planned times.")}</div></div><button class="ana kucuk" data-hepsi>${T("Approve all")}</button></div>`);
   const elle = ICERIK.filter((x) => zamanOf(x).slice(0, 10) >= bugun && Object.values(x.platformlar || {}).some((p) => p.mod === "manuel"));
   if (elle.length) kartlar.push(`<div class="bekleyen" style="background:#fff"><div class="yayil"><b>TikTok & LinkedIn versions are ready</b><div class="soluk">Until those apps approve auto-posting, copy the text and download the media from the post.</div></div><button class="ikincil kucuk" data-ac="${esc(elle[0].klasor)}">See them</button></div>`);
   $("#bekleyenler").innerHTML = kartlar.join("");
   $$("[data-git]").forEach((b) => (b.onclick = () => sekme(b.dataset.git)));
   $$("[data-logo]").forEach((b) => (b.onclick = () => $("#logoSec").click()));
   $$("#bekleyenler [data-ac]").forEach((b) => (b.onclick = () => cekmeceAc(b.dataset.ac)));
+  $$("[data-hepsi]").forEach((b) => (b.onclick = async () => {
+    b.disabled = true; let n = 0;
+    for (const x of onaysiz) {
+      try { await api(`/api/musteri/${MUSTERI.id}/icerik/${encodeURIComponent(x.klasor)}/onayla`, "POST",
+                      { surum: x.surum, metin: x.caption, zaman: (x.yayin || {}).zaman || zamanOf(x),
+                        hedefler: ((x.yayin || {}).hedefler || []).length ? x.yayin.hedefler : (VARSAYILAN_HEDEF[x.tur] || VARSAYILAN_HEDEF.post) }); n++; }
+      catch (e) { bildir(e.message, 6000); }
+    }
+    bildir(T("{n} posts approved.", { n })); anaCiz();
+  }));
   // hafta seridi: dun + 6 gun
   const gunler = [];
   for (let i = -1; i < 6; i++) { const t = new Date(bugun + "T12:00"); t.setDate(t.getDate() + i); gunler.push(t.toISOString().slice(0, 10)); }
@@ -463,7 +485,7 @@ function cekmeceAc(klasor) {
   const pl = x.platformlar || {}, padlar = Object.keys(pl).filter((k) => PLAT[k]);
   const indir = ads.filter((a) => /\.(mp4|jpg|jpeg|png)$/i.test(a)).map((a) => `<a href="${esc(dos[a])}" download="${esc(a)}" target="_blank" rel="noopener">${esc(a)}</a>`).join(", ");
   const dugmeler = [];
-  if (duzenlenir) dugmeler.push(`<button class="ana" data-i="onayla">${d === "onaylandi" || d === "bekliyor" ? "Save" : "Post it"}</button>`);
+  if (duzenlenir) dugmeler.push(`<button class="ana" data-i="onayla">${bakmaliMi(x) ? T("Looks good, post it") : d === "onaylandi" || d === "bekliyor" ? "Save" : "Post it"}</button>`);
   if (["kismen", "hata", "kacirildi", "kaldirma_hatasi"].includes(d)) dugmeler.push(`<button class="ana" data-i="tekrar">Try again</button>`);
   if (["bekliyor", "reddedildi", "hata"].includes(d)) dugmeler.push(`<button class="ikincil" data-i="revize">Ask for changes</button>`);
   if (["bekliyor", "onaylandi"].includes(d)) dugmeler.push(`<button class="tehlike" data-i="reddet">Don't post this</button>`);
@@ -477,6 +499,7 @@ function cekmeceAc(klasor) {
     <div class="medya">${medya}</div>
     ${kartlar.length > 1 ? `<div class="kaydir">${kartlar.map((k) => `<img src="${esc(dos[k])}" alt="">`).join("")}</div>` : ""}
     ${hatalar}
+    ${bakmaliMi(x) ? `<div class="not-kutu" style="margin-top:12px"><b>${T("The quality check flagged:")}</b><ul style="margin:6px 0 0;padding-inline-start:18px">${x.meta.kk_uyari.map((n) => `<li data-cevirme>${esc(n)}</li>`).join("")}</ul><div class="soluk" style="margin-top:6px">${T("Fix the text below if needed, then post it. Or ask the team for changes.")}</div></div>` : ""}
     <div class="sekmeler" role="tablist"><button class="aktif" data-p="ana" role="tab">Instagram & Facebook</button>${padlar.filter((k) => pl[k].mod === "manuel").map((k) => `<button data-p="${k}" role="tab">${PLAT[k]}</button>`).join("")}</div>
     <div data-pg="ana"><textarea rows="8" class="metin" aria-label="Caption" ${duzenlenir ? "" : "disabled"}>${esc(x.caption)}</textarea>
       <label>Time <span class="ipucu">(${esc(MUSTERI.saat_kisaltma || "")})</span></label>
@@ -489,7 +512,7 @@ function cekmeceAc(klasor) {
         <textarea rows="7" readonly class="pmetin" style="margin-top:8px">${esc(metin)}</textarea>
         <div class="satir" style="margin-top:8px"><button class="kucuk" data-kopyala>Copy text</button></div>
         <p class="soluk" style="margin-top:8px">Download: ${indir || "—"}</p></div>`; }).join("")}
-    <div class="satir" style="margin-top:18px">${dugmeler.join("")}</div></aside>`;
+    <div class="satir eylemler">${dugmeler.join("")}</div></aside>`;
   document.body.style.overflow = "hidden";
   const c = $(".cekmece");
   $$("[data-kapat]").forEach((b) => (b.onclick = cekmeceKapat));
@@ -784,6 +807,8 @@ async function sihirbaz(hatalar = {}) {
 const logoDegistir = $("#logoSec").onchange;
 
 basla().catch((e) => bildir(e.message, 8000));
+document.querySelectorAll("#giris input").forEach((i) => i.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); document.querySelector("#giris button.ana")?.click(); } }));   // Enter = ana tus
 </script>
 </body>
 </html>

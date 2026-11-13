@@ -1,6 +1,7 @@
 """Tanitim sitesinin metinleri (7 dil). Yeni dil: ayni anahtarlarla bir sozluk ekleyin; eksik anahtar Ingilizceye duser."""
 
 EN = {
+    "sektor_hepsi": "See all {n} industries", "kutu_not": "No card needed · Ready in 2 minutes · Cancel anytime",
     "kod": "en", "ad": "English", "yon": "ltr",
     "nav_nasil": "How it works", "nav_fiyat": "Pricing", "nav_sektor": "Industries", "nav_sss": "FAQ",
     "giris": "Sign in", "basla": "Start free",
@@ -10,7 +11,7 @@ EN = {
     "h1": "Your social media, handled every day.",
     "alt": "FeedZync is an AI social media team for busy businesses. It learns what you sell, then designs, writes "
            "and publishes posts, carousels and Reels — every single day.",
-    "kutu": "Your business name", "kutu_btn": "Start free for 7 days", "kutu_not": "No card needed · Ready in 2 minutes",
+    "kutu": "Your business name", "kutu_btn": "Start free for 7 days", 
     "ekip_h": "Your team this morning",
     "ekip": ["Researcher studied your sector", "Copywriter wrote today's captions", "Designer made a post and a carousel",
              "Video editor cut a 15-second Reel", "Publisher scheduled everything for the best times"],
@@ -55,6 +56,7 @@ EN = {
 }
 
 FR = {
+    "sektor_hepsi": "Voir les {n} secteurs", "kutu_not": "Sans carte · Prêt en 2 minutes · Résiliable à tout moment",
     "kod": "fr", "ad": "Français", "yon": "ltr",
     "nav_nasil": "Comment ça marche", "nav_fiyat": "Tarifs", "nav_sektor": "Secteurs", "nav_sss": "FAQ",
     "giris": "Connexion", "basla": "Essai gratuit",
@@ -64,7 +66,7 @@ FR = {
     "h1": "Vos réseaux sociaux, gérés chaque jour.",
     "alt": "FeedZync est une équipe IA de réseaux sociaux pour les entreprises occupées. Elle apprend ce que vous "
            "vendez, puis crée, rédige et publie posts, carrousels et Reels — chaque jour.",
-    "kutu": "Nom de votre entreprise", "kutu_btn": "Essai gratuit de 7 jours", "kutu_not": "Sans carte · Prêt en 2 minutes",
+    "kutu": "Nom de votre entreprise", "kutu_btn": "Essai gratuit de 7 jours", 
     "ekip_h": "Votre équipe ce matin",
     "ekip": ["La chercheuse a étudié votre secteur", "Le rédacteur a écrit les légendes du jour",
              "La designer a créé un post et un carrousel", "Le monteur a coupé un Reel de 15 secondes",
@@ -106,6 +108,7 @@ FR = {
 }
 
 ES = {
+    "sektor_hepsi": "Ver los {n} sectores", "kutu_not": "Sin tarjeta · Listo en 2 minutos · Cancela cuando quieras",
     "kod": "es", "ad": "Español", "yon": "ltr",
     "nav_nasil": "Cómo funciona", "nav_fiyat": "Precios", "nav_sektor": "Sectores", "nav_sss": "Preguntas",
     "giris": "Entrar", "basla": "Empieza gratis",
@@ -115,7 +118,7 @@ ES = {
     "h1": "Tus redes sociales, resueltas cada día.",
     "alt": "FeedZync es un equipo de IA para redes sociales de negocios ocupados. Aprende lo que vendes y diseña, "
            "escribe y publica posts, carruseles y Reels — todos los días.",
-    "kutu": "Nombre de tu negocio", "kutu_btn": "Prueba gratis 7 días", "kutu_not": "Sin tarjeta · Listo en 2 minutos",
+    "kutu": "Nombre de tu negocio", "kutu_btn": "Prueba gratis 7 días", 
     "ekip_h": "Tu equipo esta mañana",
     "ekip": ["La investigadora estudió tu sector", "El redactor escribió los textos de hoy", "La diseñadora creó un post y un carrusel",
              "El editor montó un Reel de 15 segundos", "El publicador lo programó todo a la mejor hora"],
@@ -155,6 +158,7 @@ ES = {
 }
 
 PT = {
+    "sektor_hepsi": "Ver os {n} setores", "kutu_not": "Sem cartão · Pronto em 2 minutos · Cancele quando quiser",
     "kod": "pt", "ad": "Português", "yon": "ltr",
     "nav_nasil": "Como funciona", "nav_fiyat": "Preços", "nav_sektor": "Setores", "nav_sss": "Perguntas",
     "giris": "Entrar", "basla": "Comece grátis",
@@ -164,7 +168,7 @@ PT = {
     "h1": "Suas redes sociais, resolvidas todos os dias.",
     "alt": "O FeedZync é uma equipe de IA para redes sociais de negócios ocupados. Ele aprende o que você vende e cria, "
            "escreve e publica posts, carrosséis e Reels — todos os dias.",
-    "kutu": "Nome do seu negócio", "kutu_btn": "Teste grátis por 7 dias", "kutu_not": "Sem cartão · Pronto em 2 minutos",
+    "kutu": "Nome do seu negócio", "kutu_btn": "Teste grátis por 7 dias", 
     "ekip_h": "Sua equipe hoje de manhã",
     "ekip": ["A pesquisadora estudou o seu setor", "O redator escreveu as legendas de hoje", "A designer criou um post e um carrossel",
              "O editor montou um Reel de 15 segundos", "O publicador agendou tudo nos melhores horários"],
@@ -204,6 +208,7 @@ PT = {
 }
 
 DE = {
+    "sektor_hepsi": "Alle {n} Branchen ansehen", "kutu_not": "Keine Karte · In 2 Minuten startklar · Jederzeit kündbar",
     "kod": "de", "ad": "Deutsch", "yon": "ltr",
     "nav_nasil": "So funktioniert's", "nav_fiyat": "Preise", "nav_sektor": "Branchen", "nav_sss": "FAQ",
     "giris": "Anmelden", "basla": "Kostenlos starten",
@@ -213,7 +218,7 @@ DE = {
     "h1": "Deine Social Media, jeden Tag erledigt.",
     "alt": "FeedZync ist ein KI-Social-Media-Team für Unternehmen ohne Zeit. Es lernt, was du verkaufst, und "
            "gestaltet, schreibt und veröffentlicht Posts, Karussells und Reels — jeden Tag.",
-    "kutu": "Name deines Unternehmens", "kutu_btn": "7 Tage kostenlos testen", "kutu_not": "Keine Karte · In 2 Minuten startklar",
+    "kutu": "Name deines Unternehmens", "kutu_btn": "7 Tage kostenlos testen", 
     "ekip_h": "Dein Team heute Morgen",
     "ekip": ["Die Rechercheurin hat deine Branche analysiert", "Der Texter hat die heutigen Captions geschrieben",
              "Die Designerin hat einen Post und ein Karussell gestaltet", "Der Cutter hat ein 15-Sekunden-Reel geschnitten",
@@ -254,6 +259,7 @@ DE = {
 }
 
 TR = {
+    "sektor_hepsi": "{n} sektörün tümünü gör", "kutu_not": "Kart gerekmez · 2 dakikada hazır · İstediğiniz an iptal",
     "kod": "tr", "ad": "Türkçe", "yon": "ltr",
     "nav_nasil": "Nasıl çalışır", "nav_fiyat": "Fiyatlar", "nav_sektor": "Sektörler", "nav_sss": "SSS",
     "giris": "Giriş", "basla": "Ücretsiz başla",
@@ -263,7 +269,7 @@ TR = {
     "h1": "Sosyal medyanız her gün hallediliyor.",
     "alt": "FeedZync, yoğun işletmeler için yapay zekâ sosyal medya ekibidir. Ne sattığınızı öğrenir; gönderi, "
            "carousel ve Reels'leri tasarlar, yazar ve paylaşır — her gün.",
-    "kutu": "İşletmenizin adı", "kutu_btn": "7 gün ücretsiz dene", "kutu_not": "Kart gerekmez · 2 dakikada hazır",
+    "kutu": "İşletmenizin adı", "kutu_btn": "7 gün ücretsiz dene", 
     "ekip_h": "Bu sabah ekibiniz",
     "ekip": ["Araştırmacı sektörünüzü inceledi", "Metin yazarı bugünün metinlerini yazdı", "Tasarımcı bir gönderi ve carousel hazırladı",
              "Video editörü 15 saniyelik bir Reels kurguladı", "Yayıncı hepsini en iyi saatlere planladı"],
@@ -303,6 +309,7 @@ TR = {
 }
 
 AR = {
+    "sektor_hepsi": "عرض القطاعات الـ{n} كلها", "kutu_not": "بدون بطاقة · جاهز خلال دقيقتين · ألغِ متى شئت",
     "kod": "ar", "ad": "العربية", "yon": "rtl",
     "nav_nasil": "كيف يعمل", "nav_fiyat": "الأسعار", "nav_sektor": "القطاعات", "nav_sss": "الأسئلة",
     "giris": "تسجيل الدخول", "basla": "ابدأ مجاناً",
@@ -312,7 +319,7 @@ AR = {
     "h1": "حساباتك على السوشيال ميديا، تُدار كل يوم.",
     "alt": "FeedZync فريق ذكاء اصطناعي للسوشيال ميديا للشركات المشغولة. يتعلّم ما تبيعه ثم يصمّم ويكتب وينشر "
            "المنشورات والكاروسيل والريلز — كل يوم.",
-    "kutu": "اسم نشاطك التجاري", "kutu_btn": "جرّب مجاناً 7 أيام", "kutu_not": "بدون بطاقة · جاهز خلال دقيقتين",
+    "kutu": "اسم نشاطك التجاري", "kutu_btn": "جرّب مجاناً 7 أيام", 
     "ekip_h": "فريقك هذا الصباح",
     "ekip": ["الباحثة درست قطاعك", "الكاتب كتب نصوص اليوم", "المصممة صمّمت منشوراً وكاروسيل",
              "المونتير جهّز ريلز مدته 15 ثانية", "الناشر جدول كل شيء في أفضل الأوقات"],

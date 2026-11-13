@@ -82,19 +82,25 @@ def iskelet(site, uygulama, dil, sayfa, baslik, aciklama, govde, diller=None, ld
 <meta name="theme-color" content="#127F56">
 <link rel="icon" type="image/png" href="/panel/varliklar/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/site.css?v=3">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">{'<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">' if yon == "rtl" else ""}
+<link rel="stylesheet" href="/site.css?v=4">
 {ld}
 </head>
 <body>
 <header class="sar ust"><a class="logo" href="{_yol(dil)}" aria-label="FeedZync"><img src="/panel/varliklar/feedzync-logo.png" alt="FeedZync" width="171" height="32"></a>
 <nav aria-label="Main">{nav}</nav><span class="bosluk"></span>
-<a class="dugme ince" href="{E(uygulama)}/">{E(t(dil, "giris"))}</a><a class="dugme" href="{E(uygulama)}/?kayit=1&amp;dil={dil}">{E(t(dil, "basla"))}</a></header>
+<a class="giris-link" href="{E(uygulama)}/">{E(t(dil, "giris"))}</a><a class="dugme" href="{E(uygulama)}/?kayit=1&amp;dil={dil}">{E(t(dil, "basla"))}</a></header>
 <main>{govde}</main>
+<div class="yapiskan" aria-hidden="true"><a class="dugme" tabindex="-1" href="{E(uygulama)}/?kayit=1&amp;dil={dil}">{E(t(dil, "kutu_btn"))}</a></div>
 <footer><div class="sar"><span>© 2026 FeedZync</span><a href="/legal/privacy">{E(t(dil, "gizlilik"))}</a><a href="/legal/terms">{E(t(dil, "kosullar"))}</a>
 <a href="/legal/data-deletion">{E(t(dil, "veri_silme"))}</a><span style="flex:1"></span>
 <label>{E(t(dil, "dil"))} <select onchange="location.href='/'+this.value+'/{(sayfa or '') if cok else ''}'" aria-label="{E(t(dil, 'dil'))}">{dil_sec}</select></label></div></footer>
 <script>
+(() => {{ const y = document.querySelector('.yapiskan'), f = document.querySelector('.basla-form, .son');
+  if (!y || !('IntersectionObserver' in window)) return;
+  // telefonda: baslatma formu ekrandan cikinca alta tek tus gelir; form ya da son cagri gorununce kaybolur
+  new IntersectionObserver(([e]) => y.classList.toggle('gorunur', !e.isIntersecting && scrollY > 200)).observe(f || document.body);
+}})();
 document.querySelectorAll('form.basla-form').forEach(f => f.addEventListener('submit', e => {{
   e.preventDefault(); const ad = f.querySelector('input').value.trim();
   location.href = f.action + (f.action.includes('?') ? '&' : '?') + 'ad=' + encodeURIComponent(ad);
@@ -158,14 +164,20 @@ def _son(uygulama, dil):
             f'<a class="dugme" href="{E(uygulama)}/?kayit=1&amp;dil={dil}">{E(t(dil, "son_btn"))}</a></div></div></section>')
 
 
+ONE_CIKAN = ("restoran", "guzellik", "moda", "emlak", "spor", "saglik", "eticaret", "otel", "egitim", "mobilya")
+
+
 def ana(site, uygulama, dil):
     ekip = "".join(f"<li>{E(x)}</li>" for x in t(dil, "ekip"))
     adimlar = "".join(f"<li><h3>{E(a)}</h3><p>{E(b)}</p></li>" for a, b in t(dil, "adimlar"))
     ikonlar = ("post", "car", "reel", "diger")
     gun = "".join(f'<div><span class="ikon {ikonlar[i]}" aria-hidden="true"></span><h3>{E(a)}</h3><p>{E(b)}</p></div>'
                   for i, (a, b) in enumerate(t(dil, "gun")))
-    sektorler = "".join(f'<a href="/en/industries/{s}">{E(sektor_bilgi.SEKTORLER[k]["ad"])}</a>'
-                        for s, k in sorted(SLUG.items(), key=lambda x: sektor_bilgi.SEKTORLER[x[1]]["ad"]))
+    tum = [f'<a href="/en/industries/{s}">{E(sektor_bilgi.SEKTORLER[k]["ad"])}</a>'
+           for s, k in sorted(SLUG.items(), key=lambda x: (x[1] not in ONE_CIKAN, sektor_bilgi.SEKTORLER[x[1]]["ad"]))]
+    ilk = len([k for k in SLUG.values() if k in ONE_CIKAN]) or 10
+    sektorler = ("".join(tum[:ilk]) + f'<details class="hepsi"><summary>{E(t(dil, "sektor_hepsi").replace("{n}", str(len(tum))))}</summary>'
+                 + "".join(tum[ilk:]) + "</details>")
     govde = f"""
 <section class="sar kahraman"><div><h1>{E(t(dil, "h1"))}</h1><p class="alt">{E(t(dil, "alt"))}</p>{_basla_formu(uygulama, dil)}</div>
 <aside class="ekip" aria-label="{E(t(dil, "ekip_h"))}"><h3>{E(t(dil, "ekip_h"))}</h3><ol>{ekip}</ol>
