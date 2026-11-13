@@ -167,6 +167,7 @@ footer { text-align:center; padding:26px; font-size:13px; color:var(--soluk); }
   <div id="sifreAlan"><label for="sifre">Password</label><input id="sifre" type="password" autocomplete="current-password"></div>
   <div class="satir" style="margin-top:18px"><button class="ana" id="girisBtn">Sign in</button><button id="kayitBtn" class="ikincil">Create account</button></div>
   <p id="girisMesaj" class="soluk" style="margin-top:12px"></p>
+  <p style="margin-top:24px"><select class="dilSec" aria-label="Language" style="width:auto"></select></p>
 </section>
 
 <!-- ======================= uygulama ======================= -->
@@ -177,6 +178,7 @@ footer { text-align:center; padding:26px; font-size:13px; color:var(--soluk); }
     <div class="yayil"></div>
     <a id="yonetimLink" href="/yonetim" class="gizli" style="font-weight:600;text-decoration:none">Admin</a>
     <select id="musteriSec" class="gizli" aria-label="Business"></select>
+    <select class="dilSec" aria-label="Language" style="width:auto;padding:8px 10px;border-radius:999px"></select>
     <button class="ikincil kucuk" id="cikis">Sign out</button>
   </div>
   <main>
@@ -236,11 +238,18 @@ footer { text-align:center; padding:26px; font-size:13px; color:var(--soluk); }
 <footer>FeedZync · Stock photos from <a href="https://pixabay.com" target="_blank" rel="noopener">Pixabay</a> and <a href="https://www.pexels.com" target="_blank" rel="noopener">Pexels</a></footer>
 
 <script type="module">
+import { T, baslat, secili, DILLER as ARAYUZ_DILLERI } from "/panel/ceviri.js";
+const DIL = baslat(secili());
 const $ = (s, k = document) => k.querySelector(s);
 const $$ = (s, k = document) => [...k.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let YAP = {}, sb = null, belirtec = null, MUSTERI = null, ME = null, ICERIK = [], SEKTORLER = null;
 
+document.querySelectorAll(".dilSec").forEach((sec) => {
+  sec.innerHTML = Object.entries(ARAYUZ_DILLERI).map(([k, a]) => `<option value="${k}" data-cevirme ${k === DIL ? "selected" : ""}>${a}</option>`).join("");
+  sec.setAttribute("data-cevirme", "");
+  sec.onchange = () => { localStorage.setItem("fz_dil", sec.value); location.reload(); };
+});
 function bildir(m, sure = 4000) { const e = $("#mesaj"); e.textContent = m; e.classList.remove("gizli"); clearTimeout(e._t); e._t = setTimeout(() => e.classList.add("gizli"), sure); }
 
 async function token() { if (sb) { const { data } = await sb.auth.getSession(); belirtec = data.session?.access_token || null; } return belirtec; }
@@ -378,8 +387,8 @@ function kapak(x) {
   const a = ads.filter((n) => n.startsWith("carousel_")).sort()[0] || ads.find((n) => n.startsWith("post_")) || ads.find((n) => /kapak|cover/.test(n)) || ads.find((n) => /\.(jpg|png)$/i.test(n));
   return a ? dos[a] : "";
 }
-const gunAdi = (t) => new Date(t + "T12:00").toLocaleDateString("en-GB", { weekday: "long" });
-const kisaTarih = (t) => new Date(t + "T12:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const gunAdi = (t) => new Date(t + "T12:00").toLocaleDateString(DIL === "en" ? "en-GB" : DIL, { weekday: "long" });
+const kisaTarih = (t) => new Date(t + "T12:00").toLocaleDateString(DIL === "en" ? "en-GB" : DIL, { day: "numeric", month: "short" });
 
 async function anaCiz() {
   let v;
@@ -396,7 +405,8 @@ async function anaCiz() {
   const s = ileride[0];
   $("#sonrakiCumle").textContent = !bagli ? "Posts are being prepared. Connect Instagram & Facebook and they start going out on their own."
     : !oto ? "New posts are prepared every morning and wait for you. Turn autopilot on and they go out on time."
-    : s ? `Next: ${zamanOf(s).slice(0, 10) === bugun ? "today" : gunAdi(zamanOf(s).slice(0, 10))} at ${zamanOf(s).slice(11)} — ${TUR_AD[s.tur] || "post"} on Instagram & Facebook. You don't need to do anything.`
+    : s ? T("Next: {jour} at {saat} — {tur} on Instagram & Facebook. You don't need to do anything.",
+            { jour: zamanOf(s).slice(0, 10) === bugun ? T("today") : gunAdi(zamanOf(s).slice(0, 10)), saat: zamanOf(s).slice(11), tur: T(TUR_AD[s.tur] || "Post") })
     : "The team prepares tomorrow's posts early in the morning. You don't need to do anything.";
   $("#otomatik").checked = oto; $("#otoYazi").textContent = oto ? "Autopilot on" : "Autopilot off";
   // seni bekleyenler: sadece gercekten gereken seyler
@@ -404,7 +414,7 @@ async function anaCiz() {
   if (!bagli) kartlar.push(`<div class="bekleyen"><div class="yayil"><b>Connect Instagram & Facebook</b><div class="soluk">One time, about a minute. Without it we can prepare posts but not publish them.</div></div><button class="ana kucuk" data-git="isletme">Connect</button></div>`);
   if (!MUSTERI.logo_yuklendi) kartlar.push(`<div class="bekleyen"><div class="yayil"><b>Add your logo</b><div class="soluk">We put it on your designs and take your brand colours from it.</div></div><button class="kucuk" data-logo>Upload logo</button></div>`);
   const sorunlu = ICERIK.filter((x) => ["hata", "kismen", "kacirildi", "kaldirma_hatasi"].includes((x.yayin || {}).durum));
-  if (sorunlu.length) kartlar.push(`<div class="bekleyen kotu"><div class="yayil"><b>${sorunlu.length} post${sorunlu.length > 1 ? "s" : ""} could not go out</b><div class="soluk">Open ${sorunlu.length > 1 ? "them" : "it"} and press Try again.</div></div><button class="kucuk" data-ac="${esc(sorunlu[0].klasor)}">Open</button></div>`);
+  if (sorunlu.length) kartlar.push(`<div class="bekleyen kotu"><div class="yayil"><b>${DIL === "en" ? `${sorunlu.length} post${sorunlu.length > 1 ? "s" : ""} could not go out` : T("{n} could not go out", { n: sorunlu.length })}</b><div class="soluk">${T("Open it and press Try again.")}</div></div><button class="kucuk" data-ac="${esc(sorunlu[0].klasor)}">Open</button></div>`);
   const elle = ICERIK.filter((x) => zamanOf(x).slice(0, 10) >= bugun && Object.values(x.platformlar || {}).some((p) => p.mod === "manuel"));
   if (elle.length) kartlar.push(`<div class="bekleyen" style="background:#fff"><div class="yayil"><b>TikTok & LinkedIn versions are ready</b><div class="soluk">Until those apps approve auto-posting, copy the text and download the media from the post.</div></div><button class="ikincil kucuk" data-ac="${esc(elle[0].klasor)}">See them</button></div>`);
   $("#bekleyenler").innerHTML = kartlar.join("");
@@ -427,7 +437,7 @@ async function anaCiz() {
   }).join("");
   $$("#hafta [data-ac]").forEach((b) => (b.onclick = () => cekmeceAc(b.dataset.ac)));
   const gecen = ICERIK.filter((x) => (x.yayin || {}).durum === "yayinlandi").length;
-  $("#haftaNot").textContent = gecen ? `${gecen} posted so far` : "";
+  $("#haftaNot").textContent = gecen ? T("{n} posted so far", { n: gecen }) : "";
 }
 $("#otomatik").onchange = async (e) => {
   try { MUSTERI = { ...MUSTERI, ...(await api(`/api/musteri/${MUSTERI.id}/yayin-ayar`, "PUT", { otomatik: e.target.checked })) };
@@ -497,8 +507,8 @@ async function karar(x, islem, c) {
     g.metin = $(".metin", c).value; g.zaman = $(".zaman", c).value;
     g.hedefler = ((x.yayin || {}).hedefler || []).length ? x.yayin.hedefler : (VARSAYILAN_HEDEF[x.tur] || VARSAYILAN_HEDEF.post);
   }
-  if (islem === "kaldir" && !confirm("Delete this post from Instagram and Facebook?")) return;
-  if (islem === "revize") { const n = prompt("What should change? For example: different photo, shorter text, brighter colours"); if (!n) return; g.not = n; g.secenekler = []; }
+  if (islem === "kaldir" && !confirm(T("Delete this post from Instagram and Facebook?"))) return;
+  if (islem === "revize") { const n = prompt(T("What should change? For example: different photo, shorter text, brighter colours")); if (!n) return; g.not = n; g.secenekler = []; }
   try { await api(`/api/musteri/${MUSTERI.id}/icerik/${encodeURIComponent(x.klasor)}/${islem}`, "POST", g);
         bildir({ onayla: "Saved.", reddet: "This post will not go out.", revize: "The team is redoing it.", tekrar: "Trying again.", kaldir: "Deleting it." }[islem] || "Done.");
         cekmeceKapat(); anaCiz(); }
@@ -539,7 +549,7 @@ function izgaraCiz(dosyalar) {
       <div class="bilgi"><b>${esc(d.baslik || d.not || d.ad)}</b><span class="soluk">${esc(durum)}</span></div>
       <button class="sil" data-sil="${esc(d.id)}" aria-label="Delete ${esc(d.ad)}">Delete</button></div>`; }).join("")
     : `<p class="soluk">Nothing here yet. Photos of your products, your place, your team at work and your finished jobs make the best posts.</p>`;
-  $$("[data-sil]").forEach((b) => (b.onclick = async () => { if (!confirm("Delete this file?")) return;
+  $$("[data-sil]").forEach((b) => (b.onclick = async () => { if (!confirm(T("Delete this file?"))) return;
     try { izgaraCiz((await api(`/api/musteri/${MUSTERI.id}/yukleme/${b.dataset.sil}/sil`, "POST")).dosyalar); } catch (e) { bildir(e.message); } }));
 }
 
@@ -554,7 +564,7 @@ async function paketCiz(para) {
   catch { return; }
   const gun = m.deneme_bitis ? Math.max(0, Math.ceil((new Date(m.deneme_bitis) - new Date()) / 864e5)) : null;
   const yerel = (p) => p.yerel != null && f.para !== "USD" ? `<span class="soluk">≈ ${esc(f.sembol)}${Number(p.yerel).toLocaleString()} / month</span>` : "";
-  $("#paketBlok").innerHTML = `<div class="satir"><h3 class="yayil">Plan: ${esc(pk.ad || "")}${pk.deneme ? ` · free trial, ${gun} day${gun === 1 ? "" : "s"} left` : ""}</h3>
+  $("#paketBlok").innerHTML = `<div class="satir"><h3 class="yayil">${esc(T("Plan: {ad}", { ad: pk.ad || "" }))}${pk.deneme ? ` · ${esc(T("free trial, {n} days left", { n: gun }))}` : ""}</h3>
       <label class="satir" style="margin:0;font-weight:500">Show prices in <select id="paraSec" style="width:auto">${f.paralar.map((x) => `<option ${x === f.para ? "selected" : ""}>${x}</option>`).join("")}</select></label></div>
     <div class="paketler">${f.paketler.map((p) => `<div class="paket ${p.kod === pk.kod ? "secili" : ""}"><b>${esc(p.ad)}</b>
       <div class="fiyat">$${p.usd}<small>/month</small></div>${yerel(p)}
@@ -647,16 +657,16 @@ async function temelForm(el, F, hatalar = {}, sadeceIs = false) {
   const sek = await sektorlerAl();
   const { ulkeler, diller } = await ulkelerAl();
   const ulke = F.ulke_kodu || ulkeTahmin(ulkeler);
-  const dil = F.dil || (ulkeler.find((u) => u.kod === ulke) || {}).dil || "en";
+  const dil = F.dil || (DIL !== "en" ? DIL : (ulkeler.find((u) => u.kod === ulke) || {}).dil) || "en";
   const secili = new Set(F.hizmetler || []);
-  el.innerHTML = `${sadeceIs ? "" : alanHtml("isletme_adi", "Business name", F.isletme_adi, "e.g. Mama Put Kitchen", hatalar)}
+  el.innerHTML = `${sadeceIs ? "" : alanHtml("isletme_adi", "Business name", F.isletme_adi, "e.g. Luna Bakery", hatalar)}
     <label for="f-sektor">What kind of business is it?</label>
     <select id="f-sektor" name="sektor"><option value="">Choose…</option>${sek.map((s) => `<option value="${s.anahtar}" ${s.anahtar === F.sektor ? "selected" : ""}>${esc(s.ad)}</option>`).join("")}</select>
     <label>What do you offer? <span class="ipucu">Tap all that apply</span></label>
     <div class="cipler" id="cipler"></div>
     <input name="hizmet_diger" placeholder="Something else? Type it, separated by commas" style="margin-top:10px" value="${esc([...secili].filter((x) => !sek.some((s) => s.isler.includes(x))).join(", "))}">
     ${alanHtml("tanim", "In one sentence, what makes you different?", F.tanim, "e.g. Family bakery known for sourdough and birthday cakes", hatalar)}
-    ${sadeceIs ? "" : `<div class="ikili">${alanHtml("sehirler", "City", F.sehirler, "e.g. Manchester", hatalar)}
+    ${sadeceIs ? "" : `<div class="ikili">${alanHtml("sehirler", "City", F.sehirler, "e.g. Lisbon", hatalar)}
       <div><label for="f-ulke">Country</label><select id="f-ulke" name="ulke_kodu">${ulkeler.map((u) => `<option value="${u.kod}" ${u.kod === ulke ? "selected" : ""}>${esc(u.ad)}</option>`).join("")}</select></div></div>
       <label for="f-dil">Posts are written in</label><select id="f-dil" name="dil">${Object.entries(diller).sort((a, b) => a[1].localeCompare(b[1])).map(([k, a]) => `<option value="${k}" ${k === dil ? "selected" : ""}>${esc(a)}</option>`).join("")}</select>
       <label class="satir" style="font-weight:500"><input type="checkbox" name="online_satis" style="width:auto" ${F.online_satis ? "checked" : ""}> Customers can also buy online</label>`}`;
@@ -747,12 +757,12 @@ async function sihirbaz(hatalar = {}) {
     $("#logoBtn").onclick = () => $("#logoSec").click();
     $("#logoSec").onchange = async (e) => { const f = [...e.target.files]; e.target.value = ""; if (!f.length) return;
       try { const j = await dosyaGonder(`/api/musteri/${S.mid}/logo`, f); $("#logoOn").style.backgroundImage = `url('${j.logo}')`;
-            $("#renkNot").innerHTML = `Brand colours from your logo: <span class="renkler">${Object.values(j.renkler).map((r) => `<i style="background:${esc(r)}"></i>`).join("")}</span>`; }
+            $("#renkNot").innerHTML = `${T("Brand colours from your logo:")} <span class="renkler">${Object.values(j.renkler).map((r) => `<i style="background:${esc(r)}"></i>`).join("")}</span>`; }
       catch (er) { bildir(er.message, 6000); } };
     let toplam = 0;
     const kur = $("#kurBirak");
     kur.onclick = () => $("#dosyaSec").click();
-    const yolla = async (f) => { if (!f.length) return; try { const j = await dosyaGonder(`/api/musteri/${S.mid}/yukle`, f); toplam += j.eklenen; $("#kurSayi").textContent = `${toplam} file${toplam > 1 ? "s" : ""} added. Add more or continue.`; } catch (er) { bildir(er.message, 6000); } };
+    const yolla = async (f) => { if (!f.length) return; try { const j = await dosyaGonder(`/api/musteri/${S.mid}/yukle`, f); toplam += j.eklenen; $("#kurSayi").textContent = T("{n} files added. Add more or continue.", { n: toplam }); } catch (er) { bildir(er.message, 6000); } };
     kur.ondragover = (e) => { e.preventDefault(); kur.classList.add("ustunde"); };
     kur.ondragleave = () => kur.classList.remove("ustunde");
     kur.ondrop = (e) => { e.preventDefault(); kur.classList.remove("ustunde"); yolla([...e.dataTransfer.files]); };
@@ -765,7 +775,7 @@ async function sihirbaz(hatalar = {}) {
       ${YAP.meta_hazir ? "" : `<p class="soluk">Connecting opens soon; your first posts are prepared anyway.</p>`}`;
     const bitir = async () => { try { await api(`/api/musteri/${S.mid}/uret`, "POST", { demo: false }); } catch {}
       $("#dosyaSec").onchange = (e) => { const f = [...e.target.files]; e.target.value = ""; gonder(f, ""); };
-      $("#logoSec").onchange = logoDegistir; location.hash = "musteri=" + S.mid; await yukle(); bildir("Your first posts are being made — about 15 minutes.", 7000); };
+      $("#logoSec").onchange = logoDegistir; location.hash = "musteri=" + S.mid; await yukle(); bildir(T("Your first posts are being made — about 15 minutes."), 7000); };
     $("#sonra").onclick = bitir;
     $("#baglan").onclick = async () => { try { await api(`/api/musteri/${S.mid}/uret`, "POST", { demo: false }); } catch {}
       try { location.href = (await api(`/api/musteri/${S.mid}/meta/baglan`)).adres; } catch (e) { bildir(e.message); } };
