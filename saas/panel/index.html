@@ -161,8 +161,8 @@ footer { text-align:center; padding:26px; font-size:13px; color:var(--soluk); }
 <!-- ======================= giris ======================= -->
 <section id="giris" class="giris gizli">
   <div class="marka"><img src="/panel/varliklar/feedzync-logo.png" alt="FeedZync"></div>
-  <h1 style="margin-top:28px">Your social media, handled.</h1>
-  <p class="vaat">An AI team posts for your business every day. You tell us what you do once; we do the rest.</p>
+  <h1 style="margin-top:28px" id="girisBaslik">Your social media, handled.</h1>
+  <p class="vaat" id="girisVaat">An AI team posts for your business every day. You tell us what you do once; we do the rest.</p>
   <label for="eposta">Email</label><input id="eposta" type="email" autocomplete="email">
   <div id="sifreAlan"><label for="sifre">Password</label><input id="sifre" type="password" autocomplete="current-password"></div>
   <div class="satir" style="margin-top:18px"><button class="ana" id="girisBtn">Sign in</button><button id="kayitBtn" class="ikincil">Create account</button></div>
@@ -265,6 +265,23 @@ async function dosyaGonder(yol, dosyalar, ekler = {}) {
 }
 
 // ======================= giris =======================
+const KAYIT = (() => {            // tanitim sitesinden gelen: ?kayit=1&ad=...&dil=..&paket=..
+  const q = new URLSearchParams(location.search);
+  if (q.has("kayit") || q.has("ad")) {
+    const k = { ad: q.get("ad") || "", dil: q.get("dil") || "", paket: q.get("paket") || "" };
+    try { localStorage.setItem("fz_kayit", JSON.stringify(k)); } catch {}
+    history.replaceState(null, "", location.pathname + location.hash);
+    return { ...k, yeni: true };
+  }
+  try { return JSON.parse(localStorage.getItem("fz_kayit") || "null"); } catch { return null; }
+})();
+function kayitModu() {
+  $("#girisBaslik").textContent = "Start your free trial";
+  $("#girisVaat").textContent = "7 days free, no card needed. Create your account and the team starts on your first posts.";
+  $("#kayitBtn").className = "ana"; $("#girisBtn").className = "ikincil"; $("#girisBtn").textContent = "I already have an account";
+  $("#kayitBtn").parentElement.prepend($("#kayitBtn"));
+  $("#sifre").setAttribute("autocomplete", "new-password");
+}
 async function basla() {
   YAP = await (await fetch("/api/yapilandirma")).json();
   if (YAP.supabase_url && YAP.supabase_anon && !YAP.yerel_giris) {
@@ -276,7 +293,7 @@ async function basla() {
     $("#girisMesaj").textContent = "Development sign-in: any email works.";
     belirtec = localStorage.getItem("ajan_belirtec");
   }
-  if (belirtec) await yukle(); else $("#giris").classList.remove("gizli");
+  if (belirtec) await yukle(); else { if (KAYIT?.yeni && sb) kayitModu(); $("#giris").classList.remove("gizli"); }
 }
 $("#girisBtn").onclick = async () => {
   const eposta = $("#eposta").value.trim(), sifre = $("#sifre").value;
@@ -291,8 +308,10 @@ $("#kayitBtn").onclick = async () => {
   const eposta = $("#eposta").value.trim(), sifre = $("#sifre").value;
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(eposta)) return ($("#girisMesaj").textContent = "Enter your email address.");
   if (sifre.length < 8) return ($("#girisMesaj").textContent = "Choose a password of at least 8 characters.");
-  const { error } = await sb.auth.signUp({ email: eposta, password: sifre, options: { emailRedirectTo: location.origin } });
-  $("#girisMesaj").textContent = error ? error.message : "Check your email to confirm your account, then sign in.";
+  const { data, error } = await sb.auth.signUp({ email: eposta, password: sifre, options: { emailRedirectTo: location.origin } });
+  if (error) return ($("#girisMesaj").textContent = error.message);
+  if (data.session) { $("#giris").classList.add("gizli"); return yukle(); }      // e-posta onayi kapaliysa hemen devam
+  $("#girisMesaj").textContent = "Check your email and tap the link to continue — your answers are saved.";
 };
 function cikis() { if (sb) sb.auth.signOut(); localStorage.removeItem("ajan_belirtec"); belirtec = null; location.hash = ""; location.reload(); }
 $("#cikis").onclick = cikis; $("#cikis2").onclick = cikis;
@@ -667,7 +686,7 @@ async function perdeArkasiCiz() {
 
 // ======================= kurulum sihirbazi =======================
 // Adimlar: 1 isletme  2 web sitesi (burada isletme olusur)  3 logo ve fotograflar  4 hesaplar ve baslat
-const S = { adim: 1, form: { cta: "Send us a message" }, mid: null, site: null };
+const S = { adim: 1, form: { cta: "Send us a message", ...(KAYIT?.ad ? { isletme_adi: KAYIT.ad } : {}) }, mid: null, site: null };
 function adimCubugu() { return `<div class="adimlar" aria-label="Step ${S.adim} of 4">${[1, 2, 3, 4].map((i) => `<span class="${i <= S.adim ? "tamam" : ""}"></span>`).join("")}</div>`; }
 async function sihirbaz(hatalar = {}) {
   $("#giris").classList.add("gizli"); $("#uygulama").classList.add("gizli"); $("#kurulum").classList.remove("gizli");
@@ -707,7 +726,7 @@ async function sihirbaz(hatalar = {}) {
     const olustur = async (site) => {
       const g = { ...S.form, site: site || "" };
       if (!site) delete g.site;
-      try { const m = await api("/api/musteri", "POST", g); S.mid = m.id; localStorage.setItem("ajan_musteri", m.id); ME = await api("/api/ben");
+      try { const m = await api("/api/musteri", "POST", g); S.mid = m.id; localStorage.setItem("ajan_musteri", m.id); localStorage.removeItem("fz_kayit"); ME = await api("/api/ben");
             MUSTERI = ME.musteriler.find((x) => x.id === m.id); S.adim = 3; sihirbaz(); }
       catch (e) { const a = e.alanlar || {}; if (a.isletme_adi || a.tanim) { S.adim = 1; return sihirbaz(a); } sihirbaz({ ...a, genel: a.site || a.kur ? "" : e.message }); }
     };

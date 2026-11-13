@@ -115,7 +115,7 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
-SURUM = "2026-11-13.yonetim"
+SURUM = "2026-11-13.kuresel-site"
 
 
 async def saglik(request):
@@ -609,8 +609,73 @@ async def yerel_dosya(request):
     return FileResponse(yol) if yol else hata("Not found", 404)
 
 
+def site_alani_mi(request):
+    from urllib.parse import urlparse
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    ana = urlparse(ayar.SITE_ADRES).hostname or ""
+    return bool(ana) and host in (ana, "www." + ana.removeprefix("www."))
+
+
 async def panel(request):
+    if site_alani_mi(request):                 # feedzync.com -> ziyaretcinin dilindeki tanitim sitesi
+        from .site import sayfa as site
+        return RedirectResponse(f"/{site.dil_sec(request.headers.get('accept-language'))}/", 302)
     return FileResponse(PANEL / "index.html", headers={"Cache-Control": "no-cache"})
+
+
+# ---------------------------------------------------------------- tanitim sitesi
+SITE_CSS = ayar.KOK / "saas" / "site" / "site.css"
+
+
+def _site_cevap(icerik, request):
+    if icerik is None:
+        raise HTTPException(404, "Not found")
+    return Response(icerik, media_type="text/html; charset=utf-8",
+                    headers={"Cache-Control": "public, max-age=600"})
+
+
+async def site_dil(request):
+    from .site import metin, sayfa as site
+    dil, alt = request.path_params["dil"], request.path_params.get("sayfa", "")
+    if dil not in metin.DILLER:
+        raise HTTPException(404, "Not found")
+    u = ayar.GENEL_ADRES
+    if alt == "":
+        return _site_cevap(site.ana(ayar.SITE_ADRES, u, dil), request)
+    if alt == "pricing":
+        return _site_cevap(site.fiyat(ayar.SITE_ADRES, u, dil), request)
+    if alt == "faq":
+        return _site_cevap(site.sss(ayar.SITE_ADRES, u, dil), request)
+    if alt == "industries" and dil == "en":
+        return _site_cevap(site.sektorler_sayfasi(ayar.SITE_ADRES, u), request)
+    raise HTTPException(404, "Not found")
+
+
+async def site_sektor(request):
+    from .site import sayfa as site
+    return _site_cevap(site.sektor_sayfasi(ayar.SITE_ADRES, ayar.GENEL_ADRES, request.path_params["sl"]), request)
+
+
+async def site_yasal(request):
+    from .site import sayfa as site
+    return _site_cevap(site.yasal(ayar.SITE_ADRES, ayar.GENEL_ADRES, request.path_params["ad"]), request)
+
+
+async def site_haritasi(request):
+    from .site import sayfa as site
+    return Response(site.site_haritasi(ayar.SITE_ADRES), media_type="application/xml")
+
+
+async def robots(request):
+    if site_alani_mi(request):
+        govde = f"User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /yonetim\nSitemap: {ayar.SITE_ADRES}/sitemap.xml\n"
+    else:                                       # uygulama alani arama motorlarinda gorunmesin
+        govde = "User-agent: *\nDisallow: /\n"
+    return Response(govde, media_type="text/plain")
+
+
+async def site_css(request):
+    return FileResponse(SITE_CSS, headers={"Cache-Control": "public, max-age=86400"})
 
 
 async def http_hatasi(request, exc):
@@ -619,6 +684,8 @@ async def http_hatasi(request, exc):
 
 async def guvenlik_basliklari(request, call_next):
     r = await call_next(request)
+    if not site_alani_mi(request):
+        r.headers.setdefault("X-Robots-Tag", "noindex")      # uygulama + onizleme: dizine eklenmez
     r.headers.setdefault("X-Content-Type-Options", "nosniff")
     r.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     r.headers.setdefault("X-Frame-Options", "DENY")
@@ -649,6 +716,9 @@ routes = [
     Route("/ic/zamanlayici", zamanlayici_ucu, methods=["POST"]),
     Route("/yerel-dosya/{anahtar:path}", yerel_dosya),
     Mount("/panel", StaticFiles(directory=str(PANEL)), name="panel"),
+    Route("/site.css", site_css), Route("/sitemap.xml", site_haritasi), Route("/robots.txt", robots),
+    Route("/legal/{ad}", site_yasal), Route("/en/industries/{sl}", site_sektor),
+    Route("/{dil}/", site_dil), Route("/{dil}/{sayfa}", site_dil),
 ]
 
 app = Starlette(routes=routes, exception_handlers={HTTPException: http_hatasi},

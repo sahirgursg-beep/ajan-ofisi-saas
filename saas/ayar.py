@@ -37,6 +37,7 @@ ORTAM = al("SAAS_ORTAM", "yerel")                 # yerel | bulut
 DEPO = al("SAAS_DEPO", "yerel")                   # yerel (SQLite + klasor) | supabase
 TETIK = al("SAAS_TETIK", "yerel")                 # isciyi tetikleme: yerel (alt surec) | surekli (VPS) | cloudrun | yok
 GENEL_ADRES = al("SAAS_GENEL_ADRES", "http://localhost:8800").rstrip("/")   # panelin dis adresi (OAuth donusu)
+SITE_ADRES = al("SAAS_SITE_ADRES", "https://feedzync.com").rstrip("/")      # tanitim sitesi (SEO: canonical adres)
 
 # ---- yerel depo ----
 YEREL_KLASOR = Path(al("SAAS_YEREL_KLASOR", str(KOK / ".saas_yerel")))
