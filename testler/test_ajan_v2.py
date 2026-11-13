@@ -394,10 +394,10 @@ def test_model_kaldirilinca_otomatik_yedek_model(monkeypatch):
             if k["json"]["model"] == "llama3.3-70b-instruct":
                 return Yanit({"error": "model not found"}, 404)
             return Yanit({"choices": [{"message": {"content": '{"ok": true}'}}]})
-    http = Http({"/models": Yanit({"data": [{"id": "openai-gpt-oss-120b"}, {"id": "llama-4-maverick"}]})})
+    http = Http({"/models": Yanit({"data": [{"id": "llama-4-maverick"}, {"id": "openai-gpt-oss-120b"}]})})
     assert llm_openai.sor("s", "m", json_mod=True, oturum=http) == {"ok": True}
-    assert llm_openai.model_adi() == "llama-4-maverick"
-    assert http.istekler[-1][2]["json"]["model"] == "llama-4-maverick"
+    assert llm_openai.model_adi() == "openai-gpt-oss-120b"            # tercih sirasi, listedeki sira degil
+    assert http.istekler[-1][2]["json"]["model"] == "openai-gpt-oss-120b"
 
 
 def test_sektor_tanimdan_bulunur_sablon_kategorileri_yaniltmaz(isletme, monkeypatch):

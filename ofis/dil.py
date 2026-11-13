@@ -27,6 +27,21 @@ ETIKET = {
 }
 
 
+SAGDAN_SOLA = {"ar", "fa", "ur", "he", "ps"}
+
+
+def html_isareti(metin):
+    """Sablon HTML'ine icerik dilini ve yazi yonunu ekler: Arapca/Farsca gibi dillerde satirlar sagdan sola akar,
+    noktalama ve sayilar dogru yere duser; tarayici o dilin harflerine uygun yedek fontu secer."""
+    k = kod()
+    yon = ' dir="rtl"' if k in SAGDAN_SOLA else ""
+    metin = metin.replace("<html>", f'<html lang="{k}"{yon}>', 1)
+    if yon:   # sayilar, fiyatlar ve "2 / 4" sayaci sagdan sola satirda ters donmesin
+        metin = metin.replace("</head>", "<style>[dir=rtl] :is(.sayac,.eski,.yeni,.fiyat2,.rozet b,.rozet:not(:has(b)),.serit)"
+                              "{direction:ltr;unicode-bidi:isolate}</style></head>", 1)
+    return metin
+
+
 def kod():
     from .ayarlar import AYAR
     i = AYAR.get("isletme") or {}

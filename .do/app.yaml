@@ -14,7 +14,7 @@ envs:
   - { key: SAAS_GENEL_ADRES, value: https://app.feedzync.com }
   - { key: AJAN_YZ_SAGLAYICI, value: openai }
   - { key: AJAN_YZ_URL, value: "https://inference.do-ai.run/v1" }
-  - { key: AJAN_YZ_MODEL, value: llama-4-maverick }
+  - { key: AJAN_YZ_MODEL, value: openai-gpt-oss-120b }   # llama-4-maverick DO listesinden kalkti
   - { key: AJAN_AI_GORSEL, value: "0" }
   - { key: SUPABASE_URL, type: SECRET }
   - { key: SUPABASE_ANON_KEY, type: SECRET }
@@ -29,6 +29,8 @@ envs:
   - { key: SAAS_YONETICILER, type: SECRET }
   - { key: SAAS_SITE_ADRES, value: "https://feedzync.com" }
   - { key: SAAS_DESTEK_EPOSTA, type: SECRET }
+  - { key: RESEND_API_KEY, type: SECRET }                 # haftalik ozet + deneme hatirlatma e-postalari
+  - { key: SAAS_EPOSTA_GONDEREN, value: "FeedZync <hello@feedzync.com>" }
   - { key: AJAN_YZ_AYLIK_TAVAN, value: "100" }
   - { key: PEXELS_API_KEY, type: SECRET }
   - { key: AJAN_GORSEL_MODEL, value: openai-gpt-image-1 }

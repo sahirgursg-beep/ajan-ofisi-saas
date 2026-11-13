@@ -115,7 +115,7 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
-SURUM = "2026-11-13.kutuphaneci"
+SURUM = "2026-11-14.yeni-arayuz"
 
 
 async def saglik(request):
@@ -250,7 +250,7 @@ async def yonetim_ozet(request):
             "sabit_aylik": float(ayar.al("SAAS_SABIT_AYLIK_USD", "62") or 62),
             "musteriler": satirlar,
             "servisler": {a: bool((os.environ.get(a) or "").strip()) for a in
-                          ("AJAN_YZ_ANAHTAR", "FAL_KEY", "PIXABAY_API_KEY", "META_APP_ID")},
+                          ("AJAN_YZ_ANAHTAR", "FAL_KEY", "PIXABAY_API_KEY", "META_APP_ID", "RESEND_API_KEY")},
             "surum": SURUM}
     return JSONResponse(await run_in_threadpool(topla))
 

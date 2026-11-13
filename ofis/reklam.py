@@ -55,7 +55,8 @@ def reklam_yap(urun, gorsel_yollari, taslak, tarif, hedef: Path, gunluk=print, d
                         (list(gorsel_yollari) + list(gorsel_yollari[:1]) * 3)[:3]] if gorsel_yollari else [],
         }, ensure_ascii=False)
 
-    metin = (tasarim.SABLON / sablon_adi).read_text(encoding="utf-8")
+    from . import dil as _dil
+    metin = _dil.html_isareti((tasarim.SABLON / sablon_adi).read_text(encoding="utf-8"))
     for k, deger in v.items():
         guvenli = deger if k in ("ortak", "fontlar", "veri_json") or k.startswith(("foto", "logo", "t_")) \
             else __import__("html").escape(str(deger))

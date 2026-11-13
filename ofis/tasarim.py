@@ -112,6 +112,8 @@ def ciz(sablon_adi, v, hedef, boyut=(1080, 1350)):
     for k, deger in v.items():
         guvenli = deger if k in ("ortak", "fontlar") or k.startswith(("foto", "logo", "vurgu", "t_", "odak")) else html.escape(str(deger))
         metin = metin.replace("{{" + k + "}}", guvenli)
+    from . import dil as _dil
+    metin = _dil.html_isareti(metin)
     if boyut[1] > boyut[0] * 1.5:
         metin = metin.replace("<body>", '<body class="story">', 1).replace('<body class="', '<body class="story ', 1)
     from . import fontlar as _fontlar

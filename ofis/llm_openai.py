@@ -3,7 +3,7 @@
 Ortam degiskenleri (anahtar dosyaya yazilmaz):
   AJAN_YZ_URL     varsayilan https://inference.do-ai.run/v1   (DigitalOcean)
   AJAN_YZ_ANAHTAR model erisim anahtari
-  AJAN_YZ_MODEL   varsayilan llama-4-maverick (model kaldirilirsa /models'tan otomatik yedek secilir)
+  AJAN_YZ_MODEL   varsayilan openai-gpt-oss-120b (model kaldirilirsa /models'tan otomatik yedek secilir)
 """
 import os
 import time
@@ -19,7 +19,7 @@ _json_destek = True
 _yedek_model = None          # yapilandirilan model servisten kalkmissa otomatik secilen model
 durum_metni = ""
 # Model kaldirilirsa (404) sirayla denenecek modeller (DigitalOcean katalog kimlikleri)
-TERCIH = ("llama-4-maverick", "openai-gpt-oss-120b", "deepseek-4-flash", "qwen3.5-397b-a17b",
+TERCIH = ("openai-gpt-oss-120b", "llama-4-maverick", "deepseek-4-flash", "qwen3.5-397b-a17b",
           "anthropic-claude-haiku-4.5", "openai-gpt-oss-20b")
 
 
@@ -34,7 +34,7 @@ def _anahtar():
 
 def model_adi():
     return _yedek_model or os.environ.get("AJAN_YZ_MODEL") or (AYAR.get("yz") or {}).get("openai_model") \
-        or "llama-4-maverick"
+        or "openai-gpt-oss-120b"
 
 
 def _model_bul(http):

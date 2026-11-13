@@ -454,6 +454,13 @@ def surekli(isci_adi):
                     if any(r.values()):
                         gunluk(f"Zamanlayici: {r}")
                     try:
+                        from . import eposta
+                        e = eposta.tur()
+                        if any(e.values()):
+                            gunluk(f"E-posta: {e}")
+                    except Exception as ex:
+                        gunluk(f"e-posta: {type(ex).__name__}: {ex}")
+                    try:
                         from . import kutuphane
                         kutuphane.gerekirse(paylasik)
                     except Exception as e:

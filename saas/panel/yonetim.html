@@ -206,7 +206,7 @@ function ozetCiz() {
   const mrr = o.musteriler.filter((m) => m.durum === "aktif").reduce((t, m) => t + (m.paket?.usd || 0), 0);
   const marj = mrr - gelir - sabit;
   // Yalnizca bugun dikkat isteyenler: her satir tek tikla ilgili musteriyi acar
-  const AD = { AJAN_YZ_ANAHTAR: "Text AI", FAL_KEY: "fal.ai images", PIXABAY_API_KEY: "Pixabay photos", META_APP_ID: "Meta app" };
+  const AD = { AJAN_YZ_ANAHTAR: "Text AI", FAL_KEY: "fal.ai images", PIXABAY_API_KEY: "Pixabay photos", META_APP_ID: "Meta app", RESEND_API_KEY: "Owner emails (Resend)" };
   const isler = [];
   Object.entries(o.servisler).filter(([, v]) => !v).forEach(([k]) => isler.push({ kotu: true, metin: `${AD[k] || k} is not set up (DigitalOcean environment variable)` }));
   o.musteriler.filter((m) => m.son_is && m.son_is.durum === "hata").forEach((m) => isler.push({ kotu: true, mid: m.id, metin: `${m.ad}: last job failed (${IS_AD[m.son_is.tur] || m.son_is.tur})` }));

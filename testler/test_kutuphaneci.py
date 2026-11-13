@@ -112,3 +112,12 @@ def test_ortak_ogrenim_yeni_musteriye_yon_verir():
         assert "afis" in analiz.ortak_ozet() and "retro" in analiz.ortak_ozet()
     finally:
         yol.unlink()
+
+
+def test_arapca_icerikte_tasarim_sagdan_sola_sayilar_soldan_saga(monkeypatch):
+    from ofis import dil
+    monkeypatch.setattr(dil, "kod", lambda: "ar")
+    h = dil.html_isareti("<html><head></head><body><div class='sayac'>2 / 4</div></body></html>")
+    assert '<html lang="ar" dir="rtl">' in h and "unicode-bidi:isolate" in h
+    monkeypatch.setattr(dil, "kod", lambda: "fr")
+    assert dil.html_isareti("<html><head></head></html>") == '<html lang="fr"><head></head></html>'
