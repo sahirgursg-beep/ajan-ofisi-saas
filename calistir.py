@@ -17,6 +17,19 @@ from ofis.ajanlar import bugunun_temasi, tum_ekip  # noqa: E402
 from ofis.ayarlar import AYAR, KOK, VERI, CIKTI  # noqa: E402
 
 
+class _olc:
+    """[SURE] satiri: hangi adim ne kadar surdu ve bunun ne kadari yapay zeka beklemesiydi."""
+    def __init__(self, ad):
+        self.ad = ad
+
+    def __enter__(self):
+        self.t, self.c, self.s = time.time(), llm.SAYAC["cagri"], llm.SAYAC["sn"]
+
+    def __exit__(self, *a):
+        print(f"[SURE]   {self.ad}: {time.time() - self.t:.0f} sn (yapay zeka {llm.SAYAC['cagri'] - self.c} cagri, "
+              f"{llm.SAYAC['sn'] - self.s:.0f} sn)", flush=True)
+
+
 def _arg(ad):
     return sys.argv[sys.argv.index(ad) + 1] if ad in sys.argv and sys.argv.index(ad) + 1 < len(sys.argv) else None
 
@@ -51,7 +64,8 @@ def main(plan_tarihi=None):
             from ofis import arastirma
             if arastirma.eski_mi():
                 Y.soyle("Herkes", "Sektor arastirmacisi bu haftanin sektor raporunu hazirliyor...")
-                arastirma.guncelle(gunluk=lambda m: pano.yaz("SektorArastirmaci", "SanatYonetmeni", m, "rapor"))
+                with _olc("sektor arastirmasi"):
+                    arastirma.guncelle(gunluk=lambda m: pano.yaz("SektorArastirmaci", "SanatYonetmeni", m, "rapor"))
         except Exception as e:
             print("arastirma:", e)
 
@@ -59,21 +73,24 @@ def main(plan_tarihi=None):
     if not demo:
         try:             # sahibin yukledigi fotograflar/belgeler: once incelenir, fotograflar her zaman once kullanilir
             from ofis import yuklemeler
-            yuklemeler.incele(gunluk=lambda m: pano.yaz("UrunSorumlusu", "Yonetici", m))
+            with _olc("yuklemeleri inceleme"):
+                yuklemeler.incele(gunluk=lambda m: pano.yaz("UrunSorumlusu", "Yonetici", m))
             yuk = yuklemeler.kaynak_urunleri(3)
             if yuk:
                 Y.soyle("Herkes", f"Isletme sahibinin yukledigi {len(yuk)} fotograf grubu bugun once kullanilacak: "
                         + "; ".join(u["ad"] for u in yuk))
         except Exception as e:
             print("yuklemeler:", e)
-    adaylar = U.urunleri_getir(demo=demo) or list(yuk)
+    with _olc("urun/fikir toplama"):
+        adaylar = U.urunleri_getir(demo=demo) or list(yuk)
     if not adaylar:
         Y.soyle("Herkes", "Urun olmadan devam edemiyoruz, bugunluk bu kadar.", "hata")
         return 1
     from ofis import urun_cekici
     tum = getattr(U, "tum_urunler", []) or urun_cekici.onbellekten() or adaylar
     if plan_gunu:
-        plan.eksikleri_doldur(tum, tarih, gunluk=lambda m: P.soyle("Yonetici", m))
+        with _olc("plan doldurma"):
+            plan.eksikleri_doldur(tum, tarih, gunluk=lambda m: P.soyle("Yonetici", m))
         plan_gunu = plan.gun(tarih)
 
     kullanilan, uretilen = set(), []
@@ -117,12 +134,13 @@ def main(plan_tarihi=None):
             havuz = [u for u in adaylar if u["url"] not in kullanilan] or adaylar
             if tur == "carousel":
                 havuz = [u for u in havuz if len(u.get("gorseller") or []) >= 3] or havuz
-            urun, aci = P.urun_sec(havuz, tema)
+            with _olc("urun secimi"):
+                urun, aci = P.urun_sec(havuz, tema)
         kullanilan.add(urun["url"])
         _t0 = time.time()
         try:
             klasor = _icerik_uret(urun, aci, tur, tema, plan_gunu, baslangic, ekip)
-            print(f"[SURE] {tur}: {time.time() - _t0:.0f} sn", flush=True)
+            print(f"[SURE] {tur} TOPLAM: {time.time() - _t0:.0f} sn", flush=True)
         except Exception as e:
             Y.soyle("Herkes", f"{plan.FORMAT_AD[tur]} uretilemedi: {type(e).__name__}: {e}", "hata")
             continue
@@ -172,14 +190,17 @@ def _proje_gunu_mu(tarih, plan_gunu, demo):
 def _icerik_uret(urun, aci, tur, tema, plan_gunu, baslangic, ekip):
     M, K, S, R = ekip["MetinYazari"], ekip["KaliteKontrol"], ekip["SanatYonetmeni"], ekip["Rotuscu"]
     Y = ekip["Yonetici"]
-    gorsel_yollari, gorseller, dikey = _gorseller(urun, R)
+    with _olc("gorsel indirme + rotus"):
+        gorsel_yollari, gorseller, dikey = _gorseller(urun, R)
     if not gorseller:
         Y.soyle("Herkes", f"'{urun['ad']}' gorseli indirilemedi, bu icerik atlandi.", "hata")
         return None
-    yon = S.sec(urun, tema, gorsel_yollari, tarih=(plan_gunu or {}).get("tarih"))
+    with _olc("sanat yonetmeni"):
+        yon = S.sec(urun, tema, gorsel_yollari, tarih=(plan_gunu or {}).get("tarih"))
     satis = (yon in ("C", "E")) if isinstance(yon, str) else (yon["fiyat_stili"] in ("rozet", "serit") or bool(yon["banner"]))
     aci += " Tone: sales-focused, short and energetic." if satis else " Tone: calm, elegant and premium."
-    taslak, revizyon = _metin_dongusu(M, K, urun, aci)
+    with _olc("metin + kalite kontrol"):
+        taslak, revizyon = _metin_dongusu(M, K, urun, aci)
     on_ek = plan_gunu["tarih"] if plan_gunu else f"{datetime.now():%Y-%m-%d}"
     return _paketle(urun, gorsel_yollari, gorseller, dikey, taslak, yon, tema, aci, revizyon, on_ek,
                     (plan_gunu or {}).get("tarih"), baslangic, ekip, tur=tur)
@@ -243,9 +264,11 @@ def _paketle(urun, gorsel_yollari, gorseller, dikey, taslak, yon, tema, aci, rev
     klasor = CIKTI / (f"{on_ek}_{datetime.now():%H%M}_{''.join(c for c in urun['ad'] if c.isalnum())[:30]}"
                               f"{'_' + tur if tur else ''}{ek}")
     klasor.mkdir(parents=True, exist_ok=True)
-    T.ciz(urun, gorsel_yollari, gorseller, taslak, klasor, yon, dikey, tur=tur)
+    with _olc("tasarim"):
+        T.ciz(urun, gorsel_yollari, gorseller, taslak, klasor, yon, dikey, tur=tur)
     if tur in (None, "reels"):
-        V.kurgula(urun, gorseller, taslak, klasor, gorsel_yollari, yon, dikey, muzik_id=muzik_id, muzik_haric=muzik_haric)
+        with _olc("video kurgu"):
+            V.kurgula(urun, gorseller, taslak, klasor, gorsel_yollari, yon, dikey, muzik_id=muzik_id, muzik_haric=muzik_haric)
 
     atif = ""
     if (klasor / "muzik.json").exists():   # CC BY muzik -> lisans geregi sanatci adi caption'a
@@ -253,7 +276,8 @@ def _paketle(urun, gorsel_yollari, gorseller, dikey, taslak, yon, tema, aci, rev
     # Platform uzmanlari: ayni icerik her platformda kendi diliyle (Instagram, Facebook, TikTok, LinkedIn)
     from ofis import platformlar
     try:
-        pl = platformlar.uret(urun, aci, taslak, tur)
+        with _olc("platform metinleri"):
+            pl = platformlar.uret(urun, aci, taslak, tur)
     except Exception as e:
         print("  ! platform metinleri uretilemedi:", e)
         pl = {}

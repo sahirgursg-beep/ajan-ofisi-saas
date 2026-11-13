@@ -63,6 +63,25 @@ def model_adi():
     return AYAR.get("model", "")
 
 
+SAYAC = {"cagri": 0, "sn": 0.0}       # sure olcumu: uretim adimlarinda yapay zekaya giden sure
+
+
+def _sayarak(f):
+    import functools
+    import time
+
+    @functools.wraps(f)
+    def sar(*a, **k):
+        t = time.time()
+        try:
+            return f(*a, **k)
+        finally:
+            SAYAC["cagri"] += 1
+            SAYAC["sn"] += time.time() - t
+    return sar
+
+
+@_sayarak
 def sor(sistem, mesaj, json_mod=False, sicaklik=0.7):
     """LLM'e sorar. Ana saglayici hata verirse yedegi dener. Hepsi basarisizsa None."""
     for ad in _adlar():
@@ -75,6 +94,7 @@ def sor(sistem, mesaj, json_mod=False, sicaklik=0.7):
     return None
 
 
+@_sayarak
 def gor(sistem, mesaj, gorsel_yollari, json_mod=True):
     """Gorselleri de inceleyen soru (destekleyen saglayicilar: gor() fonksiyonu olanlar). Yoksa None."""
     for ad in _adlar():
