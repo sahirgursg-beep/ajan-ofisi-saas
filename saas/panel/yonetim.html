@@ -86,7 +86,7 @@ pre { white-space:pre-wrap; font-size:12px; background:#f4f6f4; padding:10px; bo
 <div id="uygulama" class="gizli">
   <div class="ust">
     <img src="/panel/varliklar/feedzync-logo.png" alt="FeedZync"><span class="rol">Admin</span>
-    <nav><a data-s="musteriler" class="aktif">Customers</a><a data-s="isler">Jobs</a></nav>
+    <nav><a data-s="musteriler" class="aktif">Customers</a><a data-s="isler">Jobs</a><a data-s="kutuphane">Library</a></nav>
     <div class="yayil"></div><a href="/" style="font-weight:600;text-decoration:none">Customer app</a>
     <button class="ikincil" id="cikis">Sign out</button>
   </div>
@@ -109,6 +109,12 @@ pre { white-space:pre-wrap; font-size:12px; background:#f4f6f4; padding:10px; bo
       <div class="satir arac" style="margin-top:8px"><h2 class="yayil">Jobs</h2>
         <select id="isFiltre"><option value="">All</option><option value="hata">Failed</option><option value="calisiyor">Running</option><option value="bekliyor">Waiting</option></select></div>
       <div class="tablo-kap"><table><thead><tr><th>Business</th><th>Job</th><th>Status</th><th>Created</th><th>Finished</th></tr></thead><tbody id="isTablo"></tbody></table></div>
+    </section>
+    <section id="s-kutuphane" class="gizli">
+      <div class="satir arac" style="margin-top:8px"><h2 class="yayil">Creative library</h2>
+        <button class="ikincil" id="kutSimdi">Update now</button></div>
+      <p class="soluk">Grows by itself every week: new licensed music, new font pairs (including every script your customers write in), and what owners keep or reject across all businesses.</p>
+      <div id="kutIcerik" class="soluk">Loading…</div>
     </section>
   </main>
 </div>
@@ -173,6 +179,7 @@ $$(".ust nav a").forEach((a) => (a.onclick = () => {
   $$(".ust nav a").forEach((x) => x.classList.toggle("aktif", x === a));
   $$("main > section").forEach((s) => s.classList.toggle("gizli", s.id !== "s-" + a.dataset.s));
   if (a.dataset.s === "isler") islerCiz();
+  if (a.dataset.s === "kutuphane") kutuphaneCiz();
 }));
 
 function ozetCiz() {
@@ -264,6 +271,31 @@ async function islerCiz() {
   } catch (e) { bildir(e.message); }
 }
 $("#isFiltre").onchange = islerCiz;
+
+async function kutuphaneCiz() {
+  try {
+    const { durum, rapor, gecmis } = await api("/api/yonetim/kutuphane");
+    const m = rapor.muzik || {}, f = rapor.font || {};
+    const liste = (xs) => (xs || []).map((x) => `<li>${esc(x)}</li>`).join("") || "<li class='soluk'>none</li>";
+    $("#kutIcerik").innerHTML = `
+      <p>Last update: <b>${esc(durum.kutuphaneci ? tarih(durum.kutuphaneci) : "not yet")}</b>${durum.son_sonuc ? ` · ${esc(durum.son_sonuc)}` : ""}${durum.zorla ? " · <b>queued</b>" : ""}
+        · learnings refreshed ${esc(durum.ogrenim ? tarih(durum.ogrenim) : "not yet")}</p>
+      <div class="sayilar">
+        <div><b>${m.toplam ?? "–"}</b><span>music tracks</span></div>
+        <div><b>${f.toplam ?? "–"}</b><span>font pairs</span></div>
+        <div><b>${m.eklenen ?? "–"}</b><span>tracks added last run</span></div>
+        <div><b>${m.emekli ?? "–"}</b><span>tracks retired</span></div>
+      </div>
+      ${m.hata ? `<p class="hata">Music: ${esc(m.hata)}</p>` : ""}${f.hata ? `<p class="hata">Fonts: ${esc(f.hata)}</p>` : ""}
+      <h3>New font pairs</h3><ul>${liste(f.eklenen)}</ul>
+      <h3>New music searches</h3><ul>${liste(Object.entries(m.yeni_sorgu || {}).map(([r, q]) => r + ": " + q.join(", ")))}</ul>
+      <h3>History</h3><ul>${liste(gecmis.map((g) => `${g.tarih}: +${g.muzik_eklenen ?? 0} tracks, +${g.font_eklenen} font pairs`))}</ul>`;
+  } catch (e) { $("#kutIcerik").textContent = e.message; }
+}
+$("#kutSimdi").onclick = async () => {
+  try { await api("/api/yonetim/kutuphane", "POST", {}); bildir("Queued. The worker starts it within 10 minutes."); kutuphaneCiz(); }
+  catch (e) { bildir(e.message); }
+};
 
 basla().catch((e) => bildir(e.message, 8000));
 </script>

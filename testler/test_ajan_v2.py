@@ -471,11 +471,11 @@ def test_buyuk_harf_cta_duzeltilir(monkeypatch):
 # ---------------- yazi tipi kutuphanesi ----------------
 def test_font_kutuphanesi_tutarli_ve_genis():
     from ofis import fontlar, sanat
-    assert len(fontlar.CIFTLER) >= 20 and set(sanat.FONTLAR) == set(fontlar.CIFTLER)
+    assert len(fontlar.CIFTLER) >= 20 and set(sanat.FONTLAR) == set(fontlar.uygun_ciftler()) and "arap_klasik" not in sanat.FONTLAR
     assert all(a in fontlar.GOOGLE for a in fontlar.aileler())
     css = fontlar.css_siniflari()
     assert all(f".f-{k} " in css for k in fontlar.CIFTLER) and '"Anton"' in css
-    assert set(sanat.ACIKLAMA["fontlar"]) == set(fontlar.CIFTLER) and "suits" in sanat.ACIKLAMA["fontlar"]["afis"]
+    assert set(sanat.ACIKLAMA["fontlar"]) == set(sanat.FONTLAR) and "suits" in sanat.ACIKLAMA["fontlar"]["afis"]
     assert fontlar.uygunluk("retro", "Restaurants, cafes & food") == 3 and fontlar.uygunluk("antik", "Restaurants") == 1
 
 

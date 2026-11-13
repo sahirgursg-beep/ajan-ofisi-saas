@@ -115,7 +115,7 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
-SURUM = "2026-11-13.panel-dilleri"
+SURUM = "2026-11-13.kutuphaneci"
 
 
 async def saglik(request):
@@ -260,6 +260,15 @@ async def yonetim_isler(request):
     durum = request.query_params.get("durum") or None
     isler = await run_in_threadpool(depo().son_isler, 100, durum)
     return JSONResponse({"isler": isler})
+
+
+async def yonetim_kutuphane(request):
+    yonetici(request)
+    from . import kutuphane
+    if request.method == "POST":
+        await run_in_threadpool(kutuphane.zorla)
+        return JSONResponse({"durum": "ok"})
+    return JSONResponse(await run_in_threadpool(kutuphane.yonetim_ozeti))
 
 
 async def yonetim_musteri(request):
@@ -706,7 +715,8 @@ routes = [
     Route(M + "/logo", logo_yukle, methods=["POST"]), Route(M + "/logo", logo_al),
     Route("/api/site-kontrol", site_kontrol, methods=["POST"]),
     Route("/yonetim", yonetim_sayfasi), Route("/api/yonetim/ozet", yonetim_ozet),
-    Route("/api/yonetim/isler", yonetim_isler), Route("/api/yonetim/musteri/{mid}", yonetim_musteri),
+    Route("/api/yonetim/isler", yonetim_isler), Route("/api/yonetim/kutuphane", yonetim_kutuphane, methods=["GET", "POST"]),
+    Route("/api/yonetim/musteri/{mid}", yonetim_musteri),
     Route("/api/yonetim/musteri/{mid}/{islem}", yonetim_islem, methods=["POST"]),
     Route(M + "/icerik/{klasor}/{islem}", icerik_karar, methods=["POST"]),
     Route(M + "/uret", uret, methods=["POST"]), Route(M + "/isler", is_listesi), Route(M + "/pano", pano),

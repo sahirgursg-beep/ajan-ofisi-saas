@@ -18,7 +18,7 @@ TUM_DUZENLER = ["tam_ekran", "ust_foto_alt_panel", "cerceveli", "kemer", "yan_pa
 # config.json "haric_duzenler" ile istenmeyen duzenler kapatilir (or. kemer/kubbe)
 DUZENLER = [d for d in TUM_DUZENLER if d not in AYAR.get("haric_duzenler", [])] or ["tam_ekran"]
 from . import fontlar as _fontlar
-FONTLAR = list(_fontlar.CIFTLER)
+FONTLAR = _fontlar.uygun_ciftler()      # yalnizca icerik dilinin alfabesini destekleyen ciftler
 MOTIFLER = ["yok", "altin_cizgi", "cift_cerceve", "kose_susleri", "daireler", "grain"]
 FIYAT_STILLERI = ["rozet", "serit", "sade", "etiket_kart"]
 EFEKTLER = ["yok", "sicak", "dramatik", "serin"]
@@ -33,7 +33,7 @@ ACIKLAMA = {
         "yan_panel": "color panel on the left 40% with text, photo on the right 60%",
         "diyagonal": "full photo with a diagonal color band at the bottom holding the text",
     },
-    "fontlar": _fontlar.aciklama(),
+    "fontlar": _fontlar.aciklama(FONTLAR),
     "motif": {
         "yok": "no ornament", "altin_cizgi": "short accent line above text",
         "cift_cerceve": "double thin frame around the whole image (echoes our logo)",

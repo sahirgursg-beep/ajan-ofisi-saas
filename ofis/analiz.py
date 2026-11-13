@@ -11,7 +11,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-from .ayarlar import KOK, VERI, CIKTI
+from .ayarlar import AYAR, KOK, VERI, CIKTI
 
 CIKTI = CIKTI
 OGRENIM = VERI / "ogrenimler.json"
@@ -157,6 +157,10 @@ def istem_ozeti():
         parca.append(arastirma.istem_ozeti())
     except Exception as e:
         print("  ! sektor baglami eklenemedi:", e)
+    try:
+        parca.append(ortak_ozet())
+    except Exception:
+        pass
     o = ogrenimler()
     if o.get("n"):
         f = lambda xs: ", ".join(f"{s['alan']}={s['deger']}" for s in xs) or "none yet"
@@ -165,8 +169,45 @@ def istem_ozeti():
     return "".join(x for x in parca if x)
 
 
+def ortak_ogrenim():
+    """Tum musterilerin tepkilerinden (Kutuphaneci haftalik derler): once ayni sektor, yoksa genel."""
+    from .ayarlar import PAYLASIK
+    try:
+        return json.loads((PAYLASIK / "ogrenim" / "ortak.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _ortak_puan(alan, deger):
+    o = ortak_ogrenim()
+    sektor = ((AYAR.get("isletme") or {}).get("sektor") or "")
+    for kaynak, en_az in (((o.get("sektor") or {}).get(sektor) or {}, 3), (o.get("ozellik") or {}, 5)):
+        q = (kaynak.get(alan) or {}).get(str(deger))
+        if q and q.get("n", 0) >= en_az:
+            return q["skor"]
+    return None
+
+
+def ortak_ozet(n=4):
+    """Istem icin: benzer isletmelerin sahiplerinin onayladigi / reddettigi tasarim secimleri."""
+    o, sektor = ortak_ogrenim(), ((AYAR.get("isletme") or {}).get("sektor") or "")
+    kaynak = ((o.get("sektor") or {}).get(sektor) or o.get("ozellik") or {})
+    satir = [(alan, d, q) for alan, v in kaynak.items() if alan in ADLAR for d, q in v.items() if q.get("n", 0) >= 3]
+    iyi = sorted([x for x in satir if x[2]["skor"] > 0.3], key=lambda x: -x[2]["skor"])[:n]
+    kotu = sorted([x for x in satir if x[2]["skor"] < -0.3], key=lambda x: x[2]["skor"])[:n]
+    if not iyi and not kotu:
+        return ""
+    f = lambda xs: ", ".join(f"{a}={d}" for a, d, _ in xs) or "none yet"
+    return f"\nAcross similar businesses on our platform, owners kept and posted more: {f(iyi)}; rejected more: {f(kotu)}.\n"
+
+
 def ozellik_agirligi(alan, deger):
-    """Ogrenimlere gore 0.5 (kacin) - 2.0 (tercih) arasi agirlik."""
+    """Ogrenimlere gore 0.5 (kacin) - 2.0 (tercih) arasi agirlik: musterinin kendi sonuclari + platformun ortak
+    ogrenimi (yeni musteri ilk gunden digerlerinin deneyiminden yararlanir)."""
+    return max(0.4, min(2.5, _kendi_agirlik(alan, deger) * (1 + max(-0.5, min(0.5, 0.25 * (_ortak_puan(alan, deger) or 0))))))
+
+
+def _kendi_agirlik(alan, deger):
     o = ogrenimler()
     for s in o.get("tercih", []):
         if s["alan"] == alan and s["deger"] == deger:

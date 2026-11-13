@@ -9,20 +9,27 @@ Tum fontlar Google Fonts'tan (ucretsiz, ticari kullanima acik). Sablonlardaki .f
 buradan uretilir; yeni cift eklemek icin yalnizca bu tabloya satir eklemek yeterli.
 """
 import hashlib
+import json
+import os
+from pathlib import Path
 
 YEDEK_SERIF = 'Georgia,"DejaVu Serif",serif'
 YEDEK_SANS = '"Segoe UI","DejaVu Sans",sans-serif'
 YEDEK_DAR = 'Impact,"Arial Narrow","DejaVu Sans Condensed",sans-serif'
 
 
-def C(bf, bf_yedek, gf, bw, bt, bls, bo, his, uygun):
-    return {"bf": bf, "bf_yedek": bf_yedek, "gf": gf, "bw": bw, "bt": bt, "bls": bls, "bo": bo, "his": his, "uygun": uygun}
+YEDEK_ARAP = '"Noto Sans Arabic","DejaVu Sans",sans-serif'
+
+
+def C(bf, bf_yedek, gf, bw, bt, bls, bo, his, uygun, alfabe=("latin",)):
+    return {"bf": bf, "bf_yedek": bf_yedek, "gf": gf, "bw": bw, "bt": bt, "bls": bls, "bo": bo, "his": his,
+            "uygun": uygun, "alfabe": list(alfabe)}
 
 
 CIFTLER = {
     # ---- klasik / luks ----
-    "klasik": C("Cormorant Garamond", YEDEK_SERIF, "Montserrat", 600, "none", "0", 1, "classic luxury serif", "furniture, hotels, jewellery, weddings"),
-    "modern": C("Playfair Display", YEDEK_SERIF, "Inter", 700, "none", "-.01em", 1, "modern editorial serif", "fashion, interiors, real estate"),
+    "klasik": C("Cormorant Garamond", YEDEK_SERIF, "Montserrat", 600, "none", "0", 1, "classic luxury serif", "furniture, hotels, jewellery, weddings", ("latin", "cyrillic", "vietnamese")),
+    "modern": C("Playfair Display", YEDEK_SERIF, "Inter", 700, "none", "-.01em", 1, "modern editorial serif", "fashion, interiors, real estate", ("latin", "cyrillic", "vietnamese")),
     "zarif": C("Marcellus", YEDEK_SERIF, "Jost", 400, "uppercase", ".06em", .82, "refined spaced capitals", "spa, beauty, premium services"),
     "editoryal": C("DM Serif Display", YEDEK_SERIF, "DM Sans", 400, "none", "-.01em", 1.05, "magazine headline", "lifestyle, food, culture"),
     "moda_luks": C("Bodoni Moda", YEDEK_SERIF, "Manrope", 700, "none", "-.02em", 1.02, "high-fashion Didone, Vogue-like contrast", "fashion, beauty, luxury retail"),
@@ -45,6 +52,9 @@ CIFTLER = {
     "retro": C("Shrikhand", YEDEK_SERIF, "DM Sans", 400, "none", "0", .95, "70s retro display with swagger", "restaurants, drinks, lounges, music"),
     "diner": C("Righteous", YEDEK_SANS, "Poppins", 400, "uppercase", ".02em", 1, "diner/retro-futurist signage", "fast food, grills, car culture"),
     "el_yazisi": C("Permanent Marker", YEDEK_SANS, "Nunito", 400, "none", "0", 1, "hand-written marker, human and spontaneous", "small shops, crafts, community, tips"),
+    # ---- Arap alfabesi (Arapca, Farsca, Urduca icerikler) ----
+    "arap_modern": C("Cairo", YEDEK_ARAP, "Tajawal", 800, "none", "0", 1, "bold modern Arabic sans, clean and confident", "retail, tech, services, offers", ("arabic", "latin")),
+    "arap_klasik": C("Amiri", YEDEK_ARAP, "Noto Naskh Arabic", 700, "none", "0", 1.05, "classic Naskh calligraphic elegance", "luxury, perfume, hospitality, heritage", ("arabic",)),
 }
 
 GOOGLE = {   # Google Fonts css2 aile ifadeleri (yalnizca var olan agirliklar: tek bir hata tum istegi bozar)
@@ -60,7 +70,50 @@ GOOGLE = {   # Google Fonts css2 aile ifadeleri (yalnizca var olan agirliklar: t
     "Sora": "Sora:wght@400;600", "Source Sans 3": "Source+Sans+3:wght@400;600", "Nunito": "Nunito:wght@400;600;800",
     "Fredoka": "Fredoka:wght@400;600", "Shrikhand": "Shrikhand", "Righteous": "Righteous", "Poppins": "Poppins:wght@400;600",
     "Permanent Marker": "Permanent+Marker",
+    "Cairo": "Cairo:wght@400;700;800", "Tajawal": "Tajawal:wght@400;700", "Amiri": "Amiri:wght@400;700",
+    "Noto Naskh Arabic": "Noto+Naskh+Arabic:wght@400;600",
 }
+
+# Kutuphaneci'nin her hafta ekledigi ciftler (ortak kutuphane, tum musteriler). Elle yazilmis ciftleri ezmez.
+EK_DOSYA = Path(os.environ.get("AJAN_PAYLASIK_KOK") or Path(__file__).resolve().parent.parent / "paylasilan") / "fontlar" / "ek_ciftler.json"
+
+
+def _ek_yukle():
+    try:
+        ek = json.loads(EK_DOSYA.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    for k, c in (ek.get("ciftler") or {}).items():
+        if k not in CIFTLER and not c.get("emekli") and all(a in (ek.get("google") or {}) or a in GOOGLE for a in (c["bf"], c["gf"])):
+            CIFTLER[k] = {**C(c["bf"], c.get("bf_yedek") or YEDEK_SANS, c["gf"], c["bw"], c["bt"], c["bls"], c["bo"],
+                              c["his"], c["uygun"], c.get("alfabe") or ["latin"]), "ek": True}
+    for a, spec in (ek.get("google") or {}).items():
+        GOOGLE.setdefault(a, spec)
+
+
+_ek_yukle()
+
+# Icerik dili -> gereken alfabe (Google Fonts "subset" adlari)
+ALFABE = {"ar": "arabic", "fa": "arabic", "ur": "arabic", "ps": "arabic", "ru": "cyrillic", "uk": "cyrillic",
+          "bg": "cyrillic", "sr": "cyrillic", "mk": "cyrillic", "kk": "cyrillic", "el": "greek", "he": "hebrew",
+          "hi": "devanagari", "mr": "devanagari", "ne": "devanagari", "th": "thai", "vi": "vietnamese",
+          "bn": "bengali", "ta": "tamil", "ko": "korean", "ja": "japanese", "zh": "chinese-simplified"}
+
+
+def alfabe(dil_kodu):
+    return ALFABE.get((dil_kodu or "en").split("-")[0].lower(), "latin")
+
+
+def uygun_ciftler(dil_kodu=None):
+    """Icerik dilinin harflerini gercekten iceren ciftler. Hic yoksa (yeni alfabe) hepsi: sistem yedek fontu devralir."""
+    if dil_kodu is None:
+        try:
+            from . import dil
+            dil_kodu = dil.kod()
+        except Exception:
+            dil_kodu = "en"
+    a = alfabe(dil_kodu)
+    return [k for k, c in CIFTLER.items() if a in c.get("alfabe", ["latin"])] or list(CIFTLER)
 
 
 def aileler():
@@ -81,9 +134,10 @@ def css_siniflari():
     return "\n".join(satirlar)
 
 
-def aciklama():
+def aciklama(anahtarlar=None):
     """Sanat Yonetmeni istemi icin: anahtar -> 'Baslik + Govde (his; uygun)'"""
-    return {k: f'{c["bf"]} + {c["gf"]} ({c["his"]}; suits {c["uygun"]})' for k, c in CIFTLER.items()}
+    return {k: f'{c["bf"]} + {c["gf"]} ({c["his"]}; suits {c["uygun"]})' for k, c in CIFTLER.items()
+            if anahtarlar is None or k in anahtarlar}
 
 
 def uygunluk(anahtar, sektor_metni):

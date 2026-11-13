@@ -20,7 +20,7 @@ from pathlib import Path
 
 import requests
 
-from .ayarlar import AYAR, KOK, MUZIK, VERI
+from .ayarlar import AYAR, KOK, MUZIK, PAYLASIK, VERI
 
 KLASOR = MUZIK / "otomatik"
 KUTUPHANE = KLASOR / "kutuphane.json"
@@ -34,6 +34,25 @@ VARSAYILAN_SORGULAR = {
     "enerjik": ["upbeat corporate", "upbeat pop", "funk groove", "electronic upbeat", "happy energetic"],
     "festival": ["afrobeat", "celebration party", "christmas upbeat", "festive dance", "african groove"],
 }
+
+
+SORGU_DOSYA = KLASOR / "sorgular.json"            # Kutuphaneci'nin her hafta genislettigi arama listesi
+ORTAK_OGRENIM = PAYLASIK / "ogrenim" / "ortak.json"   # tum musterilerin tepkilerinden parca puanlari
+TAVAN_HER_RUH = 30                                  # ruh basina en fazla parca (depolama sinirli)
+
+
+def sorgular():
+    """Varsayilan sorgular + Kutuphaneci'nin ekledikleri (ruh -> sorgu listesi)."""
+    taban = {r: list(v) for r, v in ayar("sorgular", VARSAYILAN_SORGULAR).items()}
+    for ruh, liste in _oku(SORGU_DOSYA, {}).items():
+        if ruh in taban:
+            taban[ruh] += [q for q in liste if q not in taban[ruh]]
+    return taban
+
+
+def puanlar():
+    """Parca id -> {"skor": -2..+2, "n": tepki sayisi} (yayinlandi +, reddedildi/silindi -)."""
+    return (_oku(ORTAK_OGRENIM, {}) or {}).get("muzik", {})
 
 
 def ayar(anahtar, varsayilan=None):
@@ -105,16 +124,16 @@ def _sure_sn(dosya):
         return None
 
 
-def guncelle(hedef_her_ruh=None, gunluk=print):
-    """Her ruh hali icin kutuphanede en az hedef_her_ruh parca olmasini saglar. Indirilen parca sayisini doner."""
+def guncelle(hedef_her_ruh=None, gunluk=print, yeni_ek=0):
+    """Her ruh hali icin kutuphanede en az hedef_her_ruh parca olmasini saglar; yeni_ek > 0 ise (haftalik
+    Kutuphaneci) en az o kadar YENI parca daha ekler (TAVAN_HER_RUH'a kadar). Indirilen parca sayisini doner."""
     hedef_her_ruh = hedef_her_ruh or int(ayar("hedef_her_ruh", 6))
-    sorgular = ayar("sorgular", VARSAYILAN_SORGULAR)
     kut = kutuphane()
     var_olan = {k["id"] for k in kut}
     indirilen = 0
-    for ruh, liste in sorgular.items():
-        mevcut = [k for k in kut if k["ruh"] == ruh and (KLASOR / k["dosya"]).exists()]
-        eksik = hedef_her_ruh - len(mevcut)
+    for ruh, liste in sorgular().items():
+        mevcut = [k for k in kut if k["ruh"] == ruh and not k.get("emekli") and (KLASOR / k["dosya"]).exists()]
+        eksik = min(max(hedef_her_ruh - len(mevcut), yeni_ek), TAVAN_HER_RUH - len(mevcut))
         if eksik <= 0:
             continue
         for sorgu in random.sample(liste, len(liste)):
@@ -177,7 +196,29 @@ def _kullanici_parcalari():
 
 
 def _havuz():
-    return [k for k in kutuphane() if (KLASOR / k["dosya"]).exists()] + _kullanici_parcalari()
+    return [k for k in kutuphane() if not k.get("emekli") and (KLASOR / k["dosya"]).exists()] + _kullanici_parcalari()
+
+
+def emekliye_ayir(gunluk=print):
+    """Musterilerin begenmedigi (en az 3 tepki, ortalama olumsuz) parcalari ve ruh basina tavani asanlari
+    kutuphaneden cikarir; dosya silinir, lisans kaydi 'emekli' olarak kalir (gecmis paylasimlarin atfi icin)."""
+    kut, p, cikan = kutuphane(), puanlar(), 0
+    for k in kut:
+        q = p.get(k["id"]) or {}
+        if not k.get("emekli") and q.get("n", 0) >= 3 and q.get("skor", 0) < -0.5:
+            k["emekli"], k["emekli_neden"] = True, f"begenilmedi ({q['skor']:+.1f}, {q['n']} tepki)"
+    for ruh in {k["ruh"] for k in kut}:
+        aktif = [k for k in kut if k["ruh"] == ruh and not k.get("emekli")]
+        aktif.sort(key=lambda k: ((p.get(k["id"]) or {}).get("skor", 0), k.get("indirme", "")))
+        for k in aktif[:max(0, len(aktif) - TAVAN_HER_RUH)]:
+            k["emekli"], k["emekli_neden"] = True, "tavan: en dusuk puanli/en eski"
+    for k in kut:
+        if k.get("emekli") and (KLASOR / k["dosya"]).exists():
+            (KLASOR / k["dosya"]).unlink()
+            cikan += 1
+            gunluk(f"🎵 emekli: \"{k.get('baslik')}\" ({k['emekli_neden']})")
+    _yaz(KUTUPHANE, kut)
+    return cikan
 
 
 def _yol_ekle(k):
@@ -203,8 +244,12 @@ def sec(ruh="sakin", haric=None):
     if not uygun:
         return None
     taze = [k for k in uygun if kullanim.get(k["id"], "") < sinir] or uygun
-    taze.sort(key=lambda k: (0 if k.get("lisans") == "cc0" else 1, kullanim.get(k["id"], "")))
-    return _yol_ekle(random.choice(taze[:3]))
+    p = puanlar()
+    taze.sort(key=lambda k: (-(p.get(k["id"]) or {}).get("skor", 0), 0 if k.get("lisans") == "cc0" else 1,
+                             kullanim.get(k["id"], "")))
+    aday = taze[:5]                        # begenilenler one cikar, ama yeni parcalar da sans bulur
+    agirlik = [max(0.3, 1 + (p.get(k["id"]) or {}).get("skor", 0)) for k in aday]
+    return _yol_ekle(random.choices(aday, weights=agirlik)[0])
 
 
 def kullanildi(kayit):

@@ -1,4 +1,5 @@
 """Marka varliklari: musteri logosundan seffaf logolar, fontlarin indirilmesi."""
+import hashlib
 import re
 from pathlib import Path
 
@@ -131,9 +132,32 @@ def vurgu_rengi(yol, tohum=0):
     return hx(vurgu), hx(koyu), yazi
 
 
+def _aile_css(aile, spec, requests):
+    """Tek ailenin CSS'i + woff2 dosyalari, aile basina onbellek: kutuphaneye yeni font eklenince yalnizca o indirilir.
+    CJK dilimleri (/* [12] */ gibi, yuzlerce dosya) atlanir."""
+    anahtar = hashlib.sha1(spec.encode()).hexdigest()[:10]
+    yol = FONT_KLASOR / "aileler" / f"{anahtar}.css"
+    if yol.exists():
+        return yol.read_text(encoding="utf-8")
+    ua = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
+    r = requests.get("https://fonts.googleapis.com/css2?family=" + spec + "&display=swap", headers=ua, timeout=20)
+    r.raise_for_status()
+    bloklar = re.findall(r"(/\*[^*]*\*/\s*@font-face\s*\{[^}]*\})", r.text) or [r.text]
+    bloklar = [b for b in bloklar if not re.match(r"/\*\s*\[\d+\]", b)]
+    css = "\n".join(bloklar)
+    yol.parent.mkdir(parents=True, exist_ok=True)
+    for i, url in enumerate(dict.fromkeys(re.findall(r"url\((https://[^)]+\.woff2)\)", css))):
+        ad = f"{anahtar}_{i}.woff2"
+        (yol.parent / ad).write_bytes(requests.get(url, timeout=30).content)
+        css = css.replace(url, "aileler/" + ad)
+    yol.write_text(css, encoding="utf-8")
+    return css
+
+
 def fontlar_css():
-    """Google Fonts'u bir kez indirip yerelde saklar (sonra internetsiz calisir). Her aile ayri istenir:
-    biri basarisiz olursa digerleri yine gelir. Hicbiri gelmezse None; sablonlar yedek fontlara duser."""
+    """Google Fonts'u bir kez indirip yerelde saklar (sonra internetsiz calisir). Her aile ayri istenir ve ayri
+    saklanir: biri basarisiz olursa digerleri yine gelir. Hicbiri gelmezse None; sablonlar yedek fontlara duser."""
     from . import fontlar
     css_yolu = FONT_KLASOR / f"fonts_{fontlar.imza()}.css"
     if css_yolu.exists():
@@ -142,22 +166,11 @@ def fontlar_css():
         import requests
     except ImportError:
         return None
-    ua = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
     FONT_KLASOR.mkdir(parents=True, exist_ok=True)
-    parcalar, n = [], 0
+    parcalar = []
     for aile in fontlar.aileler():
         try:
-            css = requests.get("https://fonts.googleapis.com/css2?family=" + fontlar.GOOGLE[aile] + "&display=swap",
-                               headers=ua, timeout=20)
-            css.raise_for_status()
-            css = css.text
-            for url in dict.fromkeys(re.findall(r"url\((https://[^)]+\.woff2)\)", css)):
-                ad = f"f{n}.woff2"
-                n += 1
-                (FONT_KLASOR / ad).write_bytes(requests.get(url, timeout=30).content)
-                css = css.replace(url, ad)
-            parcalar.append(css)
+            parcalar.append(_aile_css(aile, fontlar.GOOGLE[aile], requests))
         except Exception as e:
             print(f"  ! Font indirilemedi: {aile} ({type(e).__name__})")
     if not parcalar:

@@ -344,6 +344,13 @@ def paylasik_hazirla(hedef):
         arsiv = hedef.parent / "_paylasilan.tar.gz"
         if depo().dosya_indir("_paylasilan/varliklar.tar.gz", arsiv):
             _guvenli_ac(arsiv.read_bytes(), hedef)
+        try:                 # kendi kendine buyuyen ortak kutuphane (muzik, fontlar, ortak ogrenim)
+            from . import kutuphane
+            n = kutuphane.indir(hedef)
+            if n:
+                gunluk(f"Ortak kutuphaneden {n} dosya indirildi")
+        except Exception as e:
+            gunluk(f"ortak kutuphane indirilemedi: {e}")
     return hedef
 
 
@@ -406,6 +413,12 @@ def bir_is(isci_adi, paylasik):
                 gunluk(f"IS {is_['id'][:8]} kapanis: kuyruga geri birakildi ({goruntu.get('erken', 0)} icerik yuklenmisti)")
                 return is_
             yazilan = geri_yaz(m, kok, goruntu, tur, basari)
+            if tur == "uret":
+                try:          # uretimde eklenen muzik/fontlar kalici olsun
+                    from . import kutuphane
+                    kutuphane.yukle(paylasik)
+                except Exception as e:
+                    gunluk(f"ortak kutuphane yuklenemedi: {e}")
         yazilan += goruntu.get("erken", 0)
         d.is_bitir(is_["id"], "bitti" if basari else "hata", f"{yazilan} icerik guncellendi\n{kayit}")
         gunluk(f"IS {is_['id'][:8]} {'bitti' if basari else 'HATA'} ({yazilan} icerik)")
@@ -440,6 +453,11 @@ def surekli(isci_adi):
                     r = zamanlayici.tur(tetikle=False)
                     if any(r.values()):
                         gunluk(f"Zamanlayici: {r}")
+                    try:
+                        from . import kutuphane
+                        kutuphane.gerekirse(paylasik)
+                    except Exception as e:
+                        gunluk(f"kutuphane: {type(e).__name__}: {e}")
                 if bir_is(isci_adi, paylasik) is None:
                     for _ in range(BOS_BEKLE_SN):
                         if dur["istek"]:
