@@ -180,6 +180,17 @@ class YerelDepo(Depo):
         with self._baglan() as c:
             c.execute("UPDATE isler SET durum=?, kayit=?, bitis=? WHERE id=?", (durum, kayit[-4000:], simdi_iso(), is_id))
 
+    def is_geri_birak(self, is_id):
+        with self._baglan() as c:
+            c.execute("UPDATE isler SET durum='bekliyor' WHERE id=?", (is_id,))
+
+    def yarim_kalanlar_geri(self):
+        with self._baglan() as c:
+            n = c.execute("UPDATE isler SET durum='bekliyor' WHERE durum='calisiyor' AND deneme < 3").rowcount
+            c.execute("UPDATE isler SET durum='hata', kayit='Isci uc kez yarida kaldi', bitis=? WHERE durum='calisiyor'",
+                      (simdi_iso(),))
+        return n
+
     def isler(self, mid, n=20):
         with self._baglan() as c:
             return [self._sozluk(s) for s in c.execute(

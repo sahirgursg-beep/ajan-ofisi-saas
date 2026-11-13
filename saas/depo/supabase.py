@@ -121,6 +121,17 @@ class SupabaseDepo(Depo):
         self._rest("PATCH", "isler", {"id": self._eq(is_id)},
                    {"durum": durum, "kayit": kayit[-4000:], "bitis": simdi_iso()})
 
+    def is_geri_birak(self, is_id):
+        self._rest("PATCH", "isler", {"id": self._eq(is_id)}, {"durum": "bekliyor"})
+
+    def yarim_kalanlar_geri(self):
+        """Onceki isci (yeniden dagitim/cokme) yarida biraktiysa: 3. denemeye kadar kuyruga, sonra hata."""
+        geri = self._rest("PATCH", "isler", {"durum": "eq.calisiyor", "deneme": "lt.3"}, {"durum": "bekliyor"},
+                          prefer="return=representation") or []
+        self._rest("PATCH", "isler", {"durum": "eq.calisiyor"},
+                   {"durum": "hata", "kayit": "Isci uc kez yarida kaldi", "bitis": simdi_iso()})
+        return len(geri)
+
     def isler(self, mid, n=20):
         return self._rest("GET", "isler", {"musteri_id": self._eq(mid), "select": "*",
                                            "order": "olusturma.desc", "limit": str(n)})

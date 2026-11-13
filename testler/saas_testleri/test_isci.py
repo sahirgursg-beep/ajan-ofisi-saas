@@ -122,3 +122,15 @@ def test_biten_icerik_is_bitmeden_yuklenir(d, tmp_path):
     ic = d.icerik_al("m1", k.name)
     assert ic and ic["dosyalar"] == ["post_1080x1350.jpg"] and goruntu["erken"] == 1
     assert goruntu["icerik"][k.name]["surum"] == ic["surum"] and ".hazir" not in ic["ekler"]
+
+
+def test_kapanis_sinyalinde_uretim_hemen_birakilir():
+    import sys, time
+    from saas import isci
+    isci.KAPANIS.set()
+    try:
+        t = time.time()
+        kod, _ = isci._akit([sys.executable, "-c", "import time; time.sleep(60)"], None, 600, "m1")
+        assert kod is None and time.time() - t < 10
+    finally:
+        isci.KAPANIS.clear()

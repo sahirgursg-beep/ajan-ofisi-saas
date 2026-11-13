@@ -169,6 +169,10 @@ def komutlar(tur, parametre, kok):
     return adimlar
 
 
+import threading as _threading
+KAPANIS = _threading.Event()         # SIGTERM: eldeki uretim durdurulur, is kuyruga geri birakilir
+
+
 def _akit(komut, ortam, sure, mid):
     """Alt sureci calistirir; ciktisini satir satir isci kaydina da yazar (DigitalOcean Runtime Logs'ta
     ilerleme gorunsun). -> (cikis_kodu ya da None=zaman asimi, son satirlar)"""
@@ -185,11 +189,18 @@ def _akit(komut, ortam, sure, mid):
                 print(f"   [{mid}] {satir.rstrip()[:300]}", flush=True)
     t = threading.Thread(target=oku, daemon=True)
     t.start()
-    try:
-        kod = p.wait(timeout=sure)
-    except subprocess.TimeoutExpired:
-        p.kill()
-        kod = None
+    bitis = time.time() + sure
+    kod = None
+    while True:
+        try:
+            kod = p.wait(timeout=2)
+            break
+        except subprocess.TimeoutExpired:
+            if KAPANIS.is_set() or time.time() > bitis:      # yeniden dagitim: isi birak, yeni isci devralir
+                p.kill()
+                p.wait()
+                kod = None
+                break
     t.join(timeout=5)
     return kod, list(son)
 
@@ -390,6 +401,10 @@ def bir_is(isci_adi, paylasik):
             finally:
                 dur.set()
                 erken.join(60)
+            if KAPANIS.is_set():
+                d.is_geri_birak(is_["id"])
+                gunluk(f"IS {is_['id'][:8]} kapanis: kuyruga geri birakildi ({goruntu.get('erken', 0)} icerik yuklenmisti)")
+                return is_
             yazilan = geri_yaz(m, kok, goruntu, tur, basari)
         yazilan += goruntu.get("erken", 0)
         d.is_bitir(is_["id"], "bitti" if basari else "hata", f"{yazilan} icerik guncellendi\n{kayit}")
@@ -407,11 +422,17 @@ def surekli(isci_adi):
     import signal
     from . import zamanlayici
     dur = {"istek": False}
-    signal.signal(signal.SIGTERM, lambda *a: dur.update(istek=True))
+    signal.signal(signal.SIGTERM, lambda *a: (dur.update(istek=True), KAPANIS.set()))
     son_tur = 0.0
     with tempfile.TemporaryDirectory(prefix="ajan_paylasilan_") as p:
         paylasik = paylasik_hazirla(Path(p) / "paylasilan")
         gunluk("Isci surekli modda basladi")
+        try:            # tek surekli isci: onceki surecin yarida biraktigi isler beklemeden yeniden kuyruga
+            n = depo().yarim_kalanlar_geri()
+            if n:
+                gunluk(f"Yarida kalan {n} is yeniden kuyrukta")
+        except Exception as e:
+            gunluk(f"yarida kalan isler kontrol edilemedi: {e}")
         while not dur["istek"]:
             try:
                 if time.time() - son_tur >= ZAMANLAYICI_ARALIK_SN:

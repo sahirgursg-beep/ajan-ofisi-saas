@@ -50,6 +50,20 @@ def test_coken_iscinin_isi_yeniden_kuyruga(d):
     assert d.is_al("i2", zaman_asimi_dk=60)["id"] == a["id"]
 
 
+def test_yeniden_dagitimda_yarim_kalan_is_hemen_devralinir(d):
+    _musteri(d)
+    a = d.is_ekle("m1", "uret")
+    d.is_al("eski-isci")                               # eski surec oldu, is 'calisiyor' kaldi
+    assert d.is_al("yeni-isci") is None
+    assert d.yarim_kalanlar_geri() == 1
+    b = d.is_al("yeni-isci")
+    assert b["id"] == a["id"] and b["deneme"] == 2
+    d.is_geri_birak(a["id"])
+    d.is_al("x")                                       # deneme 3
+    assert d.yarim_kalanlar_geri() == 0                # ucuncu denemeden sonra sonsuz dongu yok
+    assert [i for i in d.isler("m1") if i["id"] == a["id"]][0]["durum"] == "hata"
+
+
 def test_bilinmeyen_is_turu(d):
     _musteri(d)
     with pytest.raises(ValueError):

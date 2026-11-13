@@ -39,6 +39,8 @@ class Depo:
     def is_ekle(self, mid, tur, parametre=None): raise NotImplementedError
     def is_al(self, isci, zaman_asimi_dk=60): raise NotImplementedError
     def is_bitir(self, is_id, durum, kayit=""): raise NotImplementedError
+    def is_geri_birak(self, is_id): raise NotImplementedError                # isci kapanirken: is kuyruga doner
+    def yarim_kalanlar_geri(self): raise NotImplementedError                 # tek isci acilisi: oksuz isler kuyruga
     def isler(self, mid, n=20): raise NotImplementedError
     def son_isler(self, n=50, durum=None): raise NotImplementedError       # yonetim: tum musteriler
     def uyeler(self, mid): raise NotImplementedError                        # yonetim: musterinin kullanicilari
