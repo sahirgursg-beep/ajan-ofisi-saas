@@ -112,7 +112,9 @@ def ciz(sablon_adi, v, hedef, boyut=(1080, 1350)):
         metin = metin.replace("{{" + k + "}}", guvenli)
     if boyut[1] > boyut[0] * 1.5:
         metin = metin.replace("<body>", '<body class="story">', 1).replace('<body class="', '<body class="story ', 1)
-    metin = metin.replace("</head>", f"<style>:root{{--w:{boyut[0]}px;--h:{boyut[1]}px;{marka_css()}}}</style></head>", 1)
+    from . import fontlar as _fontlar
+    metin = metin.replace("</head>", f"<style>:root{{--w:{boyut[0]}px;--h:{boyut[1]}px;{marka_css()}}}\n"
+                          f"{_fontlar.css_siniflari()}</style></head>", 1)
     metin = metin.replace("<body", f'<body style="{v.get("odak_stil", "")}"', 1)
     gecici = SABLON / f"_render_{AYAR['musteri_id']}_{Path(hedef).stem}.html"   # sablon klasorunde: ortak.css goreli yolu calissin
     gecici.write_text(metin, encoding="utf-8")

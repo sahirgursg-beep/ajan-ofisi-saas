@@ -17,7 +17,8 @@ from . import kurallar, musteri
 TUM_DUZENLER = ["tam_ekran", "ust_foto_alt_panel", "cerceveli", "kemer", "yan_panel", "diyagonal"]
 # config.json "haric_duzenler" ile istenmeyen duzenler kapatilir (or. kemer/kubbe)
 DUZENLER = [d for d in TUM_DUZENLER if d not in AYAR.get("haric_duzenler", [])] or ["tam_ekran"]
-FONTLAR = ["klasik", "modern", "cesur", "zarif", "editoryal"]
+from . import fontlar as _fontlar
+FONTLAR = list(_fontlar.CIFTLER)
 MOTIFLER = ["yok", "altin_cizgi", "cift_cerceve", "kose_susleri", "daireler", "grain"]
 FIYAT_STILLERI = ["rozet", "serit", "sade", "etiket_kart"]
 EFEKTLER = ["yok", "sicak", "dramatik", "serin"]
@@ -32,13 +33,7 @@ ACIKLAMA = {
         "yan_panel": "color panel on the left 40% with text, photo on the right 60%",
         "diyagonal": "full photo with a diagonal color band at the bottom holding the text",
     },
-    "fontlar": {
-        "klasik": "Cormorant Garamond + Montserrat (classic luxury)",
-        "modern": "Playfair Display + Inter (modern editorial)",
-        "cesur": "Bebas Neue + Montserrat (bold, campaign, all caps)",
-        "zarif": "Marcellus + Jost (refined, spaced capitals)",
-        "editoryal": "DM Serif Display + DM Sans (magazine)",
-    },
+    "fontlar": _fontlar.aciklama(),
     "motif": {
         "yok": "no ornament", "altin_cizgi": "short accent line above text",
         "cift_cerceve": "double thin frame around the whole image (echoes our logo)",
@@ -166,6 +161,15 @@ def sablon_degiskenleri(t, logolar, uri):
 
 
 # ---------------- sablon modu (LLM yoksa) ----------------
+def _sektor_metni():
+    try:
+        from . import sektor
+        p = sektor.profil()
+        return f"{p.get('ad', '')} {p.get('alt_sektor', '')}"
+    except Exception:
+        return ""
+
+
 def rastgele_tarif(urun, bglm, tohum=None, foto_vurgu=None):
     from .analiz import ozellik_agirligi
     r = random.Random(tohum)
@@ -174,7 +178,9 @@ def rastgele_tarif(urun, bglm, tohum=None, foto_vurgu=None):
     etk = bglm["etkinlikler"][0] if bglm["etkinlikler"] else None
     t = {
         "duzen": agirlikli("duzen", kurallar.izinli("duzen", DUZENLER)),
-        "fontlar": agirlikli("fontlar", kurallar.izinli("fontlar", FONTLAR)),
+        "fontlar": r.choices(kurallar.izinli("fontlar", FONTLAR),
+                             weights=[ozellik_agirligi("fontlar", f) * _fontlar.uygunluk(f, _sektor_metni())
+                                      for f in kurallar.izinli("fontlar", FONTLAR)])[0],
         "motif": agirlikli("motif", kurallar.izinli("motif", MOTIFLER)),
         "fiyat_stili": agirlikli("fiyat_stili", kurallar.izinli("fiyat_stili", FIYAT_STILLERI)),
         "efekt": r.choice(kurallar.izinli("efekt", ["yok", "sicak", "dramatik"])),
@@ -231,6 +237,10 @@ def llm_istemi(urun, bglm, gecmis, ek_kisit=""):
         f"{kurallar.istem('gorsel')}"
         f"{__import__('ofis.analiz', fromlist=['x']).istem_ozeti()}\n\n"
         f"Design vocabulary (use ONLY these keys):\n{sozluk}\n\n"
+        "Think like the creative director of a top advertising agency: one strong idea per design, bold "
+        "typographic choices, real contrast between headline and body, and a font family that fits THIS brand and "
+        "today's message (see 'suits' in the vocabulary) - not the same safe serif every day. Recently used fonts "
+        "should not repeat.\n"
         "You have studied the leading accounts of this sector (see the sector research above): build on their "
         "visual trends and trending palettes, adapt them to this brand, never copy one account.\n"
         + ("This post has NO price: never design around a price; let the photo and headline carry it.\n"

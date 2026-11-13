@@ -40,6 +40,8 @@ class Depo:
     def is_al(self, isci, zaman_asimi_dk=60): raise NotImplementedError
     def is_bitir(self, is_id, durum, kayit=""): raise NotImplementedError
     def isler(self, mid, n=20): raise NotImplementedError
+    def son_isler(self, n=50, durum=None): raise NotImplementedError       # yonetim: tum musteriler
+    def uyeler(self, mid): raise NotImplementedError                        # yonetim: musterinin kullanicilari
 
     def bekleyen_is(self, mid, tur, parametre=None):
         """Ayni turde (ve ayni parametreyle) bekleyen/calisan is varsa onu doner: cift is acilmasin."""

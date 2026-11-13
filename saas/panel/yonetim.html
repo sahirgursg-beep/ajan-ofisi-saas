@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>FeedZync Admin</title>
+<link rel="icon" type="image/png" href="/panel/varliklar/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Yonetim: musteri paneliyle ayni dil, daha yogun. Sarı = ilgilen, kirmizi = bozuk. */
+:root { --mist:#EEF2EE; --kart:#fff; --ink:#1B3B2E; --soluk:#5F6E66; --cizgi:#D9DFD8; --jade:#127F56; --jade-acik:#DDEFE5;
+  --adacayi:#AAC7B1; --marigold:#F2B300; --marigold-acik:#FFF3CC; --kirmizi:#B4372B; --kirmizi-acik:#F9E1DE;
+  --baslik:"Bricolage Grotesque", "Figtree", system-ui, sans-serif; --govde:"Figtree", system-ui, sans-serif; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--mist); color:var(--ink); font:15px/1.45 var(--govde); }
+h1, h2, h3 { font-family:var(--baslik); margin:0; letter-spacing:-0.01em; }
+a { color:var(--jade); }
+.gizli { display:none !important; }
+:focus-visible { outline:3px solid var(--marigold); outline-offset:2px; }
+button { font:600 14px/1 var(--govde); border:0; border-radius:999px; padding:9px 15px; cursor:pointer; background:var(--ink); color:#fff; }
+button.ana { background:var(--jade); }
+button.ikincil { background:transparent; color:var(--ink); box-shadow:inset 0 0 0 1.5px var(--cizgi); }
+button.tehlike { background:transparent; color:var(--kirmizi); box-shadow:inset 0 0 0 1.5px var(--kirmizi-acik); }
+input, select { font:inherit; padding:9px 12px; border-radius:8px; border:1.5px solid var(--cizgi); background:#fff; color:var(--ink); }
+.soluk { color:var(--soluk); font-size:13px; }
+.satir { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.yayil { flex:1; }
+.ust { display:flex; align-items:center; gap:16px; padding:16px clamp(16px,3vw,32px); }
+.ust img { height:28px; }
+.ust .rol { font:700 13px var(--govde); background:var(--ink); color:#fff; padding:4px 10px; border-radius:999px; }
+.ust nav a { color:var(--soluk); text-decoration:none; font-weight:600; padding:7px 13px; border-radius:999px; cursor:pointer; }
+.ust nav a.aktif { background:#fff; color:var(--ink); }
+main { max-width:1280px; margin:0 auto; padding:6px clamp(16px,3vw,32px) 60px; }
+
+/* durum cumlesi + sayilar */
+.durum-cumle { font:800 clamp(26px,3.6vw,40px)/1.08 var(--baslik); letter-spacing:-0.02em; margin:10px 0 18px; max-width:28ch; }
+.sayilar { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:10px; }
+.sayi { background:var(--kart); border-radius:14px; padding:14px 16px; }
+.sayi b { display:block; font:800 30px var(--baslik); letter-spacing:-0.02em; }
+.sayi span { color:var(--soluk); font-size:13px; }
+.sayi.dikkat { background:var(--marigold-acik); }
+.sayi.kotu { background:var(--kirmizi-acik); }
+.servisler { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
+.servis { font-size:13px; padding:5px 11px; border-radius:999px; background:#fff; }
+.servis.yok { background:var(--kirmizi-acik); color:var(--kirmizi); }
+
+/* tablo */
+.arac { margin:24px 0 10px; }
+table { width:100%; border-collapse:collapse; background:var(--kart); border-radius:14px; overflow:hidden; }
+th { text-align:left; font-size:13px; font-weight:600; color:var(--soluk); padding:10px 12px; border-bottom:1px solid var(--cizgi); }
+td { padding:11px 12px; border-bottom:1px solid #edf1ed; vertical-align:middle; }
+tr.tikla { cursor:pointer; }
+tr.tikla:hover td { background:#f6f9f6; }
+.etiket { display:inline-block; font-size:12px; font-weight:600; padding:3px 9px; border-radius:999px; background:#eef2ee; }
+.etiket.aktif { background:var(--jade-acik); color:var(--jade); }
+.etiket.deneme { background:var(--marigold-acik); color:#7a5a00; }
+.etiket.duraklatildi, .etiket.kapali, .etiket.hata { background:var(--kirmizi-acik); color:var(--kirmizi); }
+.etiket.bitti { background:var(--jade-acik); color:var(--jade); }
+.tablo-kap { overflow-x:auto; }
+
+/* cekmece */
+.perde { position:fixed; inset:0; background:rgba(27,59,46,.45); z-index:20; }
+.cekmece { position:fixed; top:0; right:0; bottom:0; width:min(640px,100%); background:var(--mist); z-index:21; overflow-y:auto; padding:22px; }
+.blok { background:#fff; border-radius:14px; padding:16px; margin-top:12px; }
+.blok h3 { font-size:17px; margin-bottom:8px; }
+pre { white-space:pre-wrap; font-size:12px; background:#f4f6f4; padding:10px; border-radius:8px; max-height:280px; overflow:auto; }
+.pano div { padding:6px 0; border-bottom:1px solid #edf1ed; font-size:13px; }
+.giris { max-width:420px; margin:12vh auto; padding:0 18px; }
+.mesaj { position:fixed; left:50%; transform:translateX(-50%); bottom:22px; background:var(--ink); color:#fff; padding:12px 18px; border-radius:999px; z-index:30; }
+</style>
+</head>
+<body>
+<section id="giris" class="giris gizli">
+  <img src="/panel/varliklar/feedzync-logo.png" alt="FeedZync" style="height:34px">
+  <h1 style="margin:24px 0 8px">Admin</h1>
+  <p class="soluk" id="girisNot">Sign in with an admin account.</p>
+  <p><input id="eposta" type="email" placeholder="Email" style="width:100%"></p>
+  <p id="sifreAlan"><input id="sifre" type="password" placeholder="Password" style="width:100%"></p>
+  <button class="ana" id="girisBtn">Sign in</button>
+  <p id="girisMesaj" class="soluk"></p>
+</section>
+
+<div id="uygulama" class="gizli">
+  <div class="ust">
+    <img src="/panel/varliklar/feedzync-logo.png" alt="FeedZync"><span class="rol">Admin</span>
+    <nav><a data-s="musteriler" class="aktif">Customers</a><a data-s="isler">Jobs</a></nav>
+    <div class="yayil"></div><a href="/" style="font-weight:600;text-decoration:none">Customer app</a>
+    <button class="ikincil" id="cikis">Sign out</button>
+  </div>
+  <main>
+    <section id="s-musteriler">
+      <h2 class="durum-cumle" id="cumle">Loading…</h2>
+      <div class="sayilar" id="sayilar"></div>
+      <div class="servisler" id="servisler"></div>
+      <div class="satir arac">
+        <input id="ara" placeholder="Search business, owner email or city" style="flex:1;min-width:220px">
+        <select id="filtre"><option value="">All</option><option value="aktif">Active</option><option value="deneme">Trial</option>
+          <option value="bitiyor">Trial ending (3 days)</option><option value="duraklatildi">Paused</option><option value="kapali">Closed</option>
+          <option value="baglantisiz">Not connected</option><option value="hatali">Last job failed</option></select>
+        <button class="ikincil" id="yenile">Refresh</button>
+      </div>
+      <div class="tablo-kap"><table><thead><tr><th>Business</th><th>Owner</th><th>Status</th><th>Instagram & Facebook</th><th>Last job</th><th>AI spend (month)</th><th>Joined</th></tr></thead>
+        <tbody id="tablo"></tbody></table></div>
+    </section>
+    <section id="s-isler" class="gizli">
+      <div class="satir arac" style="margin-top:8px"><h2 class="yayil">Jobs</h2>
+        <select id="isFiltre"><option value="">All</option><option value="hata">Failed</option><option value="calisiyor">Running</option><option value="bekliyor">Waiting</option></select></div>
+      <div class="tablo-kap"><table><thead><tr><th>Business</th><th>Job</th><th>Status</th><th>Created</th><th>Finished</th></tr></thead><tbody id="isTablo"></tbody></table></div>
+    </section>
+  </main>
+</div>
+<div id="cekmeceAlan"></div>
+<div id="mesaj" class="mesaj gizli" role="status"></div>
+
+<script type="module">
+const $ = (s, k = document) => k.querySelector(s);
+const $$ = (s, k = document) => [...k.querySelectorAll(s)];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let sb = null, belirtec = null, OZET = null;
+const DURUM_AD = { deneme: "Trial", aktif: "Active", duraklatildi: "Paused", kapali: "Closed" };
+const IS_AD = { uret: "Make posts", yayin_turu: "Publish", kaldir: "Delete", revize: "Redo", plan: "Weekly plan" };
+const IS_DURUM = { bitti: "done", hata: "failed", calisiyor: "running", bekliyor: "waiting" };
+const tarih = (t) => t ? new Date(t).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
+function bildir(m, s = 4000) { const e = $("#mesaj"); e.textContent = m; e.classList.remove("gizli"); clearTimeout(e._t); e._t = setTimeout(() => e.classList.add("gizli"), s); }
+
+async function token() { if (sb) { const { data } = await sb.auth.getSession(); belirtec = data.session?.access_token || null; } return belirtec; }
+async function api(yol, yontem = "GET", govde) {
+  await token();
+  const r = await fetch(yol, { method: yontem, headers: { "Content-Type": "application/json", ...(belirtec ? { Authorization: "Bearer " + belirtec } : {}) },
+                              body: govde ? JSON.stringify(govde) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401) { girisGoster(); throw new Error("Please sign in"); }
+  if (r.status === 404 && yol.startsWith("/api/yonetim")) { girisGoster("This account is not an admin."); throw new Error("Not an admin"); }
+  if (!r.ok) throw new Error(j.hata || "HTTP " + r.status);
+  return j;
+}
+function girisGoster(not) { $("#uygulama").classList.add("gizli"); $("#giris").classList.remove("gizli"); if (not) $("#girisNot").textContent = not; }
+
+async function basla() {
+  const Y = await (await fetch("/api/yapilandirma")).json();
+  if (Y.supabase_url && Y.supabase_anon && !Y.yerel_giris) {
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    sb = createClient(Y.supabase_url, Y.supabase_anon);
+  } else { $("#sifreAlan").classList.add("gizli"); belirtec = localStorage.getItem("ajan_belirtec"); }
+  if (!(await token())) return girisGoster();
+  await ac();
+}
+$("#girisBtn").onclick = async () => {
+  try {
+    if (sb) { const { error } = await sb.auth.signInWithPassword({ email: $("#eposta").value.trim(), password: $("#sifre").value }); if (error) throw error; }
+    else { const r = await fetch("/api/yerel-giris", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eposta: $("#eposta").value.trim() }) });
+           belirtec = (await r.json()).belirtec; localStorage.setItem("ajan_belirtec", belirtec); }
+    await ac();
+  } catch (e) { $("#girisMesaj").textContent = e.message; }
+};
+$("#cikis").onclick = () => { if (sb) sb.auth.signOut(); localStorage.removeItem("ajan_belirtec"); location.reload(); };
+
+async function ac() {
+  OZET = await api("/api/yonetim/ozet");
+  $("#giris").classList.add("gizli"); $("#uygulama").classList.remove("gizli");
+  ozetCiz();
+}
+$$(".ust nav a").forEach((a) => (a.onclick = () => {
+  $$(".ust nav a").forEach((x) => x.classList.toggle("aktif", x === a));
+  $$("main > section").forEach((s) => s.classList.toggle("gizli", s.id !== "s-" + a.dataset.s));
+  if (a.dataset.s === "isler") islerCiz();
+}));
+
+function ozetCiz() {
+  const o = OZET, s = o.sayilar, ii = o.isler_24s;
+  const sorun = ii.hata + o.deneme_bitiyor.length;
+  $("#cumle").textContent = s.toplam === 0 ? "No customers yet." :
+    `${s.toplam} business${s.toplam > 1 ? "es" : ""}, ${s.aktif} paying. ` + (sorun ? `${ii.hata} failed job${ii.hata === 1 ? "" : "s"} and ${o.deneme_bitiyor.length} trial${o.deneme_bitiyor.length === 1 ? "" : "s"} ending soon.` : "Everything is running.");
+  const gelir = o.harcama_bu_ay, sabit = o.sabit_aylik;
+  $("#sayilar").innerHTML = [
+    ["Paying", s.aktif, ""], ["On trial", s.deneme, ""], ["Trials ending in 3 days", o.deneme_bitiyor.length, o.deneme_bitiyor.length ? "dikkat" : ""],
+    ["Paused or closed", s.duraklatildi + s.kapali, ""], ["Connected to Meta", `${o.meta_bagli}/${s.toplam}`, ""],
+    ["Jobs done (24 h)", ii.bitti, ""], ["Jobs failed (24 h)", ii.hata, ii.hata ? "kotu" : ""], ["Waiting in queue", o.kuyruk, o.kuyruk > 5 ? "dikkat" : ""],
+    ["AI spend this month", "$" + gelir.toFixed(2), ""], ["Fixed hosting / month", "$" + sabit.toFixed(0), ""],
+  ].map(([a, v, c]) => `<div class="sayi ${c}"><b>${esc(v)}</b><span>${esc(a)}</span></div>`).join("");
+  const AD = { AJAN_YZ_ANAHTAR: "Text AI", FAL_KEY: "fal.ai images", PIXABAY_API_KEY: "Pixabay photos", META_APP_ID: "Meta app" };
+  $("#servisler").innerHTML = Object.entries(o.servisler).map(([k, v]) => `<span class="servis ${v ? "" : "yok"}">${v ? "✓" : "✕"} ${AD[k] || k}</span>`).join("")
+    + `<span class="servis">Version ${esc(o.surum)}</span>`;
+  tabloCiz();
+}
+function tabloCiz() {
+  const q = $("#ara").value.trim().toLowerCase(), f = $("#filtre").value;
+  const satirlar = OZET.musteriler.filter((m) => {
+    if (q && ![m.ad, m.id, m.sehir, ...(m.sahipler || [])].join(" ").toLowerCase().includes(q)) return false;
+    if (f === "bitiyor") return OZET.deneme_bitiyor.includes(m.id);
+    if (f === "baglantisiz") return !m.meta_bagli;
+    if (f === "hatali") return m.son_is && m.son_is.durum === "hata";
+    return !f || m.durum === f;
+  });
+  $("#tablo").innerHTML = satirlar.map((m) => {
+    const gun = m.durum === "deneme" && m.deneme_bitis ? Math.ceil((new Date(m.deneme_bitis) - new Date()) / 864e5) : null;
+    return `<tr class="tikla" data-mid="${esc(m.id)}"><td><b>${esc(m.ad)}</b><div class="soluk">${esc(m.sehir || m.id)}</div></td>
+      <td class="soluk">${esc((m.sahipler || []).join(", ") || "—")}</td>
+      <td><span class="etiket ${esc(m.durum)}">${esc(DURUM_AD[m.durum] || m.durum)}</span>${gun !== null ? `<div class="soluk">${gun > 0 ? gun + " days left" : "ended"}</div>` : ""}</td>
+      <td>${m.meta_bagli ? "Connected" + (m.meta.ig_kullanici ? ` <span class="soluk">@${esc(m.meta.ig_kullanici)}</span>` : "") : `<span class="soluk">Not connected</span>`}</td>
+      <td>${m.son_is ? `<span class="etiket ${esc(m.son_is.durum)}">${esc(IS_DURUM[m.son_is.durum] || m.son_is.durum)}</span> <span class="soluk">${esc(IS_AD[m.son_is.tur] || m.son_is.tur)} · ${tarih(m.son_is.olusturma)}</span>` : `<span class="soluk">—</span>`}</td>
+      <td>$${(m.harcama?.bu_ay || 0).toFixed(2)}</td><td class="soluk">${tarih(m.olusturma)}</td></tr>`; }).join("")
+    || `<tr><td colspan="7" class="soluk" style="padding:22px">No businesses match.</td></tr>`;
+  $$("#tablo tr[data-mid]").forEach((r) => (r.onclick = () => detay(r.dataset.mid)));
+}
+$("#ara").oninput = tabloCiz; $("#filtre").onchange = tabloCiz;
+$("#yenile").onclick = () => ac().then(() => bildir("Updated."));
+
+function kapat() { $("#cekmeceAlan").innerHTML = ""; }
+async function detay(mid) {
+  let m; try { m = await api(`/api/yonetim/musteri/${encodeURIComponent(mid)}`); } catch (e) { return bildir(e.message); }
+  const oto = !!(m.yayin_ayar || {}).otomatik;
+  const kalem = Object.entries(m.harcama.kalemler || {}).map(([k, v]) => `${esc(k)}: ${v.adet}× $${Number(v.usd).toFixed(3)}`).join(" · ") || "No paid AI use this month.";
+  $("#cekmeceAlan").innerHTML = `<div class="perde" data-kapat></div><aside class="cekmece" role="dialog" aria-modal="true">
+    <div class="satir"><h2 class="yayil">${esc(m.ad)}</h2><button class="ikincil" data-kapat>Close</button></div>
+    <p class="soluk">${esc(m.id)} · ${esc(m.sektor || "no sector")} · ${esc(m.sehir || "")} ${m.site ? `· <a href="${esc(m.site)}" target="_blank" rel="noopener">${esc(m.site)}</a>` : ""}</p>
+    <div class="blok"><h3>Account</h3>
+      <div class="satir"><span>Status</span><select id="durumSec">${Object.entries(DURUM_AD).map(([k, a]) => `<option value="${k}" ${k === m.durum ? "selected" : ""}>${a}</option>`).join("")}</select>
+        <button class="kucuk" id="durumKaydet">Save status</button></div>
+      <p class="soluk" style="margin-top:10px">Trial ends: ${tarih(m.deneme_bitis)}</p>
+      <div class="satir"><button class="ikincil" data-uzat="7">+7 days trial</button><button class="ikincil" data-uzat="14">+14 days</button><button class="ikincil" data-uzat="30">+30 days</button></div>
+      <p class="soluk" style="margin-top:10px">Owner: ${esc((m.sahipler || []).join(", ") || "—")}</p></div>
+    <div class="blok"><h3>Office</h3>
+      <div class="satir"><label class="satir" style="font-weight:600"><input type="checkbox" id="otoSec" ${oto ? "checked" : ""}> Autopilot</label>
+        <span class="soluk">Instagram & Facebook: ${m.meta_bagli ? "connected" : "not connected"}</span></div>
+      <div class="satir" style="margin-top:12px"><button class="ana" id="uret">Make posts now</button>
+        <a href="/#musteri=${encodeURIComponent(m.id)}" target="_blank" rel="noopener"><button class="ikincil">Open their app</button></a></div></div>
+    <div class="blok"><h3>AI spend this month: $${Number(m.harcama.bu_ay || 0).toFixed(3)}</h3><p class="soluk">${kalem}</p></div>
+    <div class="blok"><h3>Jobs</h3>${(m.isler || []).map((i, n) => `<details ${n === 0 && i.durum === "hata" ? "open" : ""}><summary><span class="etiket ${esc(i.durum)}">${esc(IS_DURUM[i.durum] || i.durum)}</span> ${esc(IS_AD[i.tur] || i.tur)} · ${tarih(i.olusturma)}</summary><pre>${esc((i.kayit || "no log").slice(-3500))}</pre></details>`).join("") || `<p class="soluk">No jobs yet.</p>`}</div>
+    <div class="blok"><h3>Office board</h3><div class="pano">${(m.pano || []).slice(-30).reverse().map((p) => `<div><b>${esc(p.gonderen)}</b> → ${esc(p.alici)}: ${esc(p.icerik)}</div>`).join("") || `<p class="soluk">Quiet.</p>`}</div></div>
+  </aside>`;
+  $$("[data-kapat]").forEach((b) => (b.onclick = kapat));
+  const islem = async (ad, g, not) => { try { await api(`/api/yonetim/musteri/${encodeURIComponent(mid)}/${ad}`, "POST", g); bildir(not); await ac(); detay(mid); } catch (e) { bildir(e.message, 6000); } };
+  $("#durumKaydet").onclick = () => { const d = $("#durumSec").value; if (["duraklatildi", "kapali"].includes(d) && !confirm(`Set ${m.ad} to ${DURUM_AD[d]}? Their office stops making and publishing posts.`)) return;
+    islem("durum", { durum: d }, "Status saved."); };
+  $$("[data-uzat]").forEach((b) => (b.onclick = () => islem("deneme_uzat", { gun: Number(b.dataset.uzat) }, `Trial extended by ${b.dataset.uzat} days.`)));
+  $("#otoSec").onchange = (e) => islem("otomatik", { otomatik: e.target.checked }, e.target.checked ? "Autopilot on." : "Autopilot off.");
+  $("#uret").onclick = () => islem("uret", {}, "Job queued. Posts appear in about 15 minutes.");
+  document.onkeydown = (e) => { if (e.key === "Escape") kapat(); };
+}
+
+async function islerCiz() {
+  try {
+    const { isler } = await api("/api/yonetim/isler" + ($("#isFiltre").value ? "?durum=" + $("#isFiltre").value : ""));
+    const ad = Object.fromEntries((OZET?.musteriler || []).map((m) => [m.id, m.ad]));
+    $("#isTablo").innerHTML = isler.map((i) => `<tr class="tikla" data-mid="${esc(i.musteri_id)}"><td><b>${esc(ad[i.musteri_id] || i.musteri_id)}</b></td><td>${esc(IS_AD[i.tur] || i.tur)}</td>
+      <td><span class="etiket ${esc(i.durum)}">${esc(IS_DURUM[i.durum] || i.durum)}</span></td><td class="soluk">${tarih(i.olusturma)}</td><td class="soluk">${tarih(i.bitis)}</td></tr>`).join("")
+      || `<tr><td colspan="5" class="soluk" style="padding:22px">No jobs.</td></tr>`;
+    $$("#isTablo tr[data-mid]").forEach((r) => (r.onclick = () => detay(r.dataset.mid)));
+  } catch (e) { bildir(e.message); }
+}
+$("#isFiltre").onchange = islerCiz;
+
+basla().catch((e) => bildir(e.message, 8000));
+</script>
+</body>
+</html>

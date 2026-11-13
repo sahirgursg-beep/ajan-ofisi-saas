@@ -74,6 +74,8 @@ ISCI_EN_UZUN_DK = int(al("SAAS_ISCI_EN_UZUN_DK", "50"))     # bir isci calismasi
 
 # ---- urun kurallari ----
 DENEME_GUN = int(al("SAAS_DENEME_GUN", "14"))
+# Platform yoneticileri (yonetim paneli): virgulle ayrilmis e-postalar. Kodda tutulmaz, ortam degiskeninden gelir.
+YONETICILER = {e.strip().lower() for e in (al("SAAS_YONETICILER") or "").split(",") if e.strip() and "@" in e}
 VARSAYILAN_YZ = al("AJAN_YZ_SAGLAYICI", "openai")
 
 
@@ -89,4 +91,6 @@ def kontrol():
             eksik.append("SAAS_ZAMANLAYICI_ANAHTARI")
         if YEREL_GIRIS:
             eksik.append("SAAS_YEREL_GIRIS bulutta kapali olmali")
+        if not YONETICILER:
+            eksik.append("SAAS_YONETICILER")
     return eksik

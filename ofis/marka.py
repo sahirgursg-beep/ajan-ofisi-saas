@@ -132,26 +132,39 @@ def vurgu_rengi(yol, tohum=0):
 
 
 def fontlar_css():
-    """Google Fonts'u bir kez indirip yerelde saklar (sonra internetsiz calisir).
-    Basarisiz olursa bos doner; sablonlar Georgia/Segoe UI'ye duser."""
-    css_yolu = FONT_KLASOR / "fonts_v2.css"
+    """Google Fonts'u bir kez indirip yerelde saklar (sonra internetsiz calisir). Her aile ayri istenir:
+    biri basarisiz olursa digerleri yine gelir. Hicbiri gelmezse None; sablonlar yedek fontlara duser."""
+    from . import fontlar
+    css_yolu = FONT_KLASOR / f"fonts_{fontlar.imza()}.css"
     if css_yolu.exists():
         return css_yolu
     try:
         import requests
-        ua = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                            "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
-        css = requests.get(GOOGLE_FONTS, headers=ua, timeout=20).text
-        FONT_KLASOR.mkdir(parents=True, exist_ok=True)
-        for i, url in enumerate(dict.fromkeys(re.findall(r"url\((https://[^)]+\.woff2)\)", css))):
-            ad = f"f{i}.woff2"
-            (FONT_KLASOR / ad).write_bytes(requests.get(url, timeout=30).content)
-            css = css.replace(url, ad)
-        css_yolu.write_text(css, encoding="utf-8")
-        return css_yolu
-    except Exception as e:
-        print(f"  ! Fontlar indirilemedi ({e}); yedek fontlar kullanilacak.")
+    except ImportError:
         return None
+    ua = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
+    FONT_KLASOR.mkdir(parents=True, exist_ok=True)
+    parcalar, n = [], 0
+    for aile in fontlar.aileler():
+        try:
+            css = requests.get("https://fonts.googleapis.com/css2?family=" + fontlar.GOOGLE[aile] + "&display=swap",
+                               headers=ua, timeout=20)
+            css.raise_for_status()
+            css = css.text
+            for url in dict.fromkeys(re.findall(r"url\((https://[^)]+\.woff2)\)", css)):
+                ad = f"f{n}.woff2"
+                n += 1
+                (FONT_KLASOR / ad).write_bytes(requests.get(url, timeout=30).content)
+                css = css.replace(url, ad)
+            parcalar.append(css)
+        except Exception as e:
+            print(f"  ! Font indirilemedi: {aile} ({type(e).__name__})")
+    if not parcalar:
+        eski = sorted(FONT_KLASOR.glob("fonts_*.css"))
+        return eski[-1] if eski else None
+    css_yolu.write_text("\n".join(parcalar), encoding="utf-8")
+    return css_yolu
 
 
 def srgb_yap(im):

@@ -11,7 +11,7 @@ import pytest
 _GECICI = Path(tempfile.mkdtemp(prefix="saas_test_"))
 os.environ.update({"SAAS_ORTAM": "yerel", "SAAS_DEPO": "yerel", "SAAS_YEREL_KLASOR": str(_GECICI / "varsayilan"),
                    "SAAS_TETIK": "yok", "SAAS_YEREL_GIRIS": "1", "SAAS_GENEL_ADRES": "http://panel.test",
-                   "META_APP_ID": "uygulama1", "META_APP_SECRET": "gizli1", "AJAN_ENV_DOSYA": str(_GECICI / "yok.env")})
+                   "META_APP_ID": "uygulama1", "META_APP_SECRET": "gizli1", "SAAS_YONETICILER": "patron@feedzync.test", "AJAN_ENV_DOSYA": str(_GECICI / "yok.env")})
 
 from saas import depo as depo_paketi  # noqa: E402
 from saas.depo.yerel import YerelDepo  # noqa: E402

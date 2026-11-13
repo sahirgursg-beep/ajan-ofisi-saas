@@ -466,3 +466,23 @@ def test_buyuk_harf_cta_duzeltilir(monkeypatch):
         assert a.yukle(a.MUSTERI)["marka"]["cta"] == "Visit to our website"
     finally:
         yol.write_text(eski, encoding="utf-8")
+
+
+# ---------------- yazi tipi kutuphanesi ----------------
+def test_font_kutuphanesi_tutarli_ve_genis():
+    from ofis import fontlar, sanat
+    assert len(fontlar.CIFTLER) >= 20 and set(sanat.FONTLAR) == set(fontlar.CIFTLER)
+    assert all(a in fontlar.GOOGLE for a in fontlar.aileler())
+    css = fontlar.css_siniflari()
+    assert all(f".f-{k} " in css for k in fontlar.CIFTLER) and '"Anton"' in css
+    assert set(sanat.ACIKLAMA["fontlar"]) == set(fontlar.CIFTLER) and "suits" in sanat.ACIKLAMA["fontlar"]["afis"]
+    assert fontlar.uygunluk("retro", "Restaurants, cafes & food") == 3 and fontlar.uygunluk("antik", "Restaurants") == 1
+
+
+def test_sablon_modu_sektore_uygun_font_secer(isletme):
+    from ofis import sanat, fontlar
+    isletme(tanim="restaurant", sektor="restoran")
+    secilen = [sanat.rastgele_tarif({"ad": "x", "indirim_yuzde": 0}, sanat.baglam(), tohum=i)["fontlar"] for i in range(200)]
+    uygun = [f for f in fontlar.CIFTLER if fontlar.uygunluk(f, "Restaurants, cafes & food") == 3]
+    assert len(set(secilen)) >= 8                                         # cesitlilik
+    assert sum(f in uygun for f in secilen) / len(secilen) > len(uygun) / len(fontlar.CIFTLER)   # sektore yakisanlar one cikar

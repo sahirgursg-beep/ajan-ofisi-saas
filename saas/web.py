@@ -49,10 +49,21 @@ def kullanici(request):
         raise HTTPException(401, str(e))
 
 
+def yonetici_mi(k):
+    return bool(k.get("eposta")) and k["eposta"].lower() in ayar.YONETICILER
+
+
+def yonetici(request):
+    k = kullanici(request)
+    if not yonetici_mi(k):
+        raise HTTPException(404, "Not found")
+    return k
+
+
 def musteri_yetki(request, roller=("sahip", "editor", "izleyici")):
     k = kullanici(request)
     mid = request.path_params["mid"]
-    if not depo().uye_mi(k["id"], mid, roller):
+    if not yonetici_mi(k) and not depo().uye_mi(k["id"], mid, roller):    # yonetici destek icin her musteriyi acar
         raise HTTPException(404, "Not found")          # baska musteri var mi yok mu bile soylenmez
     m = depo().musteri_al(mid)
     if not m:
@@ -97,7 +108,7 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
-SURUM = "2026-11-13.yeni-panel"
+SURUM = "2026-11-13.yonetim"
 
 
 async def saglik(request):
@@ -184,6 +195,120 @@ async def site_kontrol(request):
     return JSONResponse(await run_in_threadpool(entegrasyon.site_bilgisi, str(g.get("site") or "")[:200]))
 
 
+# ---------------------------------------------------------------- yonetim paneli (platform sahibi)
+DURUMLAR = ("deneme", "aktif", "duraklatildi", "kapali")
+
+
+def _harcama(d, mid):
+    h = d.json_oku(f"{mid}/harcama.json", {}) or {}
+    ay = datetime.now(timezone.utc).strftime("%Y-%m")
+    kalem = ((h.get("_kalemler") or {}).get(ay)) or {}
+    return {"bu_ay": round(float(h.get(ay, 0) or 0), 4), "kalemler": kalem}
+
+
+def _yonetim_satiri(d, m, son_is=None):
+    uyeler = d.uyeler(m["id"])
+    i = (m.get("profil") or {}).get("isletme") or {}
+    return {**musteri_ozeti(m), "sektor": i.get("sektor") or "", "sehir": ", ".join(i.get("sehirler") or []),
+            "olusturma": m.get("olusturma"), "site": (m.get("profil") or {}).get("site") or "",
+            "sahipler": [u.get("eposta") for u in uyeler if u.get("rol") == "sahip" and u.get("eposta")],
+            "son_is": {k: (son_is or {}).get(k) for k in ("tur", "durum", "olusturma", "bitis")} if son_is else None}
+
+
+async def yonetim_ozet(request):
+    yonetici(request)
+    d = depo()
+
+    def topla():
+        musteriler = d.musteriler()
+        isler = d.son_isler(300)
+        son = {}
+        for i in isler:
+            son.setdefault(i["musteri_id"], i)
+        simdi = datetime.now(timezone.utc)
+        satirlar = [_yonetim_satiri(d, m, son.get(m["id"])) for m in musteriler]
+        for x in satirlar:
+            x["harcama"] = _harcama(d, x["id"])
+        bitiyor = [x["id"] for x in satirlar if x["durum"] == "deneme" and x.get("deneme_bitis")
+                   and datetime.fromisoformat(x["deneme_bitis"]) - simdi < timedelta(days=3)]
+        gun = simdi - timedelta(hours=24)
+        son24 = [i for i in isler if i.get("olusturma") and datetime.fromisoformat(i["olusturma"]) > gun]
+        return {
+            "sayilar": {dr: sum(1 for m in musteriler if m["durum"] == dr) for dr in DURUMLAR} | {"toplam": len(musteriler)},
+            "meta_bagli": sum(1 for x in satirlar if x["meta_bagli"]),
+            "deneme_bitiyor": bitiyor,
+            "isler_24s": {dr: sum(1 for i in son24 if i["durum"] == dr) for dr in ("bitti", "hata", "calisiyor", "bekliyor")},
+            "kuyruk": sum(1 for i in isler if i["durum"] == "bekliyor"),
+            "harcama_bu_ay": round(sum(x["harcama"]["bu_ay"] for x in satirlar), 2),
+            "sabit_aylik": float(ayar.al("SAAS_SABIT_AYLIK_USD", "62") or 62),
+            "musteriler": satirlar,
+            "servisler": {a: bool((os.environ.get(a) or "").strip()) for a in
+                          ("AJAN_YZ_ANAHTAR", "FAL_KEY", "PIXABAY_API_KEY", "META_APP_ID")},
+            "surum": SURUM}
+    return JSONResponse(await run_in_threadpool(topla))
+
+
+async def yonetim_isler(request):
+    yonetici(request)
+    durum = request.query_params.get("durum") or None
+    isler = await run_in_threadpool(depo().son_isler, 100, durum)
+    return JSONResponse({"isler": isler})
+
+
+async def yonetim_musteri(request):
+    yonetici(request)
+    mid = request.path_params["mid"]
+    d = depo()
+    m = d.musteri_al(mid)
+    if not m:
+        return hata("Not found", 404)
+
+    def topla():
+        isler = d.isler(mid, 15)
+        return {**_yonetim_satiri(d, m, isler[0] if isler else None), "harcama": _harcama(d, mid),
+                "isler": isler, "pano": d.pano_son(mid, 40), "yayin_ayar": m.get("yayin_ayar") or {},
+                "profil": profil.form_gorunumu(m["profil"])}
+    return JSONResponse(await run_in_threadpool(topla))
+
+
+async def yonetim_islem(request):
+    """POST /api/yonetim/musteri/<id>/<islem>: durum | deneme_uzat | uret | otomatik"""
+    k = yonetici(request)
+    mid, islem = request.path_params["mid"], request.path_params["islem"]
+    d = depo()
+    m = d.musteri_al(mid)
+    if not m:
+        return hata("Not found", 404)
+    g = await govde(request)
+    if islem == "durum":
+        if g.get("durum") not in DURUMLAR:
+            return hata("Unknown status")
+        m = d.musteri_guncelle(mid, durum=g["durum"])
+    elif islem == "deneme_uzat":
+        gun = int(g.get("gun") or 7)
+        if not 1 <= gun <= 90:
+            return hata("1-90 days")
+        taban = max(datetime.now(timezone.utc), datetime.fromisoformat(m["deneme_bitis"]) if m.get("deneme_bitis")
+                    else datetime.now(timezone.utc))
+        m = d.musteri_guncelle(mid, deneme_bitis=(taban + timedelta(days=gun)).isoformat(timespec="seconds"),
+                               durum="deneme" if m["durum"] in ("duraklatildi", "kapali", "deneme") else m["durum"])
+    elif islem == "uret":
+        if not kuyruk.is_ekle(mid, "uret", {"demo": False, "plansiz": True}):
+            return hata("A production job is already waiting")
+    elif islem == "otomatik":
+        ya = dict(m.get("yayin_ayar") or {})
+        ya["otomatik"] = bool(g.get("otomatik"))
+        m = d.musteri_guncelle(mid, yayin_ayar=ya)
+    else:
+        return hata("Unknown action", 404)
+    print(f"YONETIM {k.get('eposta')} {mid} {islem} {g}", flush=True)
+    return JSONResponse({"tamam": True, "musteri": _yonetim_satiri(d, d.musteri_al(mid))})
+
+
+async def yonetim_sayfasi(request):
+    return FileResponse(PANEL / "yonetim.html", headers={"Cache-Control": "no-cache"})
+
+
 async def sektorler(request):
     """Kayit formu icin sektorler ve her sektorde sunulan isler (oneri cipleri)."""
     from ofis import sektor_isleri
@@ -220,7 +345,12 @@ async def ben(request):
         m = d.musteri_al(u["musteri_id"])
         if m:
             out.append(musteri_ozeti(m, u["rol"]))
-    return JSONResponse({"kullanici": k, "musteriler": out})
+    hedef = request.query_params.get("musteri")
+    if yonetici_mi(k) and hedef and not any(x["id"] == hedef for x in out):    # yonetici bir musterinin panelini acar
+        m = d.musteri_al(hedef)
+        if m:
+            out.insert(0, musteri_ozeti(m, "yonetici"))
+    return JSONResponse({"kullanici": {**k, "yonetici": yonetici_mi(k)}, "musteriler": out})
 
 
 # ---------------------------------------------------------------- musteri olusturma / profil
@@ -467,6 +597,9 @@ routes = [
     Route(M + "/yukleme/{kimlik}/sil", yukleme_sil, methods=["POST"]),
     Route(M + "/logo", logo_yukle, methods=["POST"]), Route(M + "/logo", logo_al),
     Route("/api/site-kontrol", site_kontrol, methods=["POST"]),
+    Route("/yonetim", yonetim_sayfasi), Route("/api/yonetim/ozet", yonetim_ozet),
+    Route("/api/yonetim/isler", yonetim_isler), Route("/api/yonetim/musteri/{mid}", yonetim_musteri),
+    Route("/api/yonetim/musteri/{mid}/{islem}", yonetim_islem, methods=["POST"]),
     Route(M + "/icerik/{klasor}/{islem}", icerik_karar, methods=["POST"]),
     Route(M + "/uret", uret, methods=["POST"]), Route(M + "/isler", is_listesi), Route(M + "/pano", pano),
     Route(M + "/meta/baglan", meta_baglan), Route(M + "/meta/adaylar", meta_adaylar),

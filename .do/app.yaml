@@ -26,6 +26,7 @@ envs:
   - { key: AJAN_YZ_ANAHTAR, type: SECRET }
   - { key: PIXABAY_API_KEY, type: SECRET }
   - { key: FAL_KEY, type: SECRET }
+  - { key: SAAS_YONETICILER, type: SECRET }
   - { key: AJAN_YZ_AYLIK_TAVAN, value: "10" }
   - { key: PEXELS_API_KEY, type: SECRET }
   - { key: AJAN_GORSEL_MODEL, value: openai-gpt-image-1 }

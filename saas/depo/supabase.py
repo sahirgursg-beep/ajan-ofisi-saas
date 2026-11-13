@@ -125,6 +125,15 @@ class SupabaseDepo(Depo):
         return self._rest("GET", "isler", {"musteri_id": self._eq(mid), "select": "*",
                                            "order": "olusturma.desc", "limit": str(n)})
 
+    def son_isler(self, n=50, durum=None):
+        p = {"select": "id,musteri_id,tur,durum,deneme,olusturma,baslama,bitis", "order": "olusturma.desc", "limit": str(n)}
+        if durum:
+            p["durum"] = self._eq(durum)
+        return self._rest("GET", "isler", p)
+
+    def uyeler(self, mid):
+        return self._rest("GET", "uyelikler", {"musteri_id": self._eq(mid), "select": "*"})
+
     # ---- pano ----
     def pano_ekle(self, mid, mesajlar):
         if mesajlar:

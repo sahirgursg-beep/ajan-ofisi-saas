@@ -185,6 +185,18 @@ class YerelDepo(Depo):
             return [self._sozluk(s) for s in c.execute(
                 "SELECT * FROM isler WHERE musteri_id=? ORDER BY olusturma DESC, rowid DESC LIMIT ?", (mid, n))]
 
+    def son_isler(self, n=50, durum=None):
+        with self._baglan() as c:
+            if durum:
+                q = c.execute("SELECT * FROM isler WHERE durum=? ORDER BY olusturma DESC, rowid DESC LIMIT ?", (durum, n))
+            else:
+                q = c.execute("SELECT * FROM isler ORDER BY olusturma DESC, rowid DESC LIMIT ?", (n,))
+            return [self._sozluk(x) for x in q]
+
+    def uyeler(self, mid):
+        with self._baglan() as c:
+            return [dict(x) for x in c.execute("SELECT * FROM uyelikler WHERE musteri_id=?", (mid,))]
+
     # ---- pano ----
     def pano_ekle(self, mid, mesajlar):
         with self._baglan() as c:

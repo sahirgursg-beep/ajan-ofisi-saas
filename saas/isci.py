@@ -278,6 +278,12 @@ def geri_yaz(m, kok, goruntu, tur, basari):
             d.icerik_yaz(mid, kayit)
         yazilan += 1
 
+    h = veri / "yz_harcama.json"
+    if h.exists():                           # yonetim paneli icin musterinin yapay zeka harcamasi
+        try:
+            d.dosya_yukle(f"{mid}/harcama.json", h, "application/json")
+        except Exception as e:
+            gunluk(f"harcama yazilamadi: {e}")
     try:
         yuklemeler_geri_yaz(d, mid, kok, goruntu.get("yuklemeler") or [])
     except Exception as e:
@@ -395,7 +401,7 @@ BOS_BEKLE_SN = int(os.environ.get("SAAS_BOS_BEKLE_SN", "5"))
 
 def main():
     isci_adi = f"{socket.gethostname()}-{os.getpid()}"
-    eksik = [e for e in ayar.kontrol() if not e.startswith("META_")]   # Meta henuz yoksa isci yine calisir
+    eksik = [e for e in ayar.kontrol() if not e.startswith(("META_", "SAAS_YONETICILER"))]   # isci bunlarsiz da calisir
     if eksik:
         # Hizli yeniden baslatma dongusune girmesin; kayitta ne eksik oldugu acikca gorunsun
         gunluk("AYAR EKSIK, isci baslamiyor: " + ", ".join(eksik) +

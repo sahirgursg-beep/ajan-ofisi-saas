@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FeedZync</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%278%27 cy=%278%27 r=%277%27 fill=%27%230F7B5C%27/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" href="/panel/varliklar/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* FeedZync — "the office runs itself". Mist ground, forest ink, jade = running, marigold = needs you. */
 :root {
-  --mist:#EEF1EC; --kart:#FFFFFF; --ink:#16251F; --soluk:#5F6E66; --cizgi:#D9DFD8;
-  --jade:#0F7B5C; --jade-acik:#DCEFE7; --marigold:#F2B300; --marigold-acik:#FFF3CC; --kirmizi:#B4372B; --kirmizi-acik:#F9E1DE;
+  --mist:#EEF2EE; --kart:#FFFFFF; --ink:#1B3B2E; --adacayi:#AAC7B1; --soluk:#5F6E66; --cizgi:#D9DFD8;
+  --jade:#127F56; --jade-acik:#DDEFE5; --marigold:#F2B300; --marigold-acik:#FFF3CC; --kirmizi:#B4372B; --kirmizi-acik:#F9E1DE;
   --r-kucuk:8px; --r:14px; --r-buyuk:22px;
   --baslik:"Bricolage Grotesque", "Figtree", system-ui, sans-serif; --govde:"Figtree", system-ui, sans-serif;
 }
@@ -45,8 +45,8 @@ label { display:block; font-weight:600; font-size:14px; margin:16px 0 6px; }
 
 /* ---------- ust bar ---------- */
 .ust { display:flex; align-items:center; gap:18px; padding:18px clamp(16px,4vw,40px); }
-.marka { font:800 22px var(--baslik); letter-spacing:-0.02em; display:flex; align-items:center; gap:8px; }
-.marka i { width:12px; height:12px; border-radius:50%; background:var(--jade); display:inline-block; }
+.marka { display:flex; align-items:center; }
+.marka img { height:30px; width:auto; display:block; }
 .ust nav { display:flex; gap:4px; }
 .ust nav a { color:var(--soluk); text-decoration:none; font-weight:600; padding:8px 14px; border-radius:999px; cursor:pointer; }
 .ust nav a.aktif { background:#fff; color:var(--ink); }
@@ -57,9 +57,9 @@ main { max-width:1120px; margin:0 auto; padding:8px clamp(16px,4vw,40px) 60px; }
 .otopilot { padding:28px 0 34px; }
 .otopilot h1 { font-size:clamp(34px,6vw,64px); line-height:1.02; font-weight:800; letter-spacing:-0.03em; max-width:16ch; }
 .otopilot h1 .nokta { display:inline-block; width:.42em; height:.42em; border-radius:50%; background:var(--jade); margin-left:.12em;
-  vertical-align:.12em; box-shadow:0 0 0 0 rgba(15,123,92,.45); animation:nabiz 2.4s ease-out 1; }
+  vertical-align:.12em; box-shadow:0 0 0 0 rgba(18,127,86,.45); animation:nabiz 2.4s ease-out 1; }
 .otopilot.durdu h1 .nokta { background:var(--marigold); }
-@keyframes nabiz { 0% { box-shadow:0 0 0 0 rgba(15,123,92,.5); } 100% { box-shadow:0 0 0 22px rgba(15,123,92,0); } }
+@keyframes nabiz { 0% { box-shadow:0 0 0 0 rgba(18,127,86,.5); } 100% { box-shadow:0 0 0 22px rgba(18,127,86,0); } }
 .otopilot .sonraki { font-size:clamp(17px,2vw,21px); margin-top:14px; max-width:60ch; }
 .otopilot .kontrol { margin-top:18px; }
 .anahtar { display:inline-flex; align-items:center; gap:10px; cursor:pointer; font-weight:600; user-select:none; }
@@ -85,7 +85,7 @@ main { max-width:1120px; margin:0 auto; padding:8px clamp(16px,4vw,40px) 60px; }
 .gonderi { display:block; width:100%; text-align:left; background:var(--kart); border-radius:var(--r); padding:0; overflow:hidden; color:var(--ink);
   box-shadow:inset 0 0 0 1px var(--cizgi); margin-bottom:10px; font-weight:500; }
 .gonderi .medya { aspect-ratio:1/1; background:#dfe5df center/cover no-repeat; position:relative; }
-.gonderi .medya .tur { position:absolute; left:10px; bottom:10px; background:rgba(22,37,31,.78); color:#fff; font-size:12px; font-weight:600; padding:4px 9px; border-radius:999px; }
+.gonderi .medya .tur { position:absolute; left:10px; bottom:10px; background:rgba(27,59,46,.78); color:#fff; font-size:12px; font-weight:600; padding:4px 9px; border-radius:999px; }
 .gonderi .alt { padding:10px 12px 12px; }
 .gonderi .saat { font-weight:700; }
 .gonderi .durum { font-size:13px; color:var(--soluk); }
@@ -101,7 +101,7 @@ main { max-width:1120px; margin:0 auto; padding:8px clamp(16px,4vw,40px) 60px; }
 .birak .ikon { width:56px; height:56px; border-radius:16px; background:var(--jade); color:#fff; display:grid; place-items:center; font:800 30px var(--baslik); }
 
 /* ---------- cekmece (icerik detayi) ---------- */
-.perde { position:fixed; inset:0; background:rgba(22,37,31,.45); z-index:20; }
+.perde { position:fixed; inset:0; background:rgba(27,59,46,.45); z-index:20; }
 .cekmece { position:fixed; top:0; right:0; bottom:0; width:min(560px,100%); background:var(--mist); z-index:21; overflow-y:auto; padding:22px; }
 .cekmece .medya img, .cekmece .medya video { width:100%; border-radius:var(--r); display:block; background:#000; }
 .kaydir { display:flex; gap:8px; overflow-x:auto; margin-top:8px; }
@@ -155,7 +155,7 @@ footer { text-align:center; padding:26px; font-size:13px; color:var(--soluk); }
 
 <!-- ======================= giris ======================= -->
 <section id="giris" class="giris gizli">
-  <div class="marka"><i></i>FeedZync</div>
+  <div class="marka"><img src="/panel/varliklar/feedzync-logo.png" alt="FeedZync"></div>
   <h1 style="margin-top:28px">Your social media, handled.</h1>
   <p class="vaat">An AI team posts for your business every day. You tell us what you do once; we do the rest.</p>
   <label for="eposta">Email</label><input id="eposta" type="email" autocomplete="email">
@@ -167,9 +167,10 @@ footer { text-align:center; padding:26px; font-size:13px; color:var(--soluk); }
 <!-- ======================= uygulama ======================= -->
 <div id="uygulama" class="gizli">
   <div class="ust">
-    <div class="marka"><i></i>FeedZync</div>
+    <div class="marka"><img src="/panel/varliklar/feedzync-logo.png" alt="FeedZync"></div>
     <nav id="sekmeler"><a data-s="ana" class="aktif">Home</a><a data-s="kutuphane">Photos & files</a><a data-s="isletme">Business</a></nav>
     <div class="yayil"></div>
+    <a id="yonetimLink" href="/yonetim" class="gizli" style="font-weight:600;text-decoration:none">Admin</a>
     <select id="musteriSec" class="gizli" aria-label="Business"></select>
     <button class="ikincil kucuk" id="cikis">Sign out</button>
   </div>
@@ -218,7 +219,7 @@ footer { text-align:center; padding:26px; font-size:13px; color:var(--soluk); }
 
 <!-- ======================= kurulum ======================= -->
 <section id="kurulum" class="gizli">
-  <div class="ust"><div class="marka"><i></i>FeedZync</div><div class="yayil"></div><button class="ikincil kucuk" id="cikis2">Sign out</button></div>
+  <div class="ust"><div class="marka"><img src="/panel/varliklar/feedzync-logo.png" alt="FeedZync"></div><div class="yayil"></div><button class="ikincil kucuk" id="cikis2">Sign out</button></div>
   <main><div class="sihirbaz" id="sihirbaz"></div></main>
 </section>
 
@@ -292,9 +293,10 @@ $("#cikis").onclick = cikis; $("#cikis2").onclick = cikis;
 
 // ======================= yukleme =======================
 async function yukle() {
-  ME = await api("/api/ben");
   const h = new URLSearchParams(location.hash.slice(1));
-  if (!ME.musteriler.length) return sihirbaz();
+  ME = await api("/api/ben" + (h.get("musteri") ? "?musteri=" + encodeURIComponent(h.get("musteri")) : ""));
+  $("#yonetimLink").classList.toggle("gizli", !ME.kullanici.yonetici);
+  if (!ME.musteriler.length) return ME.kullanici.yonetici && !h.get("kur") ? (location.href = "/yonetim") : sihirbaz();
   const sec = $("#musteriSec");
   sec.innerHTML = ME.musteriler.map((m) => `<option value="${esc(m.id)}">${esc(m.ad)}</option>`).join("");
   sec.classList.toggle("gizli", ME.musteriler.length < 2);
