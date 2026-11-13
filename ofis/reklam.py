@@ -8,7 +8,7 @@ from .ayarlar import AYAR, KOK
 from . import algila, marka, musteri, tasarim
 
 SURE = 15.0
-FPS = 30
+FPS = 25          # Reels icin yeterli akicilik; 30'a gore %17 daha az kare
 YEDEK_FAYDALAR = (musteri.faydalar() or list(musteri.bilgi().get("hizmetler") or [])[:2] or [musteri.ad()]) * 2
 
 
@@ -66,8 +66,9 @@ def reklam_yap(urun, gorsel_yollari, taslak, tarif, hedef: Path, gunluk=print, d
 
     # Kareler kayipsiz PNG; video telefonlarin bekledigi BT.709 renk uzayina dogru donusturulup etiketlenir
     # (aksi halde kirmizi/turuncu tonlar kayar).
+    # Kareler yuksek kaliteli JPEG: PNG'ye gore cok daha hizli cekilir ve cozulur (renk farki gozle gorulmez)
     komut = [_ffmpeg(), "-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", str(FPS),
-             "-vcodec", "png", "-i", "-"]
+             "-vcodec", "mjpeg", "-i", "-"]
     # Muzik: ruh haline uygun, lisansi temiz (CC0 / CC BY) parca; en canli 15 sn bolumu
     from . import muzik
     parca = None
@@ -91,11 +92,14 @@ def reklam_yap(urun, gorsel_yollari, taslak, tarif, hedef: Path, gunluk=print, d
         sayfa.evaluate("document.fonts.ready")
         sayfa.evaluate("Promise.all([...document.images].map(i => i.decode().catch(() => {})))")
         toplam = int(SURE * FPS)
+        import time as _t
+        _bas = _t.time()
         for i in range(toplam):
             sayfa.evaluate(f"ciz({i / FPS:.4f})")
-            p.stdin.write(sayfa.screenshot(type="png"))
+            p.stdin.write(sayfa.screenshot(type="jpeg", quality=93))
             if i % 90 == 0:
                 gunluk(f"Reels kurguluyorum... %{int(100 * i / toplam)}")
+        gunluk(f"Reels kareleri {toplam} adet, {_t.time() - _bas:.0f} sn")
     finally:
         p.stdin.close()
         p.wait()

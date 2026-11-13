@@ -313,7 +313,13 @@ $("#kayitBtn").onclick = async () => {
   if (data.session) { $("#giris").classList.add("gizli"); return yukle(); }      // e-posta onayi kapaliysa hemen devam
   $("#girisMesaj").textContent = "Check your email and tap the link to continue — your answers are saved.";
 };
-function cikis() { if (sb) sb.auth.signOut(); localStorage.removeItem("ajan_belirtec"); belirtec = null; location.hash = ""; location.reload(); }
+async function oturumuKapat() {
+  try { if (sb) await sb.auth.signOut({ scope: "local" }); } catch {}
+  // Supabase oturum anahtarlari (sb-<proje>-auth-token) ve yerel belirtec tamamen silinir
+  Object.keys(localStorage).filter((k) => k.startsWith("sb-") || k === "ajan_belirtec" || k === "ajan_musteri").forEach((k) => localStorage.removeItem(k));
+  belirtec = null;
+}
+async function cikis() { await oturumuKapat(); location.replace(location.pathname); }
 $("#cikis").onclick = cikis; $("#cikis2").onclick = cikis;
 
 // ======================= yukleme =======================

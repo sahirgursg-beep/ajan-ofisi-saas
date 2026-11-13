@@ -334,6 +334,31 @@ def paylasik_hazirla(hedef):
     return hedef
 
 
+def _erken_yayinla(d, mid, kok, goruntu, dur, aralik=8):
+    """Uretim surerken biten her icerigi (ajanlar klasore '.hazir' yazar) hemen panele yukler: musteri ilk
+    gonderiyi tum isin bitmesini beklemeden gorur. Sonraki geri_yaz bunlari mevcut kayit olarak gunceller."""
+    cikti = kok / "cikti"
+    while True:
+        bitti = dur.wait(aralik)
+        try:
+            for k in sorted(cikti.iterdir()) if cikti.exists() else []:
+                if k.name in goruntu["icerik"] or not (k / ".hazir").exists() or not (k / "meta.json").exists():
+                    continue
+                kayit = _klasor_oku(k)
+                for ad in kayit["dosyalar"]:
+                    d.dosya_yukle(f"{mid}/cikti/{k.name}/{ad}", k / ad)
+                surum = d.icerik_yaz(mid, kayit)
+                goruntu["icerik"][k.name] = {"surum": surum, "yayin": kayit["yayin"], "meta": kayit["meta"],
+                                             "caption": kayit["caption"], "ekler": kayit["ekler"],
+                                             "dosyalar": set(kayit["dosyalar"])}
+                goruntu["erken"] = goruntu.get("erken", 0) + 1
+                gunluk(f"   [{mid}] erken yuklendi: {k.name}")
+        except Exception as e:
+            gunluk(f"   [{mid}] erken yukleme atlandi: {type(e).__name__}: {e}")
+        if bitti:
+            return
+
+
 def bir_is(isci_adi, paylasik):
     d = depo()
     is_ = d.is_al(isci_adi, ayar.ISCI_EN_UZUN_DK + 10)
@@ -354,8 +379,17 @@ def bir_is(isci_adi, paylasik):
             kok.mkdir(parents=True)
             goruntu = indir(m, kok, tur, is_.get("parametre"))
             adimlar = komutlar(tur, is_.get("parametre"), kok)
-            basari, kayit = calistir(mid, tmp, paylasik, adimlar, ayar.ISCI_EN_UZUN_DK * 60)
+            import threading
+            dur = threading.Event()
+            erken = threading.Thread(target=_erken_yayinla, args=(d, mid, kok, goruntu, dur), daemon=True)
+            erken.start()
+            try:
+                basari, kayit = calistir(mid, tmp, paylasik, adimlar, ayar.ISCI_EN_UZUN_DK * 60)
+            finally:
+                dur.set()
+                erken.join(60)
             yazilan = geri_yaz(m, kok, goruntu, tur, basari)
+        yazilan += goruntu.get("erken", 0)
         d.is_bitir(is_["id"], "bitti" if basari else "hata", f"{yazilan} icerik guncellendi\n{kayit}")
         gunluk(f"IS {is_['id'][:8]} {'bitti' if basari else 'HATA'} ({yazilan} icerik)")
     except Exception:

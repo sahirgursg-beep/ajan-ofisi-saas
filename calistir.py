@@ -119,14 +119,17 @@ def main(plan_tarihi=None):
                 havuz = [u for u in havuz if len(u.get("gorseller") or []) >= 3] or havuz
             urun, aci = P.urun_sec(havuz, tema)
         kullanilan.add(urun["url"])
+        _t0 = time.time()
         try:
             klasor = _icerik_uret(urun, aci, tur, tema, plan_gunu, baslangic, ekip)
+            print(f"[SURE] {tur}: {time.time() - _t0:.0f} sn", flush=True)
         except Exception as e:
             Y.soyle("Herkes", f"{plan.FORMAT_AD[tur]} uretilemedi: {type(e).__name__}: {e}", "hata")
             continue
         if not klasor:
             continue
         uretilen.append(klasor)
+        (klasor / ".hazir").write_text(datetime.now().isoformat(timespec="seconds"), encoding="utf-8")   # isci hemen yukler
         if urun.get("yukleme"):
             from ofis import yuklemeler
             yuklemeler.kullanildi(urun, klasor)

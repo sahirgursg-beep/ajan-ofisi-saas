@@ -96,3 +96,29 @@ def test_uctan_uca_uret_onayla_yayinla_kaldir(d, graph, monkeypatch, tmp_path):
     assert len(yeni) == 3
     onceki_urunler = {v["meta"]["urun"]["ad"] for v in ic.values()}
     assert len({x["meta"]["urun"]["ad"] for x in yeni} - onceki_urunler) >= 1     # 4 demo urunden tekrar etmeyen
+
+
+def test_biten_icerik_is_bitmeden_yuklenir(d, tmp_path):
+    import json as _j
+    import threading
+    kok = tmp_path / "kok"
+    k = kok / "cikti" / "2026-11-13_1200_post"
+    k.mkdir(parents=True)
+    (k / "meta.json").write_text(_j.dumps({"format": "post"}))
+    (k / "post_1080x1350.jpg").write_bytes(b"jpg")
+    goruntu = {"icerik": {}}
+    dur = threading.Event()
+    t = threading.Thread(target=isci._erken_yayinla, args=(d, "m1", kok, goruntu, dur, 0.05), daemon=True)
+    t.start()
+    import time
+    time.sleep(0.2)
+    assert d.icerik_al("m1", k.name) is None                   # .hazir yok: henuz yuklenmez
+    (k / ".hazir").write_text("1")
+    for _ in range(40):
+        if d.icerik_al("m1", k.name):
+            break
+        time.sleep(0.05)
+    dur.set(); t.join(5)
+    ic = d.icerik_al("m1", k.name)
+    assert ic and ic["dosyalar"] == ["post_1080x1350.jpg"] and goruntu["erken"] == 1
+    assert goruntu["icerik"][k.name]["surum"] == ic["surum"] and ".hazir" not in ic["ekler"]

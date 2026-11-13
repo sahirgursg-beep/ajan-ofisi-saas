@@ -156,7 +156,13 @@ $("#girisBtn").onclick = async () => {
     await ac();
   } catch (e) { $("#girisMesaj").textContent = e.message; }
 };
-$("#cikis").onclick = () => { if (sb) sb.auth.signOut(); localStorage.removeItem("ajan_belirtec"); location.reload(); };
+async function oturumuKapat() {
+  try { if (sb) await sb.auth.signOut({ scope: "local" }); } catch {}
+  // Supabase oturum anahtarlari (sb-<proje>-auth-token) ve yerel belirtec tamamen silinir
+  Object.keys(localStorage).filter((k) => k.startsWith("sb-") || k === "ajan_belirtec" || k === "ajan_musteri").forEach((k) => localStorage.removeItem(k));
+  belirtec = null;
+}
+$("#cikis").onclick = async () => { await oturumuKapat(); location.replace("/yonetim"); };
 
 async function ac() {
   OZET = await api("/api/yonetim/ozet");
