@@ -81,7 +81,8 @@ def main(plan_tarihi=None):
     if proje:
         Y.soyle("Herkes", f"🏗 Bugun proje gunu! Tamamlanan isimiz '{proje['baslik']}' ({proje['foto_sayisi']} fotograf) "
                 "icin post, carousel ve Reels hazirliyoruz. Gercek fotograflar: yapay zeka ile degistirmiyoruz.", "rapor")
-    for tur in plan.FORMATLAR:
+    from ofis import paketler
+    for tur in paketler.formatlar(plan.FORMATLAR):
         slot = (plan_gunu or {}).get("icerikler", {}).get(tur) if plan_gunu else None
         if slot and slot.get("klasor"):
             kullanilan.add(slot["urun"]["url"])

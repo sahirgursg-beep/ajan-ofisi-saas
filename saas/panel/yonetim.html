@@ -102,7 +102,7 @@ pre { white-space:pre-wrap; font-size:12px; background:#f4f6f4; padding:10px; bo
           <option value="baglantisiz">Not connected</option><option value="hatali">Last job failed</option></select>
         <button class="ikincil" id="yenile">Refresh</button>
       </div>
-      <div class="tablo-kap"><table><thead><tr><th>Business</th><th>Owner</th><th>Status</th><th>Instagram & Facebook</th><th>Last job</th><th>AI spend (month)</th><th>Joined</th></tr></thead>
+      <div class="tablo-kap"><table><thead><tr><th>Business</th><th>Owner</th><th>Status</th><th>Plan</th><th>Instagram & Facebook</th><th>Last job</th><th>AI spend (month)</th><th>Joined</th></tr></thead>
         <tbody id="tablo"></tbody></table></div>
     </section>
     <section id="s-isler" class="gizli">
@@ -179,6 +179,7 @@ function ozetCiz() {
     ["Paying", s.aktif, ""], ["On trial", s.deneme, ""], ["Trials ending in 3 days", o.deneme_bitiyor.length, o.deneme_bitiyor.length ? "dikkat" : ""],
     ["Paused or closed", s.duraklatildi + s.kapali, ""], ["Connected to Meta", `${o.meta_bagli}/${s.toplam}`, ""],
     ["Jobs done (24 h)", ii.bitti, ""], ["Jobs failed (24 h)", ii.hata, ii.hata ? "kotu" : ""], ["Waiting in queue", o.kuyruk, o.kuyruk > 5 ? "dikkat" : ""],
+    ["Monthly revenue (paying)", "$" + o.musteriler.filter((m) => m.durum === "aktif").reduce((t, m) => t + (m.paket?.usd || 0), 0), ""],
     ["AI spend this month", "$" + gelir.toFixed(2), ""], ["Fixed hosting / month", "$" + sabit.toFixed(0), ""],
   ].map(([a, v, c]) => `<div class="sayi ${c}"><b>${esc(v)}</b><span>${esc(a)}</span></div>`).join("");
   const AD = { AJAN_YZ_ANAHTAR: "Text AI", FAL_KEY: "fal.ai images", PIXABAY_API_KEY: "Pixabay photos", META_APP_ID: "Meta app" };
@@ -200,10 +201,11 @@ function tabloCiz() {
     return `<tr class="tikla" data-mid="${esc(m.id)}"><td><b>${esc(m.ad)}</b><div class="soluk">${esc(m.sehir || m.id)}</div></td>
       <td class="soluk">${esc((m.sahipler || []).join(", ") || "—")}</td>
       <td><span class="etiket ${esc(m.durum)}">${esc(DURUM_AD[m.durum] || m.durum)}</span>${gun !== null ? `<div class="soluk">${gun > 0 ? gun + " days left" : "ended"}</div>` : ""}</td>
+      <td>${esc(m.paket?.ad || "")}<div class="soluk">$${m.paket?.usd ?? ""}/mo</div></td>
       <td>${m.meta_bagli ? "Connected" + (m.meta.ig_kullanici ? ` <span class="soluk">@${esc(m.meta.ig_kullanici)}</span>` : "") : `<span class="soluk">Not connected</span>`}</td>
       <td>${m.son_is ? `<span class="etiket ${esc(m.son_is.durum)}">${esc(IS_DURUM[m.son_is.durum] || m.son_is.durum)}</span> <span class="soluk">${esc(IS_AD[m.son_is.tur] || m.son_is.tur)} · ${tarih(m.son_is.olusturma)}</span>` : `<span class="soluk">—</span>`}</td>
       <td>$${(m.harcama?.bu_ay || 0).toFixed(2)}</td><td class="soluk">${tarih(m.olusturma)}</td></tr>`; }).join("")
-    || `<tr><td colspan="7" class="soluk" style="padding:22px">No businesses match.</td></tr>`;
+    || `<tr><td colspan="8" class="soluk" style="padding:22px">No businesses match.</td></tr>`;
   $$("#tablo tr[data-mid]").forEach((r) => (r.onclick = () => detay(r.dataset.mid)));
 }
 $("#ara").oninput = tabloCiz; $("#filtre").onchange = tabloCiz;
@@ -220,6 +222,8 @@ async function detay(mid) {
     <div class="blok"><h3>Account</h3>
       <div class="satir"><span>Status</span><select id="durumSec">${Object.entries(DURUM_AD).map(([k, a]) => `<option value="${k}" ${k === m.durum ? "selected" : ""}>${a}</option>`).join("")}</select>
         <button class="kucuk" id="durumKaydet">Save status</button></div>
+      <div class="satir" style="margin-top:10px"><span>Plan</span><select id="planSec">${["starter", "growth", "pro"].map((k) => `<option value="${k}" ${k === m.paket.kod ? "selected" : ""}>${k[0].toUpperCase() + k.slice(1)}</option>`).join("")}</select>
+        <button class="ikincil" id="planKaydet">Save plan</button></div>
       <p class="soluk" style="margin-top:10px">Trial ends: ${tarih(m.deneme_bitis)}</p>
       <div class="satir"><button class="ikincil" data-uzat="7">+7 days trial</button><button class="ikincil" data-uzat="14">+14 days</button><button class="ikincil" data-uzat="30">+30 days</button></div>
       <p class="soluk" style="margin-top:10px">Owner: ${esc((m.sahipler || []).join(", ") || "—")}</p></div>
@@ -236,6 +240,7 @@ async function detay(mid) {
   const islem = async (ad, g, not) => { try { await api(`/api/yonetim/musteri/${encodeURIComponent(mid)}/${ad}`, "POST", g); bildir(not); await ac(); detay(mid); } catch (e) { bildir(e.message, 6000); } };
   $("#durumKaydet").onclick = () => { const d = $("#durumSec").value; if (["duraklatildi", "kapali"].includes(d) && !confirm(`Set ${m.ad} to ${DURUM_AD[d]}? Their office stops making and publishing posts.`)) return;
     islem("durum", { durum: d }, "Status saved."); };
+  $("#planKaydet").onclick = () => islem("plan", { plan: $("#planSec").value }, "Plan saved.");
   $$("[data-uzat]").forEach((b) => (b.onclick = () => islem("deneme_uzat", { gun: Number(b.dataset.uzat) }, `Trial extended by ${b.dataset.uzat} days.`)));
   $("#otoSec").onchange = (e) => islem("otomatik", { otomatik: e.target.checked }, e.target.checked ? "Autopilot on." : "Autopilot off.");
   $("#uret").onclick = () => islem("uret", {}, "Job queued. Posts appear in about 15 minutes.");

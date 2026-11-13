@@ -60,3 +60,24 @@ def test_yonetici_musteri_panelini_destek_icin_acar(sunucu, d):
     assert requests.get(f"{sunucu}/api/musteri/{mid}/icerikler", headers=P).status_code == 200
     yabanci = oturum(sunucu, "yabanci@b.test")
     assert requests.get(sunucu + "/api/ben", headers=yabanci, params={"musteri": mid}).json()["musteriler"] == []
+
+
+def test_fiyatlar_usd_ve_yerel_para(sunucu, monkeypatch):
+    from saas import kur
+    monkeypatch.setattr(kur, "kurlar", lambda oturum=None: ({"EUR": 0.92, "NGN": 1540.5, "JPY": 151.3}, "today"))
+    j = requests.get(sunucu + "/api/fiyatlar", params={"para": "NGN"}).json()
+    assert [p["usd"] for p in j["paketler"]] == [10, 30, 60] and j["deneme_gun"] == 7
+    assert [p["yerel"] for p in j["paketler"]] == [15000, 46000, 92000] and j["sembol"] == "₦"
+    assert requests.get(sunucu + "/api/fiyatlar", params={"ulke": "DE"}).json()["paketler"][0]["yerel"] == 9.0
+    j = requests.get(sunucu + "/api/fiyatlar", params={"para": "XYZ"}).json()
+    assert j["para"] == "USD" and "EUR" in j["paralar"] and "JPY" in j["paralar"]
+    assert kur.guzel_yuvarla(9.43) == 9.5 and kur.guzel_yuvarla(15480) == 15000 and kur.guzel_yuvarla(1534000) == 1500000
+
+
+def test_yonetici_paket_degistirir(sunucu, d):
+    H, mid = _kur(sunucu)
+    assert requests.get(sunucu + "/api/ben", headers=H).json()["musteriler"][0]["paket"]["kod"] == "growth"
+    P = oturum(sunucu, PATRON)
+    assert requests.post(f"{sunucu}/api/yonetim/musteri/{mid}/plan", headers=P, json={"plan": "pro"}).status_code == 200
+    assert d.musteri_al(mid)["profil"]["abonelik"]["plan"] == "pro"
+    assert requests.post(f"{sunucu}/api/yonetim/musteri/{mid}/plan", headers=P, json={"plan": "gold"}).status_code == 400

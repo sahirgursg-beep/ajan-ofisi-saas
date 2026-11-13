@@ -73,7 +73,7 @@ ISCI_IS_ADI = al("SAAS_ISCI_IS_ADI", "ajan-isci")
 ISCI_EN_UZUN_DK = int(al("SAAS_ISCI_EN_UZUN_DK", "50"))     # bir isci calismasinin ust siniri
 
 # ---- urun kurallari ----
-DENEME_GUN = int(al("SAAS_DENEME_GUN", "14"))
+DENEME_GUN = int(al("SAAS_DENEME_GUN", "7"))
 # Platform yoneticileri (yonetim paneli): virgulle ayrilmis e-postalar. Kodda tutulmaz, ortam degiskeninden gelir.
 YONETICILER = {e.strip().lower() for e in (al("SAAS_YONETICILER") or "").split(",") if e.strip() and "@" in e}
 VARSAYILAN_YZ = al("AJAN_YZ_SAGLAYICI", "openai")

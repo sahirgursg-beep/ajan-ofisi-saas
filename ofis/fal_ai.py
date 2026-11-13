@@ -43,10 +43,16 @@ def _harcamalar():
 
 
 def tavan():
+    """Aylik ucretli yapay zeka butcesi: paketin tavani; ortam degiskeni ust sinir koyar."""
     try:
-        return float(os.environ.get("AJAN_YZ_AYLIK_TAVAN", "10"))
+        ust = float(os.environ.get("AJAN_YZ_AYLIK_TAVAN", "100"))
     except ValueError:
-        return 10.0
+        ust = 100.0
+    try:
+        from . import paketler
+        return min(float(paketler.aktif()["ai_tavan_usd"]), ust)
+    except Exception:
+        return min(10.0, ust)
 
 
 def bu_ay():

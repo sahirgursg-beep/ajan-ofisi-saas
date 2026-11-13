@@ -27,7 +27,8 @@ envs:
   - { key: PIXABAY_API_KEY, type: SECRET }
   - { key: FAL_KEY, type: SECRET }
   - { key: SAAS_YONETICILER, type: SECRET }
-  - { key: AJAN_YZ_AYLIK_TAVAN, value: "10" }
+  - { key: SAAS_DESTEK_EPOSTA, type: SECRET }
+  - { key: AJAN_YZ_AYLIK_TAVAN, value: "100" }
   - { key: PEXELS_API_KEY, type: SECRET }
   - { key: AJAN_GORSEL_MODEL, value: openai-gpt-image-1 }
 services:

@@ -510,3 +510,16 @@ def test_ulkesi_takvimi_olmayan_isletme_kuresel_takvimi_kullanir(isletme):
     isletme(ulke_kodu="JP")
     b = sanat.baglam(date(2026, 11, 25))
     assert any(e["ad"] == "Black Friday" for e in b["etkinlikler"]) and b["trendler"]
+
+
+# ---------------- paketler ----------------
+def test_paket_sinirlari_uretime_uygulanir(isletme, monkeypatch):
+    from ofis import paketler, plan
+    monkeypatch.setitem(ayarlar.AYAR, "abonelik", {"plan": "starter"})
+    assert paketler.formatlar(plan.FORMATLAR) == ["post"]
+    isletme(tanim="law firm", sektor="hukuk", platformlar=[])
+    assert platformlar.aktif_platformlar() == ["instagram", "facebook"]
+    assert fal_ai.tavan() == 2
+    monkeypatch.setitem(ayarlar.AYAR, "abonelik", {})            # deneme -> Growth
+    assert paketler.formatlar(plan.FORMATLAR) == list(plan.FORMATLAR) and "linkedin" in platformlar.aktif_platformlar()
+    assert [p["usd"] for p in paketler.liste()] == [10, 30, 60]

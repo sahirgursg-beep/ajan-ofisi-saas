@@ -43,11 +43,13 @@ SIRA = ("instagram", "facebook", "tiktok", "linkedin")
 
 def aktif_platformlar():
     """Sektor agirligi 0 olan platformlar atlanir (or. kuafor icin LinkedIn)."""
+    from . import paketler
+    izin = set(paketler.aktif()["platformlar"])
     agirlik = (sektor.profil().get("platform") or {})
     secili = musteri.bilgi().get("platformlar")
     if secili:
-        return [p for p in SIRA if p in secili]
-    return [p for p in SIRA if agirlik.get(p, 1) > 0]
+        return [p for p in SIRA if p in secili and p in izin]
+    return [p for p in SIRA if agirlik.get(p, 1) > 0 and p in izin]
 
 
 def _temizle(p, d, taban):

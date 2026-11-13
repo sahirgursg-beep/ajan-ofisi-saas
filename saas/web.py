@@ -78,6 +78,12 @@ def tz(m):
         return timezone.utc
 
 
+def _paket(m):
+    from ofis import paketler
+    kod = paketler.kod_of((m.get("profil") or {}).get("abonelik"))
+    return {"kod": kod, "ad": paketler.al(kod)["ad"], "usd": paketler.al(kod)["usd"], "deneme": m.get("durum") == "deneme"}
+
+
 def musteri_ozeti(m, rol=None):
     i = (m.get("profil") or {}).get("isletme") or {}
     return {"id": m["id"], "ad": m["ad"], "durum": m["durum"], "deneme_bitis": m.get("deneme_bitis"), "rol": rol,
@@ -86,6 +92,7 @@ def musteri_ozeti(m, rol=None):
             "saat_kisaltma": i.get("saat_kisaltma"), "para": (m.get("profil") or {}).get("para_sembolu"),
             "yayin_ayar": m.get("yayin_ayar") or {}, "son_uretim": m.get("son_uretim"),
             "logo_yuklendi": bool(((m.get("profil") or {}).get("marka") or {}).get("logo_yuklendi")),
+            "paket": _paket(m),
             "site": (m.get("profil") or {}).get("site") or ""}
 
 
@@ -295,6 +302,13 @@ async def yonetim_islem(request):
     elif islem == "uret":
         if not kuyruk.is_ekle(mid, "uret", {"demo": False, "plansiz": True}):
             return hata("A production job is already waiting")
+    elif islem == "plan":
+        from ofis import paketler
+        if g.get("plan") not in paketler.PAKETLER:
+            return hata("Unknown plan")
+        p = dict(m["profil"])
+        p["abonelik"] = {**(p.get("abonelik") or {}), "plan": g["plan"]}
+        m = d.musteri_guncelle(mid, profil=p)
     elif islem == "otomatik":
         ya = dict(m.get("yayin_ayar") or {})
         ya["otomatik"] = bool(g.get("otomatik"))
@@ -315,6 +329,27 @@ async def sektorler(request):
     return JSONResponse({"sektorler": sektor_isleri.liste()}, headers={"Cache-Control": "public, max-age=3600"})
 
 
+async def fiyatlar(request):
+    """Paketler: USD + istenen para biriminde yaklasik karsiligi. ?para=EUR (yoksa ?ulke=DE'den bulunur)."""
+    from ofis import paketler, ulkeler
+    from . import kur
+    para = (request.query_params.get("para") or "").upper()[:3]
+    if not para:
+        u = ulkeler.al(request.query_params.get("ulke"))
+        para = u["para"] if u else "USD"
+    sembol = next((u["sembol"] for u in ulkeler.ULKELER.values() if u["para"] == para), para)
+    out, tarih = [], ""
+    for p in paketler.liste():
+        yerel, tarih = await run_in_threadpool(kur.cevir, p["usd"], para)
+        out.append({**p, "yerel": yerel})
+    kurlar, _ = await run_in_threadpool(kur.kurlar)
+    paralar = sorted({u["para"] for u in ulkeler.ULKELER.values()} | {"USD", "EUR", "GBP"})
+    return JSONResponse({"para": para if out[0]["yerel"] is not None else "USD", "sembol": sembol, "kur_tarihi": tarih,
+                         "deneme_gun": ayar.DENEME_GUN, "paketler": out,
+                         "paralar": [x for x in paralar if x == "USD" or x in kurlar]},
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
 async def ulkeler_ucu(request):
     from ofis import ulkeler
     return JSONResponse({"ulkeler": ulkeler.liste(), "diller": ulkeler.DILLER},
@@ -330,7 +365,7 @@ async def yapilandirma(request):
     """Panelin giris icin ihtiyaci (gizli degil)."""
     return JSONResponse({"supabase_url": ayar.SUPABASE_URL, "supabase_anon": ayar.SUPABASE_ANON_ANAHTARI,
                          "yerel_giris": ayar.YEREL_GIRIS and ayar.ORTAM != "bulut",
-                         "meta_hazir": bool(ayar.META_APP_ID)})
+                         "meta_hazir": bool(ayar.META_APP_ID), "destek": ayar.al("SAAS_DESTEK_EPOSTA") or ""})
 
 
 async def yerel_giris(request):
@@ -594,7 +629,7 @@ M = "/api/musteri/{mid}"
 routes = [
     Route("/", panel), Route("/saglik", saglik),
     Route("/api/yapilandirma", yapilandirma), Route("/api/sektorler", sektorler),
-    Route("/api/sektor-tahmin", sektor_tahmin), Route("/api/ulkeler", ulkeler_ucu), Route("/api/yerel-giris", yerel_giris, methods=["POST"]),
+    Route("/api/sektor-tahmin", sektor_tahmin), Route("/api/ulkeler", ulkeler_ucu), Route("/api/fiyatlar", fiyatlar), Route("/api/yerel-giris", yerel_giris, methods=["POST"]),
     Route("/api/ben", ben), Route("/api/musteri", musteri_olustur, methods=["POST"]),
     Route(M + "/profil", profil_al), Route(M + "/profil", profil_guncelle, methods=["PUT"]),
     Route(M + "/yayin-ayar", yayin_ayari, methods=["PUT"]),

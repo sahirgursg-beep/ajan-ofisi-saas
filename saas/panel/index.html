@@ -139,6 +139,11 @@ main { max-width:1120px; margin:0 auto; padding:8px clamp(16px,4vw,40px) 60px; }
 .blok { background:var(--kart); border-radius:var(--r-buyuk); padding:22px; margin-bottom:16px; }
 .ikili { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
 details > summary { cursor:pointer; font-weight:600; }
+.paketler { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:12px; margin-top:14px; }
+.paket { border-radius:var(--r); padding:16px; box-shadow:inset 0 0 0 1.5px var(--cizgi); }
+.paket.secili { box-shadow:inset 0 0 0 2px var(--jade); background:var(--jade-acik); }
+.paket .fiyat { font:800 30px var(--baslik); margin:6px 0 2px; } .paket .fiyat small { font:500 14px var(--govde); color:var(--soluk); }
+.paket ul { padding-left:18px; margin:10px 0; font-size:14px; }
 .pano div { padding:8px 0; border-bottom:1px solid var(--cizgi); font-size:14px; }
 
 /* ---------- giris ---------- */
@@ -208,6 +213,7 @@ footer { text-align:center; padding:26px; font-size:13px; color:var(--soluk); }
     <section id="s-isletme" class="gizli">
       <h2 style="margin-bottom:16px">Business</h2>
       <div class="blok" id="logoBlok"></div>
+      <div class="blok" id="paketBlok"></div>
       <div class="blok" id="hesapBlok"></div>
       <div class="blok" id="isletmeBlok"></div>
       <div class="blok"><details id="perdeArkasi"><summary>Behind the scenes</summary>
@@ -513,7 +519,27 @@ function izgaraCiz(dosyalar) {
 }
 
 // ======================= isletme =======================
-async function isletmeCiz() { logoCiz(); hesapCiz(); formCiz(); perdeArkasiCiz(); }
+async function isletmeCiz() { logoCiz(); paketCiz(); hesapCiz(); formCiz(); perdeArkasiCiz(); }
+let PARA = null;
+async function paketCiz(para) {
+  const m = MUSTERI, pk = m.paket || {};
+  PARA = para || PARA || localStorage.getItem("fz_para") || "";
+  let f;
+  try { f = await (await fetch("/api/fiyatlar" + (PARA ? "?para=" + PARA : "?ulke=" + encodeURIComponent((await api(`/api/musteri/${m.id}/profil`)).form.ulke_kodu || "")))).json(); }
+  catch { return; }
+  const gun = m.deneme_bitis ? Math.max(0, Math.ceil((new Date(m.deneme_bitis) - new Date()) / 864e5)) : null;
+  const yerel = (p) => p.yerel != null && f.para !== "USD" ? `<span class="soluk">≈ ${esc(f.sembol)}${Number(p.yerel).toLocaleString()} / month</span>` : "";
+  $("#paketBlok").innerHTML = `<div class="satir"><h3 class="yayil">Plan: ${esc(pk.ad || "")}${pk.deneme ? ` · free trial, ${gun} day${gun === 1 ? "" : "s"} left` : ""}</h3>
+      <label class="satir" style="margin:0;font-weight:500">Show prices in <select id="paraSec" style="width:auto">${f.paralar.map((x) => `<option ${x === f.para ? "selected" : ""}>${x}</option>`).join("")}</select></label></div>
+    <div class="paketler">${f.paketler.map((p) => `<div class="paket ${p.kod === pk.kod ? "secili" : ""}"><b>${esc(p.ad)}</b>
+      <div class="fiyat">$${p.usd}<small>/month</small></div>${yerel(p)}
+      <ul>${p.ozellikler.map((o) => `<li>${esc(o)}</li>`).join("")}</ul>
+      ${p.kod === pk.kod ? `<span class="soluk">${pk.deneme ? "You're trying this plan" : "Your plan"}</span>`
+        : YAP.destek ? `<a href="mailto:${esc(YAP.destek)}?subject=${encodeURIComponent("Plan: " + p.ad + " — " + m.ad)}"><button class="kucuk ${p.one_cikan ? "ana" : "ikincil"}">Choose ${esc(p.ad)}</button></a>`
+        : `<span class="soluk">Online payment opens soon</span>`}</div>`).join("")}</div>
+    <p class="soluk" style="margin-top:10px">Billed in US dollars. Local amounts are approximate${f.kur_tarihi ? " (rates updated daily)" : ""}.</p>`;
+  $("#paraSec").onchange = (e) => { localStorage.setItem("fz_para", e.target.value); paketCiz(e.target.value); };
+}
 async function logoCiz() {
   let logo = null; try { logo = (await api(`/api/musteri/${MUSTERI.id}/logo`)).logo; } catch {}
   $("#logoBlok").innerHTML = `<div class="satir" style="gap:20px"><div class="logo-onizleme" style="${logo ? `background-image:url('${esc(logo)}')` : ""}"></div>
