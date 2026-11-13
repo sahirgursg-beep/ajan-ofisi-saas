@@ -87,9 +87,9 @@ def _sablon(p, taban):
 def uret(urun, aci, taban, tur):
     """Taban taslaktan (Metin Yazari + Kalite Kontrol onayli) her platforma ozel surum."""
     platformlar = aktif_platformlar()
-    out = {}
     fiyat = urun.get("fiyat_metni") or ""
-    for p in platformlar:
+
+    def tek(p):
         k = KURALLAR[p]
         cevap = None
         if llm.hazir():
@@ -112,8 +112,11 @@ def uret(urun, aci, taban, tur):
                 sonuc = _sablon(p, taban)          # fiyat bozulduysa onayli metne don
         else:
             sonuc = _sablon(p, taban)
-        out[p] = sonuc
-    return out
+        return sonuc
+    # Platform uzmanlari birbirini beklemez: istekler ayni anda gider (4 platform ~ tek istek suresi)
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=max(1, len(platformlar))) as h:
+        return dict(zip(platformlar, h.map(tek, platformlar)))
 
 
 def kaydet(klasor, veri):

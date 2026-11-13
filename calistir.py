@@ -264,6 +264,11 @@ def _paketle(urun, gorsel_yollari, gorseller, dikey, taslak, yon, tema, aci, rev
     klasor = CIKTI / (f"{on_ek}_{datetime.now():%H%M}_{''.join(c for c in urun['ad'] if c.isalnum())[:30]}"
                               f"{'_' + tur if tur else ''}{ek}")
     klasor.mkdir(parents=True, exist_ok=True)
+    # Platform metinleri yalnizca onayli metne bagli: tasarim ve video cizilirken arka planda yazilir
+    from concurrent.futures import ThreadPoolExecutor
+    from ofis import platformlar
+    _arka = ThreadPoolExecutor(max_workers=1)
+    _pl_is = _arka.submit(platformlar.uret, urun, aci, dict(taslak), tur)
     with _olc("tasarim"):
         T.ciz(urun, gorsel_yollari, gorseller, taslak, klasor, yon, dikey, tur=tur)
     if tur in (None, "reels"):
@@ -274,10 +279,10 @@ def _paketle(urun, gorsel_yollari, gorseller, dikey, taslak, yon, tema, aci, rev
     if (klasor / "muzik.json").exists():   # CC BY muzik -> lisans geregi sanatci adi caption'a
         atif = _json.loads((klasor / "muzik.json").read_text(encoding="utf-8")).get("atif", "")
     # Platform uzmanlari: ayni icerik her platformda kendi diliyle (Instagram, Facebook, TikTok, LinkedIn)
-    from ofis import platformlar
     try:
-        with _olc("platform metinleri"):
-            pl = platformlar.uret(urun, aci, taslak, tur)
+        with _olc("platform metinleri (kalan bekleme)"):
+            pl = _pl_is.result()
+        _arka.shutdown(wait=False)
     except Exception as e:
         print("  ! platform metinleri uretilemedi:", e)
         pl = {}
