@@ -30,7 +30,7 @@ def test_kotu_tasarim_olculur_duzeltilir_iyi_tasarim_gecer(tmp_path, monkeypatch
                     "accent": "#FF5A36", "accent2": "#2D5BFF"}, "dokular": "tiles"}
         sorular.append(mesaj)
         if "problems" in mesaj:
-            assert "outside the safe area" in mesaj and "required text missing" in mesaj
+            assert "outside the canvas" in mesaj and "required text missing" in mesaj
             return iyi
         return KOTU.replace("HEAD", "Comfort that feels like home")
     monkeypatch.setattr(llm, "hazir", lambda: True)

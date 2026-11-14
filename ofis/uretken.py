@@ -198,38 +198,42 @@ def _sayfa(govde, tuval, dil, varliklar):
         f"<html><head><meta charset=\"utf-8\">"
         + (f"<link rel=\"stylesheet\" href=\"{tasarim._uri(css)}\">" if css else "")
         + f"<style>{fontlar.css_siniflari()}\nhtml,body{{margin:0;width:{W}px;height:{H}px;overflow:hidden;"
-        f"background:{dil['palet']['bg']}}} *{{box-sizing:border-box}} img{{display:block}}</style></head>"
+        f"background:{dil['palet']['bg']}}} *{{box-sizing:border-box}} img{{display:block}}"
+        f".tuval{{width:{W}px!important;height:{H}px!important;overflow:hidden!important}}</style></head>"
         f"<body class=\"f-{dil['font']}\">{govde}</body></html>")
 
 
-OLC = """([W, H, kenar, zorunlu]) => {
-  const sorun = [], kutular = [];
-  const tuval = document.querySelector('.tuval');
-  if (!tuval) return ['root .tuval missing'];
-  const t = tuval.getBoundingClientRect();
-  if (Math.abs(t.width - W) > 2 || Math.abs(t.height - H) > 2) sorun.push(`.tuval must be exactly ${W}x${H}px (is ${Math.round(t.width)}x${Math.round(t.height)})`);
-  document.querySelectorAll('img').forEach((i) => { if (!i.complete || !i.naturalWidth) sorun.push('an image did not load (use only the given placeholders)'); });
+OLC = r"""([W, H, kenar, zorunlu]) => {
+  // sert = yayinlanamaz (kesik/tuval disi yazi, eksik zorunlu metin, yuklenmeyen gorsel); yumusak = iyilestirilebilir
+  const sert = [], yumusak = [], kutular = [];
+  if (!document.querySelector('.tuval')) return {sert: ['root .tuval missing'], yumusak: []};
+  document.querySelectorAll('.tuval img').forEach((i) => { if (!i.complete || !i.naturalWidth) sert.push('an image did not load (use only the given placeholders)'); });
   const metinli = [...document.querySelectorAll('.tuval *')].filter((e) => [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()));
   for (const e of metinli) {
-    const s = getComputedStyle(e); if (s.visibility === 'hidden' || s.display === 'none' || +s.opacity === 0) continue;
+    const s = getComputedStyle(e); if (s.visibility === 'hidden' || s.display === 'none' || +s.opacity < 0.05) continue;
     const r = e.getBoundingClientRect(); if (!r.width || !r.height) continue;
-    const ad = e.textContent.trim().slice(0, 40);
-    if (r.left < kenar - 8 || r.top < kenar - 8 || r.right > W - kenar + 8 || r.bottom > H - kenar + 8) {
-      if (s.transform === 'none') sorun.push(`text "${ad}" is outside the safe area (${kenar}px from edges)`); }
-    if (e.scrollWidth > e.clientWidth + 3 && s.overflow !== 'visible') sorun.push(`text "${ad}" overflows its box horizontally`);
-    if (e.scrollHeight > e.clientHeight + 3 && s.overflow !== 'visible') sorun.push(`text "${ad}" is cut off vertically`);
-    if (parseFloat(s.fontSize) < 24) sorun.push(`text "${ad}" is too small (${parseFloat(s.fontSize)}px, min 26px)`);
-    if (s.transform === 'none') kutular.push([ad, r]);
+    const ad = e.textContent.trim().slice(0, 40), boy = parseFloat(s.fontSize);
+    if (r.left < -2 || r.top < -2 || r.right > W + 2 || r.bottom > H + 2) sert.push(`text "${ad}" goes outside the canvas`);
+    else if (r.left < kenar - 16 || r.top < kenar - 16 || r.right > W - kenar + 16 || r.bottom > H - kenar + 16) yumusak.push(`text "${ad}" is too close to the edge`);
+    if (s.overflow !== 'visible' && (e.scrollWidth > e.clientWidth + 4 || e.scrollHeight > e.clientHeight + 4)) sert.push(`text "${ad}" is cut off by its box`);
+    if (boy < 18) sert.push(`text "${ad}" is unreadable (${boy}px)`); else if (boy < 24) yumusak.push(`text "${ad}" is small (${boy}px)`);
+    if (s.transform === 'none' && boy >= 24) kutular.push([ad, r]);
   }
   for (let i = 0; i < kutular.length; i++) for (let j = i + 1; j < kutular.length; j++) {
     const [a, r1] = kutular[i], [b, r2] = kutular[j];
+    const ic = (p, q) => p.left <= q.left + 1 && p.right >= q.right - 1 && p.top <= q.top + 1 && p.bottom >= q.bottom - 1;
     const x = Math.max(0, Math.min(r1.right, r2.right) - Math.max(r1.left, r2.left)), y = Math.max(0, Math.min(r1.bottom, r2.bottom) - Math.max(r1.top, r2.top));
-    if (x * y > 0.25 * Math.min(r1.width * r1.height, r2.width * r2.height) && !(r1.left <= r2.left && r1.right >= r2.right && r1.top <= r2.top && r1.bottom >= r2.bottom) && !(r2.left <= r1.left && r2.right >= r1.right && r2.top <= r1.top && r2.bottom >= r1.bottom))
-      sorun.push(`texts "${a}" and "${b}" overlap`);
+    if (!ic(r1, r2) && !ic(r2, r1) && x * y > 0.35 * Math.min(r1.width * r1.height, r2.width * r2.height)) yumusak.push(`texts "${a}" and "${b}" overlap`);
   }
-  const yazi = (document.querySelector('.tuval').innerText || '').toLowerCase().replace(/\\s+/g, ' ');
-  for (const z of zorunlu) if (z && !yazi.includes(z.toLowerCase().replace(/\\s+/g, ' ').slice(0, 30))) sorun.push(`required text missing: "${z}"`);
-  return [...new Set(sorun)].slice(0, 12);
+  const yazi = (document.querySelector('.tuval').innerText || '').toLowerCase();
+  const kelimeler = (t) => (t.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []);
+  const mevcut = new Set(kelimeler(yazi));
+  for (const z of zorunlu) {
+    const k = kelimeler(z); if (!k.length) continue;
+    const bulunan = k.filter((w) => mevcut.has(w)).length;
+    if (bulunan / k.length < 0.8) sert.push(`required text missing or changed: "${z}"`);
+  }
+  return {sert: [...new Set(sert)].slice(0, 8), yumusak: [...new Set(yumusak)].slice(0, 8)};
 }"""
 
 
@@ -304,29 +308,40 @@ def tasarla(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print):
     for tuval in liste:
         hedef = klasor / (f"{tuval['ad']}_{tuval['boyut'][0]}x{tuval['boyut'][1]}.jpg"
                           if tuval["ad"] in ("post", "story") else f"{tuval['ad']}.jpg")
-        govde, iyi = taslaklar.get(tuval["ad"]), False
+        govde, iyi, en_iyi = taslaklar.get(tuval["ad"]), False, None       # en_iyi: (puan, html) sert sorunu olmayan
         for deneme in range(3):
             if not govde or ".tuval" not in govde:
+                gunluk(f"{tuval['ad']}: tasarimci gecerli HTML vermedi, tekrar yaziliyor")
                 govde = yaz(tuval)
                 continue
+            sayfa_html = _sayfa(govde, tuval, dil, varliklar)
             try:
-                sorunlar = _ciz_ve_olc(_sayfa(govde, tuval, dil, varliklar), tuval, hedef)
+                olcum = _ciz_ve_olc(sayfa_html, tuval, hedef)
             except Exception as e:
-                sorunlar = [f"render error: {str(e)[:80]}"]
-            puan, notlar = (None, [])
-            if not sorunlar:
+                olcum = {"sert": [f"render error: {str(e)[:80]}"], "yumusak": []}
+            sert, yumusak = olcum.get("sert", []), olcum.get("yumusak", [])
+            puan, notlar = None, []
+            if not sert:
                 puan, notlar = _gorsel_puan(hedef, tuval)
-                if puan is None or puan >= 7:
+                p = (puan if puan is not None else 7) - 0.5 * len(yumusak)
+                if en_iyi is None or p > en_iyi[0]:
+                    en_iyi = (p, sayfa_html, puan)
+                if (puan is None or puan >= 7) and len(yumusak) <= 1:
                     iyi = True
-                    sonuc["puanlar"][tuval["ad"]] = puan
                     break
-                sorunlar = notlar or ["make it more modern and readable"]
-            gunluk(f"{tuval['ad']}: duzeltme {deneme + 1} ({'; '.join(sorunlar[:3])}{f', puan {puan}' if puan else ''})")
+            sorunlar = sert + yumusak + notlar
+            gunluk(f"{tuval['ad']}: deneme {deneme + 1} - sert {len(sert)}, yumusak {len(yumusak)}, puan {puan}: "
+                   f"{'; '.join(sorunlar[:3])}")
             if deneme < 2:
                 govde = _temizle(llm.sor(SISTEM, _istem(dil, tuval, foto_bilgi, bool(varliklar["LOGO_KOYU"]))
                                          + "\n\nYour previous version had these problems, fix ALL of them and keep "
-                                           "the idea:\n- " + "\n- ".join(sorunlar) + "\n\nPrevious version:\n" + govde[:6000],
-                                         json_mod=False, sicaklik=0.6))
+                                           "the idea:\n- " + "\n- ".join(sorunlar or ["make it more modern"])
+                                         + "\n\nPrevious version:\n" + govde[:6000], json_mod=False, sicaklik=0.6)) or govde
+        if not iyi and en_iyi and (en_iyi[2] is None or en_iyi[2] >= 6):
+            _ciz_ve_olc(en_iyi[1], tuval, hedef)            # sert sorunu olmayan en iyi deneme yayinlanir
+            iyi = True
+        if iyi:
+            sonuc["puanlar"][tuval["ad"]] = (en_iyi or (None, None, None))[2]
         if iyi:
             sonuc["dosyalar"].append(hedef)
         elif tuval["ad"] == "post":
