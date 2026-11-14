@@ -169,9 +169,8 @@ def adaylar(tuval, adet=2, haric=()):
     """Bu tuval icin denenecek duzen adlari (son kart icin liste)."""
     if "points" in tuval["metin"]:
         return ["liste_karti"]
-    havuz = [d for d in DUZENLER if d not in haric]
-    if tuval["boyut"][1] > 1500:                  # story: yan yana bolunmus duzen dar kalir
-        havuz = [d for d in havuz if d != "dikey_bolunmus"] or havuz
+    # dikey_bolunmus (50/50) hakemlerce "eski sablon" bulundugu icin otomatik secilmez
+    havuz = [d for d in DUZENLER if d not in haric and d != "dikey_bolunmus"]
     return random.sample(havuz, min(adet, len(havuz)))
 
 
@@ -179,3 +178,43 @@ def ciz(ad, tuval, dil, varliklar):
     W, H = tuval["boyut"]
     f = liste_karti if ad == "liste_karti" else DUZENLER[ad]
     return f(W, H, tuval["metin"], dil, varliklar)
+
+
+# ------------------------------------------------------------------ Reels kapanis karti (sabit, saglam)
+def kapanis(W, H, metin, dil, v):
+    """Logo kahraman: zemin logoyla kontrast olacak sekilde secilir (koyu zemin -> acik logo, acik -> koyu),
+    alt guvenli alanin ustunde tek CTA, kucuk web adresi. Fotograf yok, yazi yok -> asla tasmaz."""
+    pl = dil["palet"]
+    adaylar = [pl.get("bg"), pl.get("accent"), pl.get("ink")]
+    adaylar = [c for c in adaylar if c]
+    # Elde hangi logo varsa ona uyan zemin: acik logo varsa koyu zemin tercih, yalniz koyu logo varsa acik zemin
+    # Marka rengi (accent) uygunsa o; degilse zemin/murekkep. Acik logo koyu zemin, koyu logo acik zemin ister.
+    sira = [pl.get("accent"), pl.get("bg"), pl.get("ink")]
+    sira = [c for c in sira if c]
+    if v.get("LOGO_ACIK") and not v.get("LOGO_KOYU"):
+        zemin = next((c for c in sira if _p(c) < 0.4), min(adaylar, key=_p))
+    elif v.get("LOGO_KOYU") and not v.get("LOGO_ACIK"):
+        zemin = next((c for c in sira if _p(c) > 0.6), max(adaylar, key=_p))
+    else:
+        zemin = pl.get("accent") if 0.12 < _p(pl.get("accent")) < 0.5 else pl.get("bg")
+    koyu = _p(zemin) < 0.5
+    yazi = _yazi(zemin)
+    vurgu = pl.get("accent2") if abs(_p(pl.get("accent2")) - _p(zemin)) > 0.35 else yazi
+    vurgu_yazi = _yazi(vurgu)
+    logo_src = v.get("LOGO_ACIK") if koyu else v.get("LOGO_KOYU")
+    logo = (f'<img src="{logo_src}" alt="" style="max-width:520px;max-height:300px;width:auto;height:auto;'
+            'object-fit:contain">' if logo_src else
+            f'<div class="h" data-metin style="font-size:96px;color:{yazi};text-align:center">{E(metin.get("MARKA") or "")}</div>')
+    cta = (f'<div class="pill" data-metin style="background:{vurgu};color:{vurgu_yazi};font-size:40px;padding:28px 48px">'
+           f'{E(metin.get("CTA"))}</div>' if metin.get("CTA") else "")
+    web = (f'<div data-metin style="font-size:32px;opacity:.82;color:{yazi};letter-spacing:.01em">{E(metin.get("WEB"))}</div>'
+           if metin.get("WEB") else "")
+    return (_ortak(W, H, dil).replace(f"background:{pl['bg']}", f"background:{zemin}") + f"""
+.halo{{position:absolute;left:50%;top:42%;width:760px;height:760px;transform:translate(-50%,-50%);border-radius:50%;
+background:radial-gradient(circle,{'rgba(255,255,255,.10)' if koyu else 'rgba(0,0,0,.06)'} 0%,rgba(0,0,0,0) 68%)}}
+.orta{{position:absolute;left:{GUVENLI}px;right:{GUVENLI}px;top:220px;bottom:360px;display:flex;flex-direction:column;
+align-items:center;justify-content:center;gap:56px}}
+.alt{{position:absolute;left:{GUVENLI}px;right:{GUVENLI}px;bottom:380px;display:flex;flex-direction:column;align-items:center;gap:26px}}
+</style><div class="tuval"><div class="halo"></div>
+<div class="orta" style="bottom:640px">{logo}</div>
+<div class="alt">{cta}{web}</div></div>""")

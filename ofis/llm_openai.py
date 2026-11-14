@@ -226,58 +226,93 @@ def durum():
 
 
 # ---------------------------------------------------------------- tasarim modeli
-TASARIM_TERCIH = ("anthropic-claude-4.5-sonnet", "anthropic-claude-sonnet-4.5", "anthropic-claude-sonnet-4",
-                  "anthropic-claude-haiku-4.5", "claude-sonnet", "claude-haiku", "kimi-k3", "kimi-k2.6")
-_tasarim_model = None
+# Tasarim (HTML/CSS) ve marka tasarim sistemi icin guclu model. Sira: DigitalOcean'daki Claude modelleri (yeniden
+# eskiye) -> fal.ai uzerinden OpenRouter Claude (FAL_KEY varsa) -> metin modeli.
+TASARIM_TERCIH = ("anthropic-claude-sonnet-5", "anthropic-claude-4.6-sonnet", "anthropic-claude-sonnet-4.6",
+                  "anthropic-claude-4.5-sonnet", "anthropic-claude-opus-4.6", "anthropic-claude-haiku-4.5", "claude")
+FAL_TASARIM = os.environ.get("AJAN_FAL_TASARIM_MODEL", "anthropic/claude-sonnet-4.6")
+_tasarim_adaylari = None
 _tasarim_kotu = set()
 
 
-def tasarim_modeli(http=None):
-    """HTML/CSS tasarim yazmak icin en iyi model (Claude varsa). AJAN_YZ_TASARIM_MODEL ile sabitlenebilir;
-    "metin" yazilirsa metin modeli kullanilir. Bulunamazsa metin modeli."""
-    global _tasarim_model
+def _do_tasarim_adaylari(http):
     env = os.environ.get("AJAN_YZ_TASARIM_MODEL", "").strip()
     if env:
-        return model_adi() if env == "metin" else env
-    if _tasarim_model:
-        return _tasarim_model
+        return [] if env in ("metin", "fal") else [env]
     try:
-        r = (http or requests).get(_url() + "/models", timeout=30, headers={"Authorization": f"Bearer {_anahtar()}"})
+        r = http.get(_url() + "/models", timeout=30, headers={"Authorization": f"Bearer {_anahtar()}"})
         mevcut = [m.get("id") for m in (r.json().get("data") or []) if m.get("id")] if r.status_code == 200 else []
     except Exception:
         mevcut = []
+    out = []
     for parca in TASARIM_TERCIH:
-        bulunan = [m for m in mevcut if parca in m and m not in _tasarim_kotu]
-        if bulunan:
-            _tasarim_model = bulunan[0]
-            print(f"  Tasarim modeli: {_tasarim_model}")
-            return _tasarim_model
-    _tasarim_model = model_adi()
-    return _tasarim_model
+        out += [m for m in mevcut if parca in m and m not in out and "image" not in m]
+    return out
+
+
+def tasarim_modeli(http=None):
+    """Kullanilacak ilk tasarim modelinin adi (kayit icin)."""
+    global _tasarim_adaylari
+    if _tasarim_adaylari is None:
+        _tasarim_adaylari = _do_tasarim_adaylari(http or requests)
+    for m in _tasarim_adaylari:
+        if m not in _tasarim_kotu:
+            return m
+    if os.environ.get("FAL_KEY") and os.environ.get("AJAN_YZ_TASARIM_MODEL", "") != "metin" and "fal" not in _tasarim_kotu:
+        return "fal:" + FAL_TASARIM
+    return model_adi()
+
+
+def _fal_sor(sistem, mesaj, sicaklik, http):
+    r = http.post("https://fal.run/openrouter/router", timeout=300,
+                  headers={"Authorization": f"Key {os.environ['FAL_KEY']}", "Content-Type": "application/json"},
+                  json={"model": FAL_TASARIM, "system_prompt": sistem, "prompt": mesaj, "temperature": sicaklik,
+                        "max_tokens": 6000})
+    if r.status_code in (400, 401, 403, 404, 422):
+        raise PermissionError(f"HTTP {r.status_code}: {r.text[:120]}")
+    r.raise_for_status()
+    veri = r.json()
+    u = veri.get("usage") or {}
+    try:
+        from . import fal_ai
+        tutar = float(u.get("cost") or 0) or (u.get("prompt_tokens", 0) * 3 + u.get("completion_tokens", 0) * 15) / 1e6
+        fal_ai.harca(tutar, "tasarim_yz")
+    except Exception:
+        pass
+    return (veri.get("output") or "").strip()
 
 
 def tasarim_sor(sistem, mesaj, sicaklik=0.7, oturum=None):
-    """Tasarim modeline sorar; model hata verirse bir daha denemez ve metin modeline doner."""
-    global _tasarim_model
+    """Tasarim modeline sorar; erisilemeyen model (403/404...) isaretlenir, siradaki denenir; en son metin modeli."""
     if not hazir():
         return None
     http = oturum or requests
-    model = tasarim_modeli(http)
-    if model == model_adi():
-        return sor(sistem, mesaj, json_mod=False, sicaklik=sicaklik, oturum=oturum)
-    govde = {"model": model, "temperature": sicaklik, "max_tokens": 6000,
-             "messages": [{"role": "system", "content": sistem}, {"role": "user", "content": mesaj}]}
-    try:
-        r = http.post(_url() + "/chat/completions", json=govde, timeout=300, headers={"Authorization": f"Bearer {_anahtar()}"})
-        if r.status_code in (400, 401, 403, 404, 422):
-            print(f"  ! Tasarim modeli '{model}' kullanilamadi (HTTP {r.status_code}); metin modeline donuluyor")
-            _tasarim_kotu.add(model)
-            _tasarim_model = model_adi()
+    for _ in range(8):
+        model = tasarim_modeli(http)
+        if model == model_adi():
             return sor(sistem, mesaj, json_mod=False, sicaklik=sicaklik, oturum=oturum)
-        r.raise_for_status()
-        veri = r.json()
-        _maliyet_yaz(veri.get("usage") or {}, model)
-        return (veri["choices"][0]["message"].get("content") or "").strip()
-    except Exception as e:
-        print(f"  ! Tasarim modeli hatasi: {str(e)[:160]}")
-        return sor(sistem, mesaj, json_mod=False, sicaklik=sicaklik, oturum=oturum)
+        try:
+            if model.startswith("fal:"):
+                return _fal_sor(sistem, mesaj, sicaklik, http)
+            govde = {"model": model, "temperature": sicaklik, "max_tokens": 6000,
+                     "messages": [{"role": "system", "content": sistem}, {"role": "user", "content": mesaj}]}
+            r = http.post(_url() + "/chat/completions", json=govde, timeout=300,
+                          headers={"Authorization": f"Bearer {_anahtar()}"})
+            if r.status_code in (400, 401, 403, 404, 422):
+                raise PermissionError(f"HTTP {r.status_code}")
+            r.raise_for_status()
+            veri = r.json()
+            _maliyet_yaz(veri.get("usage") or {}, model)
+            print(f"  Tasarim modeli: {model}") if model not in _bildirilen else None
+            _bildirilen.add(model)
+            return (veri["choices"][0]["message"].get("content") or "").strip()
+        except PermissionError as e:
+            print(f"  ! Tasarim modeli '{model}' kullanilamadi ({e}); siradaki deneniyor")
+            _tasarim_kotu.add("fal" if model.startswith("fal:") else model)
+        except Exception as e:
+            print(f"  ! Tasarim modeli hatasi ({model}): {str(e)[:160]}")
+            return sor(sistem, mesaj, json_mod=False, sicaklik=sicaklik, oturum=oturum)
+    return sor(sistem, mesaj, json_mod=False, sicaklik=sicaklik, oturum=oturum)
+
+
+_bildirilen = set()

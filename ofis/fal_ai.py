@@ -2,7 +2,7 @@
 
 Anahtar: FAL_KEY (fal.ai > Dashboard > API Keys). Modeller ortam degiskeniyle degistirilebilir:
   AJAN_FAL_GENISLET  (varsayilan fal-ai/flux-2-pro/outpaint, ~$0.06 / dikey gorsel)
-  AJAN_FAL_URET      (varsayilan fal-ai/flux-2/flash, ~$0.01 / dikey gorsel)
+  AJAN_FAL_URET      (varsayilan fal-ai/flux-2-pro, ~$0.045 / dikey gorsel; hata verirse flux-2/flash)
 Aylik harcama tavani (musteri basina, USD): AJAN_YZ_AYLIK_TAVAN (varsayilan 10). Tavan dolunca ucretli cagri
 yapilmaz; rotus bedava netlestirmeye, gorseller stok fotograflara doner.
 """
@@ -119,11 +119,19 @@ def genislet(ic, ust, alt, oturum=None):
 
 def uret(istem, w=1024, h=1536, oturum=None):
     """Metinden gorsel. -> PIL gorsel ya da None."""
-    fiyat = 0.005 * max(1, _mp(w, h))
+    # Varsayilan FLUX.2 Pro: flash'a gore cok daha az bozuk el/anlamsiz yazi (~$0.03/MP). Hata verirse flash.
+    model = os.environ.get("AJAN_FAL_URET", "fal-ai/flux-2-pro")
+    fiyat = (0.005 if "flash" in model else 0.03) * max(1, _mp(w, h))
     if not hazir() or not butce_var(fiyat):
         return None
-    model = os.environ.get("AJAN_FAL_URET", "fal-ai/flux-2/flash")
-    sonuc = _cagir(model, {"prompt": istem[:3000], "image_size": {"width": w, "height": h},
-                           "output_format": "jpeg"}, oturum or requests, sure=180)
+    girdi = {"prompt": istem[:3000], "image_size": {"width": w, "height": h}, "output_format": "jpeg"}
+    try:
+        sonuc = _cagir(model, girdi, oturum or requests, sure=180)
+    except Exception as e:
+        if "flash" in model:
+            raise
+        print(f"  ! {model} kullanilamadi ({str(e)[:80]}), flux-2/flash deneniyor")
+        model, fiyat = "fal-ai/flux-2/flash", 0.005 * max(1, _mp(w, h))
+        sonuc = _cagir(model, girdi, oturum or requests, sure=180)
     harca(fiyat, "gorsel_uretim")
     return sonuc.convert("RGB")

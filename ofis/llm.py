@@ -108,6 +108,18 @@ def tasarim_sor(sistem, mesaj, sicaklik=0.7):
     return None
 
 
+def tasarim_modeli_adi():
+    """Kayit icin: tasarimda kullanilacak modelin adi."""
+    for ad in _adlar():
+        s = _yukle(ad)
+        if s and s.hazir():
+            try:
+                return s.tasarim_modeli() if hasattr(s, "tasarim_modeli") else ad
+            except Exception:
+                return ad
+    return "yok"
+
+
 @_sayarak
 def gor(sistem, mesaj, gorsel_yollari, json_mod=True):
     """Gorselleri de inceleyen soru (destekleyen saglayicilar: gor() fonksiyonu olanlar). Yoksa None."""

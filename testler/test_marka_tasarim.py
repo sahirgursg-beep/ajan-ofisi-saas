@@ -1,0 +1,120 @@
+"""Marka tasarim sistemi + tasarim modeli zinciri + Reels kapanis karti."""
+import json
+import os
+
+import pytest
+
+from ofis import fiyat, llm, llm_openai, marka_tasarim, modern_duzen, uretken
+
+TARAYICI = pytest.mark.skipif(os.environ.get("AJAN_TAM_TEST") != "1", reason="tarayici gerekir (AJAN_TAM_TEST=1)")
+
+SABLON = """<style>.tuval{width:1080px;height:1350px;position:relative;overflow:hidden;background:#111;color:#fff}
+.b{position:absolute;left:72px;right:72px;bottom:260px;font:800 var(--h)/1 var(--bf);text-wrap:balance}
+.p{position:absolute;left:72px;bottom:120px;font:700 48px var(--gf);white-space:nowrap}
+.c{position:absolute;right:72px;bottom:120px;font:700 36px var(--gf);white-space:nowrap}</style>
+<div class="tuval"><img src="{{FOTO1}}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.5">
+<h1 class="b" data-metin>{{HEADLINE}}</h1><div class="p" data-metin data-alan="PRICE">{{PRICE}}</div>
+<div class="c" data-metin data-alan="CTA">{{CTA}}</div></div>"""
+
+
+class _Yanit:
+    def __init__(self, kod, veri):
+        self.status_code, self._veri, self.text = kod, veri, json.dumps(veri)
+
+    def json(self):
+        return self._veri
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(self.status_code)
+
+
+class _Http:
+    """DO: /models iki Claude listeler; ilki 403, ikincisi calisir."""
+    def __init__(self):
+        self.denenen = []
+
+    def get(self, url, **k):
+        return _Yanit(200, {"data": [{"id": "anthropic-claude-4.5-sonnet"}, {"id": "anthropic-claude-4.6-sonnet"},
+                                     {"id": "openai-gpt-oss-120b"}]})
+
+    def post(self, url, json=None, **k):
+        self.denenen.append(json["model"])
+        if json["model"] == "anthropic-claude-4.6-sonnet":
+            return _Yanit(403, {"error": "model not in key scope"})
+        return _Yanit(200, {"choices": [{"message": {"content": "<div class='tuval'></div>"}}], "usage": {}})
+
+
+def test_tasarim_modeli_403_verirse_siradaki_claude_denenir(monkeypatch):
+    monkeypatch.setenv("AJAN_YZ_ANAHTAR", "x")
+    monkeypatch.delenv("AJAN_YZ_TASARIM_MODEL", raising=False)
+    monkeypatch.delenv("FAL_KEY", raising=False)
+    monkeypatch.setattr(llm_openai, "hazir", lambda: True)
+    monkeypatch.setattr(llm_openai, "_tasarim_adaylari", None)
+    monkeypatch.setattr(llm_openai, "_tasarim_kotu", set())
+    http = _Http()
+    cevap = llm_openai.tasarim_sor("s", "m", oturum=http)
+    assert cevap == "<div class='tuval'></div>"
+    assert http.denenen == ["anthropic-claude-4.6-sonnet", "anthropic-claude-4.5-sonnet"]
+    assert llm_openai.tasarim_modeli(http) == "anthropic-claude-4.5-sonnet"
+
+
+def test_do_claude_yoksa_fal_openrouter_kullanilir(monkeypatch):
+    monkeypatch.setenv("FAL_KEY", "k")
+    monkeypatch.setattr(llm_openai, "hazir", lambda: True)
+    monkeypatch.setattr(llm_openai, "_tasarim_adaylari", [])
+    monkeypatch.setattr(llm_openai, "_tasarim_kotu", set())
+
+    class Http:
+        def post(self, url, json=None, headers=None, **k):
+            assert url.endswith("openrouter/router") and headers["Authorization"] == "Key k"
+            assert json["model"].startswith("anthropic/claude") and json["system_prompt"] == "s"
+            return _Yanit(200, {"output": "<style></style><div class=\"tuval\"></div>", "usage": {"cost": 0.01}})
+    assert "tuval" in llm_openai.tasarim_sor("s", "m", oturum=Http())
+
+
+def test_sablon_doldurma_bos_alanlari_kaldirir_ve_boyu_metne_gore_ayarlar():
+    h = marka_tasarim.doldur(SABLON, "post_a", {"HEADLINE": "A <b>", "PRICE": "", "CTA": "Shop"}, {"FOTO1": "data:x"})
+    assert "A &lt;b&gt;" in h and "{{" not in h and "--h:124px" in h
+    assert '"PRICE"' in h.split("<script>")[1]                    # bos fiyat ogesi sayfada kaldirilir
+    uzun = marka_tasarim.doldur(SABLON, "post_a", {"HEADLINE": "x" * 58}, {})
+    assert "--h:76px" in uzun
+
+
+def test_kapanis_karti_logoyu_kontrast_zemine_koyar():
+    dil = {"palet": {"bg": "#F4F4F0", "ink": "#111111", "accent": "#1B3D2F", "accent2": "#E8B04B"}, "font": "cagdas"}
+    yalniz_acik = modern_duzen.kapanis(1080, 1920, {"CTA": "Book now", "WEB": "x.com"}, dil, {"LOGO_ACIK": "data:acik"})
+    assert "background:#1B3D2F" in yalniz_acik and "data:acik" in yalniz_acik       # acik logo -> koyu zemin
+    yalniz_koyu = modern_duzen.kapanis(1080, 1920, {"CTA": "Book now"}, dil, {"LOGO_KOYU": "data:koyu"})
+    assert "background:#F4F4F0" in yalniz_koyu and "data:koyu" in yalniz_koyu
+
+
+def test_hakem_kapanis_kartinda_foto_ya_da_baslik_aramaz():
+    assert "do not ask for a photo" in uretken._olcut({"ad": "reels_son"})
+    assert "Instagram creative" in uretken._olcut({"ad": "post"})
+
+
+@TARAYICI
+def test_sistem_kurulur_ve_gunluk_set_sablonlardan_cizilir(tmp_path, monkeypatch):
+    from PIL import Image
+    monkeypatch.setattr(marka_tasarim, "DOSYA", tmp_path / "sistem.json")
+    fotolar = []
+    for i, renk in enumerate(("#7a8c6e", "#8c6e7a", "#6e7a8c")):
+        f = tmp_path / f"f{i}.jpg"
+        Image.new("RGB", (900, 1200), renk).save(f)
+        fotolar.append(str(f))
+    urun = fiyat.hazirla({"ad": "Lamp", "fiyat": 50, "para_birimi": "USD", "gorseller": []})
+    monkeypatch.setattr(llm, "hazir", lambda: True)
+    monkeypatch.setattr(llm, "sor", lambda s, m, json_mod=False, sicaklik=0.7:
+                        {"stil": "poster_tipografi", "fikir": "x", "font": "cagdas"} if json_mod else "")
+    monkeypatch.setattr(llm, "tasarim_sor", lambda s, m, sicaklik=0.7:
+                        SABLON.replace("{{HEADLINE}}", "{{LINE}}") if "carousel slide" in m else SABLON)
+    monkeypatch.setattr(llm, "gor", lambda *a, **k: {"score": 8, "problems": []})
+    s = marka_tasarim.kur(urun, fotolar, {"headline": "Glow"}, gunluk=lambda m: None, zorla=True)
+    assert s and "post_a" in s["sablonlar"] and not marka_tasarim.eski_mi()
+    r = marka_tasarim.ciz_set(urun, fotolar, {"headline": "Glow", "carousel_lines": ["One", "Two"]}, tmp_path,
+                              "carousel", gunluk=lambda m: None)
+    assert r and r["sistem"] and (tmp_path / "post_1080x1350.jpg").stat().st_size > 5000
+    assert [p.name for p in r["dosyalar"]][:3] == ["post_1080x1350.jpg", "carousel_1.jpg", "carousel_2.jpg"]
+    son = marka_tasarim.son_kart(fotolar, tmp_path / "son.jpg", gunluk=lambda m: None)
+    assert son and son.stat().st_size > 3000

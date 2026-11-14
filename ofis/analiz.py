@@ -33,7 +33,7 @@ def meta_yaz(klasor, urun, tarif, tema, taslak, plan_gunu=None):
         "tema": tema, "kanca": taslak.get("hook", ""), "baslik": taslak.get("headline", ""),
         "tarif": t,
         "ozellikler": {
-            "duzen": t.get("duzen"), "fontlar": t.get("fontlar"), "motif": t.get("motif"),
+            "duzen": t.get("duzen"), "stil": t.get("uretken_stil"), "fontlar": t.get("fontlar"), "motif": t.get("motif"),
             "fiyat_stili": t.get("fiyat_stili"), "banner": "var" if t.get("banner") else "yok",
             "palet_ton": ("koyu" if _parlaklik(t["palet"]["zemin"]) < 0.5 else "acik") if t.get("palet") else None,
             "ana_kategori": kat[0] if kat else None, "alt_kategori": kat[-1] if kat else None,

@@ -603,8 +603,23 @@ class Tasarimci(Ajan):
         """tur: post -> post+story | carousel -> kapak+kartlar | reels -> sadece kapak (onizleme) | None -> hepsi"""
         from . import gorsel
         tarif = yon if isinstance(yon, dict) else None
-        # Once uretken tasarim (sabit sablon yok); tutmazsa asagidaki sablon yolu devralir
+        # 1) Markanin tasarim sistemi (guclu modelle kurulan, markaya ozel duzenler) -> hizli ve tutarli
+        u = None
         try:
+            from . import marka_tasarim
+            if marka_tasarim.eski_mi() and llm.hazir():
+                self.calis("Markana ozel tasarim sistemini kuruyorum (iki haftada bir yenilenir, birkac dakika)...")
+                marka_tasarim.kur(urun, gorsel_yollari, taslak, lambda m: (print(f"[TASARIM] {m}", flush=True),
+                                                                          pano.durum(self.ad, "calisiyor", m)))
+            u = marka_tasarim.ciz_set(urun, gorsel_yollari, taslak, klasor, tur,
+                                      lambda m: (print(f"[TASARIM] {m}", flush=True), pano.durum(self.ad, "calisiyor", m)))
+        except Exception as e:
+            u = None
+            print(f"[TASARIM] tasarim sistemi calismadi: {type(e).__name__}: {str(e)[:160]}", flush=True)
+        # 2) Tutmazsa uretken tasarim (her tuval sifirdan); o da tutmazsa sablon yolu devralir
+        try:
+            if u:
+                raise StopIteration
             from . import uretken
             self.calis("Bugunun gorsel dilini seciyorum ve tasarimi sifirdan ciziyorum...")
             def sablon_ciz(hedef):
@@ -614,13 +629,16 @@ class Tasarimci(Ajan):
             u = uretken.tasarla(urun, gorsel_yollari, taslak, klasor, tur,
                                 lambda m: (print(f"[TASARIM] {m}", flush=True), pano.durum(self.ad, "calisiyor", m)),
                                 sablon_ciz=sablon_ciz)
+        except StopIteration:
+            pass
         except Exception as e:
             u = None
             self.soyle("Yonetici", f"Uretken tasarim calismadi ({type(e).__name__}: {str(e)[:120]}), sablonla devam.", "uyari")
         if u:
             d = u["dil"]
             if tarif is not None:       # ogrenme ve Reels ayni gorsel dili kullansin
-                tarif.update({"isim": f"{d['stil']} #{random.randint(100, 999)}", "duzen": f"uretken:{d['stil']}",
+                # 'duzen' sablon motorunun anahtari olarak kalir (Reels onu kullanir); stil ayri tutulur
+                tarif.update({"isim": f"{d['stil']} #{random.randint(100, 999)}", "uretken_stil": d["stil"],
                               "uretken_dil": d,
                               "fontlar": d["font"], "neden": d.get("neden") or d.get("fikir"),
                               "palet": {"zemin": d["palet"]["bg"], "vurgu": d["palet"]["accent"], "panel": d["palet"]["bg"]}})
@@ -695,14 +713,12 @@ class VideoEditoru(Ajan):
             except Exception as e:
                 self.soyle("Yonetici", f"Muzik kutuphanesi guncellenemedi ({type(e).__name__}), mevcut parcalarla devam.", "uyari")
         son_kart = None
-        if isinstance(tarif, dict) and tarif.get("uretken_dil"):
-            try:
-                from . import uretken
-                self.calis("Kapanis kartini (logo + CTA) bu icerigin gorsel diliyle tasarliyorum...")
-                son_kart = uretken.son_kart(urun, gorsel_yollari or [], taslak, tarif["uretken_dil"],
-                                            klasor / "_reels_son.jpg",
-                                            lambda m: (print(f"[TASARIM] {m}", flush=True), pano.durum(self.ad, "calisiyor", m)))
-            except Exception as e:
+        try:
+            from . import marka_tasarim
+            self.calis("Kapanis kartini (logo + CTA) markanin tasarim sistemiyle hazirliyorum...")
+            son_kart = marka_tasarim.son_kart(gorsel_yollari or [], klasor / "_reels_son.jpg",
+                                              lambda m: (print(f"[TASARIM] {m}", flush=True), pano.durum(self.ad, "calisiyor", m)))
+        except Exception as e:
                 self.soyle("Yonetici", f"Kapanis karti tasarlanamadi ({type(e).__name__}), sablon kapanisi kullanilacak.", "uyari")
         self.calis(f"Bugunun Reels formati: {reels_formatlari.FORMATLAR[bicim]}. Kurguluyorum (yaklasik 1 dakika)...")
         try:
@@ -739,7 +755,7 @@ class VideoEditoru(Ajan):
             m = _j.loads(bilgi.read_text(encoding="utf-8"))
             ses = f"muzik: \"{m.get('baslik')}\" - {m.get('sanatci') or '?'} ({str(m.get('lisans')).upper()}, {m.get('ruh')})"
         else:
-            ses = "muziksiz (kutuphane bos)"
+            ses = "muziksiz (basit kurgu muzik eklemez)" if tur == "basit kurgu" else "muziksiz (uygun parca bulunamadi)"
         self.soyle("Yonetici", f"Reels hazir 🎬 15 sn {tur}, {ses}.")
         self.bitir()
 

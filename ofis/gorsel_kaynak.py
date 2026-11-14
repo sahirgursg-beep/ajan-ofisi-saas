@@ -39,11 +39,19 @@ def yz_hazir():
 
 
 def _indir(http, adres):
+    """Onbellekli indirme. Pixabay/Pexels 429 (cok istek) verirse kisa bekleyip tekrar dener."""
+    import time
     yol = _yol(adres, ".jpg")
     if not yol.exists():
-        g = http.get(adres, timeout=60)
-        g.raise_for_status()
+        for deneme in range(4):
+            g = http.get(adres, timeout=60)
+            if g.status_code == 429 and deneme < 3:
+                time.sleep(2 + 3 * deneme)
+                continue
+            g.raise_for_status()
+            break
         yol.write_bytes(g.content)
+        time.sleep(0.15)                    # saniyede ~6 istegi gecmeyelim (Pixabay siniri dakikada 100)
     return str(yol)
 
 

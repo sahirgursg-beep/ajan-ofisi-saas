@@ -9,6 +9,7 @@ Kalite kapisi (sirayla):
 Sorun varsa tasarimci ayni tuvali sorun listesiyle bir kez daha yazar; yine olmazsa o tuval eski sablona duser.
 Boylece her gun farkli ama her zaman okunakli tasarimlar cikar.
 """
+import html
 import json
 import random
 import re
@@ -27,24 +28,21 @@ STILLER = {
     "bento": "rounded tiles of different sizes in a grid (photo tile, big-claim tile, small tag tiles), 16-24px gaps, soft shadows",
     "poster_tipografi": "oversized headline (150-260px) with tight leading as the hero, photo smaller or cut by the type, very bold contrast",
     "sticker_pop": "full-bleed photo with rotated sticker labels, pill tags, a hand-drawn SVG arrow or circle pointing at the subject",
-    "renk_blok": "two or three flat color blocks on a strict Swiss grid, photo in one block, left-aligned type, generous whitespace",
     "cam_kart": "blurred and darkened photo as background with a sharp crop of it on top and a frosted-glass card (backdrop-filter) for text",
     "gradient_mesh": "soft multi-color gradient blobs (radial-gradients) behind a crisp photo card, modern app aesthetic",
     "dev_rakam": "one giant number or price as the visual anchor (300px+) with a tiny context line and the photo beside it",
     "polaroid_kolaj": "two or three photos as tilted polaroid/print cards with tape strips, playful and personal",
     "outline_type": "huge outlined (-webkit-text-stroke) words behind the photo subject, layered depth",
-    "bolunmus": "split screen: photo on one half, solid color with type on the other, a thin divider or overlapping badge",
     "minimal_lux": "lots of negative space, one small elegant photo, refined sans headline, tiny caps details - premium and calm",
 }
 KART_TIPLERI = (
     "big statement: the line huge across the slide, small photo crop as accent",
     "photo-led: full-bleed or large photo with the line on a bold sticker or pill",
     "number/step: a giant step number or icon-like shape plus the line",
-    "split: half photo, half solid color with the line",
     "quote card: the line large inside one clean card over a blurred photo",
     "detail zoom: a tight crop of the photo in a rounded window with the line beside it",
 )
-YASAK = ("newspaper columns", "body text paragraphs on the image", "thin hairline rules everywhere",
+YASAK = ("newspaper columns", "split-screen 50/50 photo|color boxes", "body text paragraphs on the image", "thin hairline rules everywhere",
          "gold frames", "centered serif headline over a gradient as the only idea", "clip-art", "emoji walls")
 
 
@@ -152,8 +150,9 @@ def _istem(dil, tuval, foto_bilgi, logo_var, ornek=None):
     return (
         f"Design ONE {W}x{H}px social media image as HTML+CSS.\nRole: {tuval['rol']}\n"
         f"Visual language (keep it): style '{dil['stil']}' - {STILLER.get(dil['stil'], dil['stil'])}. "
-        f"Idea: {dil['fikir']}. Details: {dil['dokular']}. Palette: {json.dumps(dil['palet'])}.\n"
-        f"Exact texts to place (use them VERBATIM, nothing else except tiny decorative labels of 1-3 words): "
+        f"Idea (a note for YOU - never write it on the image): {dil['fikir']}. Details: {dil['dokular']}. "
+        f"Palette: {json.dumps(dil['palet'])}.\n"
+        f"Exact texts to place (use them VERBATIM and add NO other words - no labels, no taglines, no notes): "
         f"{json.dumps(metinler, ensure_ascii=False)}\n"
         f"Photos available: {foto_bilgi}. Use them as <img src=\"{{{{FOTO1}}}}\"> etc. with object-fit:cover and "
         "a deliberate object-position. The photo must stay clearly visible (at least 40% of the canvas) unless the "
@@ -277,12 +276,36 @@ def _ciz_ve_olc(html_, tuval, hedef):
         gecici.unlink(missing_ok=True)
 
 
+def html_kac(metin):
+    return html.escape(str(metin or ""))
+
+
+def _rol_adi(tuval):
+    ad = tuval.get("ad", "")
+    if ad.startswith("reels_son") or ad == "son":
+        return "Reels END CARD (last 3 seconds of a video)"
+    if ad.startswith("carousel"):
+        return f"carousel slide ({ad})"
+    return ad
+
+
+def _olcut(tuval):
+    """Hakem olcutu tuvalin rolune gore: kapanis kartinda foto ya da baslik aranmaz."""
+    ad = tuval.get("ad", "")
+    if ad.startswith("reels_son") or ad == "son":
+        return ("Score it 1-10 as an end card: the brand logo is clearly the focal point, crisp and well placed "
+                "(not tiny, not stretched, not floating randomly) on a background that contrasts with it; the call to "
+                "action is bold and readable; colors match a modern brand; calm, intentional composition. Empty space "
+                "around the logo is GOOD here; do not ask for a photo or a headline.")
+    return ("Score it 1-10 as a 2026 Instagram creative: modern and thumb-stopping (not like a newspaper or a "
+            "dated template), every text easy to read on a phone, clear hierarchy, the photo/subject well presented, "
+            "nothing cut off or overlapping.")
+
+
 def _gorsel_puan(yol, tuval):
     cevap = llm.gor(
         "You are a strict art director reviewing social media creatives before they are published. Answer ONLY with valid JSON.",
-        f"This is a {tuval['ad']} for {musteri.ad()}. Score it 1-10 as a 2026 Instagram creative: modern and "
-        "thumb-stopping (not like a newspaper or a dated template), every text easy to read on a phone, clear "
-        "hierarchy, the photo/subject well presented, nothing cut off or overlapping.\n"
+        f"This is a {_rol_adi(tuval)} for {musteri.ad()}. {_olcut(tuval)}\n"
         'Return JSON: {"score": 1-10, "problems": ["<concrete fix, max 12 words>"]}', [yol])
     if not isinstance(cevap, dict):
         return None, []
@@ -331,7 +354,7 @@ def tasarla(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print, sablon
         hedef = klasor / (f"{tuval['ad']}_{tuval['boyut'][0]}x{tuval['boyut'][1]}.jpg"
                           if tuval["ad"] in ("post", "story") else f"{tuval['ad']}.jpg")
         govde, iyi, en_iyi = taslaklar.get(tuval["ad"]), False, None       # en_iyi: (puan, html) sert sorunu olmayan
-        for deneme in range(3):
+        for deneme in range(2):
             if not govde or ".tuval" not in govde:
                 gunluk(f"{tuval['ad']}: tasarimci gecerli HTML vermedi, tekrar yaziliyor")
                 govde = yaz(tuval)
@@ -450,7 +473,7 @@ def son_kart(urun, gorsel_yollari, taslak, dil, hedef, gunluk=print):
     foto_bilgi = ", ".join(f"FOTO{i}" for i in range(1, len(fotolar) + 1)) or "none"
     govde = _temizle(llm.tasarim_sor(SISTEM, _istem(dil, tuval, foto_bilgi, bool(varliklar["LOGO_KOYU"])), sicaklik=0.7))
     en_iyi = None
-    for deneme in range(3):
+    for deneme in range(2):
         if not govde or ".tuval" not in govde:
             break
         sayfa_html = _sayfa(govde, tuval, dil, varliklar)
