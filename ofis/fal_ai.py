@@ -63,15 +63,22 @@ def butce_var(tahmini=0.0):
     return bu_ay() + tahmini <= tavan()
 
 
+_harca_kilit = __import__("threading").Lock()
+
+
 def harca(tutar, ne=""):
-    h = _harcamalar()
-    h[_ay()] = round(float(h.get(_ay(), 0.0)) + tutar, 4)
-    kalem = h.setdefault("_kalemler", {}).setdefault(_ay(), {})
-    k = kalem.setdefault(ne or "diger", {"adet": 0, "usd": 0.0})
-    k["adet"] += 1
-    k["usd"] = round(k["usd"] + tutar, 5)
-    HARCAMA.parent.mkdir(parents=True, exist_ok=True)
-    HARCAMA.write_text(json.dumps(h, ensure_ascii=False, indent=1), encoding="utf-8")
+    """Paralel is parcaciklari ayni dosyaya yazar: kilit + atomik yazim (aksi halde sayac sifirlaniyordu)."""
+    with _harca_kilit:
+        h = _harcamalar()
+        h[_ay()] = round(float(h.get(_ay(), 0.0)) + tutar, 4)
+        kalem = h.setdefault("_kalemler", {}).setdefault(_ay(), {})
+        k = kalem.setdefault(ne or "diger", {"adet": 0, "usd": 0.0})
+        k["adet"] += 1
+        k["usd"] = round(k["usd"] + tutar, 5)
+        HARCAMA.parent.mkdir(parents=True, exist_ok=True)
+        gecici = HARCAMA.with_suffix(".tmp")
+        gecici.write_text(json.dumps(h, ensure_ascii=False, indent=1), encoding="utf-8")
+        os.replace(gecici, HARCAMA)
 
 
 def _mp(w, h):
@@ -120,7 +127,8 @@ def genislet(ic, ust, alt, oturum=None):
 def uret(istem, w=1024, h=1536, oturum=None):
     """Metinden gorsel. -> PIL gorsel ya da None."""
     # Varsayilan FLUX.2 Pro: flash'a gore cok daha az bozuk el/anlamsiz yazi (~$0.03/MP). Hata verirse flash.
-    model = os.environ.get("AJAN_FAL_URET", "fal-ai/flux-2-pro")
+    # Butcenin ilk yarisinda FLUX.2 Pro (kalite), ikinci yarisinda flash (6 kat ucuz): ay sonu stoksuz kalinmasin
+    model = os.environ.get("AJAN_FAL_URET") or ("fal-ai/flux-2-pro" if bu_ay() < 0.5 * tavan() else "fal-ai/flux-2/flash")
     fiyat = (0.005 if "flash" in model else 0.03) * max(1, _mp(w, h))
     if not hazir() or not butce_var(fiyat):
         return None

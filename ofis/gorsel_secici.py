@@ -100,13 +100,16 @@ def sec(sorgular, konu, isletme, adet=3, kacin="", haric=(), gunluk=print):
         if len(adaylar) >= 16:
             break
     adaylar = adaylar[:16]
-    kucukler, gecerli = [], []
-    for a in adaylar:
+    def _kucuk(a):
         try:
-            kucukler.append(gorsel_kaynak.indir(a["onizleme"]))
-            gecerli.append(a)
+            return gorsel_kaynak.indir(a["onizleme"])
         except Exception:
-            continue
+            return None
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=4) as h:
+        inen = list(h.map(_kucuk, adaylar))
+    kucukler = [y for y in inen if y]
+    gecerli = [a for a, y in zip(adaylar, inen) if y]
     puanlar = puanla(kucukler, konu, isletme, kacin) if gecerli else {}
     rapor = {"aday": len(gecerli), "gorme": puanlar is not None}
     if puanlar is None:                        # gorme modeli yok: eski davranis (aday sirasi)

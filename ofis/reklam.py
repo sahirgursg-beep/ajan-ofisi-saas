@@ -55,8 +55,11 @@ def reklam_yap(urun, gorsel_yollari, taslak, tarif, hedef: Path, gunluk=print, d
                         (list(gorsel_yollari) + list(gorsel_yollari[:1]) * 3)[:3]] if gorsel_yollari else [],
         }, ensure_ascii=False)
 
-    from . import dil as _dil
-    metin = _dil.html_isareti((tasarim.SABLON / sablon_adi).read_text(encoding="utf-8"))
+    from . import dil as _dil, fontlar as _fontlar
+    # Tum font ciftlerinin degiskenleri (--bf, --bo...): sablonda yalniz 5 eski cift tanimli; digerlerinde
+    # degiskenler tanimsiz kalip yazilar 16px serif'e dusuyordu
+    metin = _dil.html_isareti((tasarim.SABLON / sablon_adi).read_text(encoding="utf-8")).replace(
+        "</head>", f"<style>{_fontlar.css_siniflari()}</style></head>", 1)
     for k, deger in v.items():
         guvenli = deger if k in ("ortak", "fontlar", "veri_json") or k.startswith(("foto", "logo", "t_")) \
             else __import__("html").escape(str(deger))

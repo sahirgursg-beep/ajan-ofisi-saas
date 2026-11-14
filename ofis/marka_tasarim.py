@@ -18,7 +18,8 @@ from . import llm, marka, modern_duzen, musteri, tasarim, uretken
 from .ayarlar import AYAR, VERI
 
 DOSYA = VERI / "tasarim_sistemi.json"
-YENILEME_GUN = 14
+YENILEME_GUN = 30
+EN_COK_DENEME = 2      # tutmayan sablon tipi en fazla bu kadar gun yeniden denenir (maliyet)
 GECME = 6.0            # hakem puani: bu ve ustu dogrudan kabul
 KABUL = 5.0            # iki turdan sonra, olcumu temiz en iyi surum en az bu puandaysa kabul
 
@@ -66,9 +67,31 @@ def _suresi_doldu(s):
 
 
 def _eksikler(s):
-    """Sistemde olmayan ve bugun henuz denenmemis sablon tipleri."""
+    """Sistemde olmayan sablon tipleri: gunde bir, toplamda EN_COK_DENEME kez yeniden denenir."""
     bugun = datetime.now().strftime("%Y-%m-%d")
-    return [t for t in TIPLER if t not in s.get("sablonlar", {}) and (s.get("denendi") or {}).get(t) != bugun]
+    d = s.get("denendi") or {}
+    out = []
+    for t in _tipler():
+        if t in s.get("sablonlar", {}):
+            continue
+        k = d.get(t)
+        k = {"gun": k, "kez": 1} if isinstance(k, str) else (k or {})
+        if k.get("gun") != bugun and k.get("kez", 0) < EN_COK_DENEME:
+            out.append(t)
+    return out
+
+
+def _tipler():
+    """Paketin urettigi formatlara gereken sablonlar (yalniz post ureten pakette carousel/Reels sablonu kurulmaz)."""
+    try:
+        from . import paketler
+        f = set(paketler.aktif().get("formatlar") or [])
+    except Exception:
+        f = set()
+    if not f or f >= {"post", "carousel", "reels"}:
+        return list(TIPLER)
+    return [t for t in TIPLER if t.startswith(("post", "story")) or (t.startswith(("slayt", "liste")) and "carousel" in f)
+            or (t == "son" and "reels" in f)]
 
 
 def eski_mi():
@@ -88,22 +111,38 @@ def _boy(metin, tip, alan):
     return int(taban * k)
 
 
+IZINLI = {"post": ("HEADLINE", "HOOK", "PRICE", "OLD_PRICE", "CTA", "WEB"),
+          "story": ("HEADLINE", "HOOK", "PRICE", "OLD_PRICE", "CTA", "WEB"),
+          "slayt": ("LINE", "NO"), "liste": ("POINT1", "POINT2", "POINT3", "PRICE", "CTA", "WEB"), "son": ("CTA", "WEB")}
+
+
+def izinli(tip):
+    return IZINLI.get(tip.split("_")[0], YER_TUTUCULAR)
+
+
+BOS = '<i data-bos></i>'
+TEMIZLE_JS = ("<script>document.querySelectorAll('[data-bos]').forEach(function(b){"
+              "var e=b.closest('[data-alan]')||b.closest('[data-metin]')||b.parentElement;"
+              "while(e&&!e.classList.contains('tuval')){var p=e.parentElement;e.remove();"
+              "if(!p||p.classList.contains('tuval')||p.textContent.trim()||p.querySelector('img'))break;e=p;}});</script>")
+
+
 def doldur(sablon, tip, metin, varliklar):
-    """Yer tutuculari doldurur; bos alanli ogeler (data-alan) sayfadaki kucuk betikle kaldirilir."""
-    h = sablon
+    """Yer tutuculari doldurur. Bu tuval tipinin almadigi ya da bos kalan her alanin ogesi (ve onunla bosalan
+    kapsayicisi: 'No.' rozeti, ikon cipi...) sayfadan kaldirilir; yarim etiket kalmaz."""
+    h, bos_var = sablon, False
     for k in YER_TUTUCULAR:
-        h = h.replace("{{" + k + "}}", uretken.html_kac(metin.get(k, "")))
+        deger = str(metin.get(k, "") or "").strip() if k in izinli(tip) else ""
+        if not deger and "{{" + k + "}}" in h:
+            bos_var = True
+        h = h.replace("{{" + k + "}}", uretken.html_kac(deger) if deger else BOS)
     for k, v in varliklar.items():
         h = h.replace("{{" + k + "}}", v)
     h = re.sub(r"\{\{[A-Z0-9_]+\}\}", "", h)
     stil = (f"--h:{_boy(metin.get('HEADLINE') or metin.get('HOOK'), tip, 'HEADLINE')}px;"
             f"--l:{_boy(metin.get('LINE'), tip, 'LINE')}px;")
     h = h.replace('class="tuval"', f'class="tuval" style="{stil}"', 1)
-    bos = [k for k in YER_TUTUCULAR if not str(metin.get(k, "")).strip()]
-    if bos:
-        h += ("<script>for(const a of " + json.dumps(bos) + ")document.querySelectorAll('[data-alan=\"'+a+'\"]')"
-              ".forEach(e=>e.remove());</script>")
-    return h
+    return h + (TEMIZLE_JS if bos_var else "")
 
 
 # ---------------------------------------------------------------- kurulum
@@ -116,8 +155,9 @@ def _istem(tip, dil, arastirma_ozeti):
         f"Palette {json.dumps(dil['palet'])}. Details: {dil.get('dokular', '')}.\n"
         f"{arastirma_ozeti}\n"
         f"This template: {rol}.\n"
-        "PLACEHOLDERS (write them literally, the system fills them): text {{HEADLINE}} {{LINE}} {{HOOK}} {{PRICE}} "
-        "{{OLD_PRICE}} {{CTA}} {{WEB}} {{NO}} {{POINT1}} {{POINT2}} {{POINT3}} (use only the ones this template needs); "
+        "PLACEHOLDERS (write them literally, the system fills them). This template may use ONLY these text "
+        f"placeholders: {' '.join('{{' + k + '}}' for k in izinli(tip))}. Use each at most once; write NO other words "
+        "of your own (no labels like 'No.', 'Step', 'Tip', no invented taglines, no icon-only chips); "
         "images <img src=\"{{FOTO1}}\"> (and {{FOTO2}} optionally) with object-fit:cover, logo <img src=\"{{LOGO_KOYU}}\"> "
         "or <img src=\"{{LOGO_ACIK}}\"> (height 56-90px unless the logo is the hero).\n"
         "TEXT SIZE: the system sets CSS variables on .tuval: use font-size:var(--h) for {{HEADLINE}}/{{HOOK}} and "
@@ -199,7 +239,7 @@ def kur(urun, gorsel_yollari, taslak, gunluk=print, zorla=False):
         dil["palet"] = modern_duzen.palet_onar(dil.get("palet"))
         s = {"tarih": datetime.now().isoformat(timespec="minutes"), "dil": dil, "sablonlar": {}, "kullanim": {},
              "denendi": {}}
-        hedefler = list(TIPLER)
+        hedefler = _tipler()
     else:
         eski, dil, hedefler = {}, s["dil"], _eksikler(s)
     if not hedefler:
@@ -261,13 +301,15 @@ def kur(urun, gorsel_yollari, taslak, gunluk=print, zorla=False):
         if tip in en_iyi and en_iyi[tip][0] >= KABUL:
             s["sablonlar"][tip] = {"html": en_iyi[tip][1], "puan": en_iyi[tip][0]}
         else:
-            s.setdefault("denendi", {})[tip] = bugun
+            onceki = (s.get("denendi") or {}).get(tip)
+            kez = 1 if not isinstance(onceki, dict) else onceki.get("kez", 0) + 1
+            s.setdefault("denendi", {})[tip] = {"gun": bugun, "kez": kez if not isinstance(onceki, str) else 2}
             if tip in eski:                                         # yenisi tutmadi: calisan eski surum kalsin
                 s["sablonlar"][tip] = eski[tip]
     s["model"] = llm.tasarim_modeli_adi()
     DOSYA.parent.mkdir(parents=True, exist_ok=True)
     DOSYA.write_text(json.dumps(s, ensure_ascii=False, indent=1), encoding="utf-8")
-    gunluk(f"Tasarim sistemi: {len(s['sablonlar'])}/{len(TIPLER)} sablon hazir ({', '.join(s['sablonlar']) or 'yok'}), "
+    gunluk(f"Tasarim sistemi: {len(s['sablonlar'])}/{len(_tipler())} sablon hazir ({', '.join(s['sablonlar']) or 'yok'}), "
            f"{int(time.time() - t0)} sn. Eksik tuvaller modern duzenlerle cizilir.")
     return s
 

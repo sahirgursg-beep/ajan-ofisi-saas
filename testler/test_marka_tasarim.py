@@ -77,7 +77,10 @@ def test_do_claude_yoksa_fal_openrouter_kullanilir(monkeypatch):
 def test_sablon_doldurma_bos_alanlari_kaldirir_ve_boyu_metne_gore_ayarlar():
     h = marka_tasarim.doldur(SABLON, "post_a", {"HEADLINE": "A <b>", "PRICE": "", "CTA": "Shop"}, {"FOTO1": "data:x"})
     assert "A &lt;b&gt;" in h and "{{" not in h and "--h:124px" in h
-    assert '"PRICE"' in h.split("<script>")[1]                    # bos fiyat ogesi sayfada kaldirilir
+    assert h.count("<i data-bos>") == 1 and "<script>" in h       # bos fiyat ogesi sayfada kaldirilir
+    kart = marka_tasarim.doldur("<div class=\"tuval\"><b data-metin>No. {{NO}}</b><h1>{{HEADLINE}}</h1></div>", "post_c",
+                                {"HEADLINE": "Hi", "NO": "3"}, {})
+    assert "No. 3" not in kart and "data-bos" in kart             # post NO almaz: rozet kaldirilir
     uzun = marka_tasarim.doldur(SABLON, "post_a", {"HEADLINE": "x" * 58}, {})
     assert "--h:76px" in uzun
 
@@ -153,3 +156,23 @@ def test_sistem_kurulamasa_da_set_modern_duzenlerle_tam_cizilir_ve_her_uretimde_
     assert adlar == ["post_1080x1350.jpg", "story_1080x1920.jpg", "carousel_1.jpg", "carousel_2.jpg", "carousel_3.jpg",
                      "carousel_4.jpg", "carousel_5.jpg"] and not r["sistem"]
     assert marka_tasarim.son_kart(fotolar, tmp_path / "son.jpg", gunluk=lambda m: None)
+
+
+@TARAYICI
+def test_bos_rozet_ve_ikon_cipi_goruntuden_kalkar(tmp_path):
+    from ofis import tasarim
+    sab = ("<style>.tuval{width:1080px;height:1350px;position:relative;background:#111;color:#fff;font-size:60px}</style>"
+           "<div class=\"tuval\"><div id=\"r\" data-metin>No. {{NO}}</div><div id=\"c\"><span><svg width=\"20\" height=\"20\"></svg>"
+           "<span data-metin>{{POINT1}}</span></span></div><h1 data-metin>{{HEADLINE}}</h1></div>")
+    dil = uretken._varsayilan_dil()
+    tuval = {"ad": "post", "boyut": (1080, 1350), "rol": "", "metin": {"headline": "Hello"}}
+    f = tmp_path / "s.html"
+    f.write_text(uretken._sayfa(marka_tasarim.doldur(sab, "post_c", {"HEADLINE": "Hello"}, {}), tuval, dil, {}), encoding="utf-8")
+    sayfa = tasarim._tarayici_al().new_page()
+    try:
+        sayfa.goto(f.as_uri())
+        assert sayfa.evaluate("[!!document.getElementById('r'), !!document.getElementById('c'), document.querySelector('h1').innerText]") \
+            == [False, False, "Hello"]
+    finally:
+        sayfa.close()
+        tasarim.kapat()
