@@ -465,7 +465,7 @@ def test_buyuk_harf_cta_duzeltilir(monkeypatch):
     p["marka"]["cta"] = "VISIT TO OUR WEBSITE"
     yol.write_text(_j.dumps(p), encoding="utf-8")
     try:
-        assert a.yukle(a.MUSTERI)["marka"]["cta"] == "Visit to our website"
+        assert a.yukle(a.MUSTERI)["marka"]["cta"] == "Visit our website"   # buyuk harf + dilbilgisi duzeltmesi
     finally:
         yol.write_text(eski, encoding="utf-8")
 
