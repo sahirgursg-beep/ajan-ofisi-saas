@@ -37,6 +37,14 @@ STILLER = {
     "bolunmus": "split screen: photo on one half, solid color with type on the other, a thin divider or overlapping badge",
     "minimal_lux": "lots of negative space, one small elegant photo, refined sans headline, tiny caps details - premium and calm",
 }
+KART_TIPLERI = (
+    "big statement: the line huge across the slide, small photo crop as accent",
+    "photo-led: full-bleed or large photo with the line on a bold sticker or pill",
+    "number/step: a giant step number or icon-like shape plus the line",
+    "split: half photo, half solid color with the line",
+    "quote/notes card: the line inside a card that looks like a note or chat bubble over a blurred photo",
+    "detail zoom: a tight crop of the photo in a rounded window with the line beside it",
+)
 YASAK = ("newspaper columns", "body text paragraphs on the image", "thin hairline rules everywhere",
          "gold frames", "centered serif headline over a gradient as the only idea", "clip-art", "emoji walls")
 
@@ -107,17 +115,21 @@ def tuvaller(urun, taslak, tur, foto_sayisi):
                       "rol": "Instagram story (9:16). Keep top 220px and bottom 340px free of text (app UI).",
                       "metin": {**temel, "hook": taslak.get("hook") or ""}})
     if tur in (None, "carousel"):
-        satir = [str(s).strip() for s in (taslak.get("carousel_lines") or []) if str(s).strip()][:3]
+        satir = [str(s).strip() for s in (taslak.get("carousel_lines") or []) if str(s).strip()][:4]
         madde = [str(s).strip() for s in (taslak.get("carousel_points") or []) if str(s).strip()][:3] \
             or musteri.carousel_maddeleri()
-        toplam = 2 + max(1, len(satir))
+        # Her kart ayni gorsel dilde ama FARKLI bir duzende: carousel'i kaydirtan sey cesitlilik
+        tipler = random.sample(KART_TIPLERI, len(KART_TIPLERI))
         for i, s in enumerate(satir or [taslak.get("headline") or urun["ad"]], 2):
+            tip = tipler[(i - 2) % len(tipler)]
             liste.append({"ad": f"carousel_{i}", "boyut": (1080, 1350), "foto": min(i - 1, foto_sayisi),
-                          "rol": f"Carousel slide {i}/{toplam}: one idea per slide, same visual language as slide 1, "
-                                 "show the page counter.", "metin": {"line": s, "counter": f"{i}/{toplam}"}})
-        liste.append({"ad": f"carousel_{toplam}", "boyut": (1080, 1350),
-                      "rol": f"Last carousel slide {toplam}/{toplam}: the takeaway and call to action.",
-                      "metin": {"points": madde, "price": fiyat, "cta": cta, "counter": f"{toplam}/{toplam}"}})
+                          "rol": f"Carousel slide {i} (swipe content). Layout for THIS slide: {tip}. Same palette and "
+                                 "fonts as the cover but a different composition from the other slides. No page counter "
+                                 "(Instagram shows its own dots).", "metin": {"line": s}})
+        son_no = 2 + len(satir or [1])
+        liste.append({"ad": f"carousel_{son_no}", "boyut": (1080, 1350), "son": True,
+                      "rol": "Last carousel slide: the takeaway and the call to action, as a checklist or stacked "
+                             "cards - make people save the post.", "metin": {"points": madde, "price": fiyat, "cta": cta}})
     return liste
 
 
@@ -133,6 +145,8 @@ def _istem(dil, tuval, foto_bilgi, logo_var, ornek=None):
         f"Photos available: {foto_bilgi}. Use them as <img src=\"{{{{FOTO1}}}}\"> etc. with object-fit:cover and "
         "a deliberate object-position. The photo must stay clearly visible (at least 40% of the canvas) unless the "
         "style is pure typography.\n"
+        + (f"Main photo of this slide: FOTO{tuval['foto']} (so the slides do not repeat the same image).\n"
+           if tuval.get("foto") else "")
         + ("Logo: <img src=\"{{LOGO_KOYU}}\"> on light areas or <img src=\"{{LOGO_ACIK}}\"> on dark areas, "
            "height 56-80px, in a corner.\n" if logo_var else "No logo.\n")
         + "Fonts: headline font-family: var(--bf); body font-family: var(--gf). Headline weight var(--bw).\n"
@@ -149,7 +163,8 @@ def _istem(dil, tuval, foto_bilgi, logo_var, ornek=None):
         "grid/flex children get min-width:0 so long words never push the layout; prices on one line "
         "(white-space:nowrap) and sized to fit.\n"
         "- No <script>, no external URLs, no web fonts other than the variables, no emoji.\n"
-        + (f"Slide 1 of this carousel, for visual consistency:\n{ornek[:3500]}\n" if ornek else "")
+        + (f"The cover (slide 1) uses this CSS - reuse its colors, fonts, radius and details, not its layout:\n"
+           f"{ornek[:3000]}\n" if ornek else "")
         + "Return ONLY the HTML: one <style> block followed by the <div class=\"tuval\">...</div>."
     )
 
@@ -283,7 +298,8 @@ def tasarla(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print):
     with ThreadPoolExecutor(max_workers=4) as h:           # once ana post (diger tuvaller onun dilini izler)
         ana = h.submit(yaz, liste[0]).result()
         taslaklar[liste[0]["ad"]] = ana
-        isler = {t["ad"]: h.submit(yaz, t, "", ana if t["ad"].startswith("carousel") else None) for t in liste[1:]}
+        stil_ornek = (ana or "")[:(ana or "").find("</style>") + 8] if ana and "</style>" in ana else (ana or "")[:2500]
+        isler = {t["ad"]: h.submit(yaz, t, "", stil_ornek if t["ad"].startswith("carousel") else None) for t in liste[1:]}
         taslaklar.update({k: f.result() for k, f in isler.items()})
     for tuval in liste:
         hedef = klasor / (f"{tuval['ad']}_{tuval['boyut'][0]}x{tuval['boyut'][1]}.jpg"
@@ -318,13 +334,22 @@ def tasarla(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print):
         else:
             Path(hedef).unlink(missing_ok=True)
     if tur in (None, "carousel"):
-        kartlar = [t["ad"] for t in liste if t["ad"].startswith("carousel_")]
-        if all((klasor / f"{k}.jpg").exists() for k in kartlar):
+        # Tutan kartlar sirayla numaralanir (kartta sayac yok); hic kart tutmadiysa eski carousel devralir
+        kartlar = [t for t in liste if t["ad"].startswith("carousel_")]
+        tutan = [klasor / f"{t['ad']}.jpg" for t in kartlar if (klasor / f"{t['ad']}.jpg").exists()]
+        if tutan:
             import shutil
+            gecici = []
+            for i, y in enumerate(tutan, 2):
+                g = klasor / f"_kart_{i}.jpg"
+                y.rename(g)
+                gecici.append(g)
+            for i, g in enumerate(gecici, 2):
+                g.rename(klasor / f"carousel_{i}.jpg")
             shutil.copyfile(klasor / "post_1080x1350.jpg", klasor / "carousel_1.jpg")
-        else:                                               # sira bozulmasin: kartlar toptan eski yola
-            for k in kartlar:
-                (klasor / f"{k}.jpg").unlink(missing_ok=True)
+            sonuc["dosyalar"] = [d for d in sonuc["dosyalar"] if not Path(d).name.startswith("carousel_")] + \
+                [klasor / f"carousel_{i}.jpg" for i in range(1, len(tutan) + 2)]
+        else:
             sonuc["carousel_eksik"] = True
     _gecmise_yaz({"tarih": datetime.now().strftime("%Y-%m-%d %H:%M"), "stil": dil["stil"], "palet": dil["palet"],
                   "font": dil["font"], "puanlar": sonuc["puanlar"]})

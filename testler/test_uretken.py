@@ -55,3 +55,34 @@ def test_temizlik_dis_adres_ve_script_birakmaz():
                          '<script>alert(1)</script><div class="tuval" onclick="x()"><img src="https://evil/p.jpg">'
                          '<img src="{{FOTO1}}"></div>```')
     assert "script" not in h and "evil" not in h and "onclick" not in h and "@import" not in h and "{{FOTO1}}" in h
+
+
+def test_carousel_kartlari_farkli_duzenlerde_tutmayan_kart_atilir_sira_bozulmaz(tmp_path, monkeypatch):
+    from PIL import Image
+    fotolar = []
+    for i in range(3):
+        f = tmp_path / f"f{i}.jpg"
+        Image.new("RGB", (900, 1200), (40 * i, 120, 90)).save(f)
+        fotolar.append(str(f))
+    urun = fiyat.hazirla({"ad": "Sofa", "fiyat": 900, "para_birimi": "USD", "gorseller": []})
+    roller = []
+
+    def sor(sistem, mesaj, json_mod=False, sicaklik=0.7):
+        if json_mod:
+            return {"stil": "renk_blok", "fikir": "x", "font": "cagdas", "palet": {}}
+        rol = mesaj.split("Role: ")[1].split("\n")[0]
+        roller.append(rol)
+        if "Line two" in mesaj:                                     # bu kart hic duzelmez
+            return KOTU.replace("HEAD", "Line two")
+        metin = "Line one" if "Line one" in mesaj else "Line three" if "Line three" in mesaj else "Comfort"
+        return IYI.replace("HEAD", metin).replace("PRICE", urun["fiyat_metni"])
+    monkeypatch.setattr(llm, "hazir", lambda: True)
+    monkeypatch.setattr(llm, "sor", sor)
+    monkeypatch.setattr(llm, "gor", lambda *a, **k: {"score": 8})
+    r = uretken.tasarla(urun, fotolar, {"headline": "Comfort", "carousel_lines": ["Line one", "Line two", "Line three"]},
+                        tmp_path, "carousel")
+    adlar = sorted(p.name for p in tmp_path.glob("carousel_*.jpg"))
+    assert adlar == ["carousel_1.jpg", "carousel_2.jpg", "carousel_3.jpg", "carousel_4.jpg"]   # 2. satir atildi, bosluk yok
+    assert not r.get("carousel_eksik")
+    duzenler = {x.split("Layout for THIS slide: ")[1].split(".")[0] for x in roller if "Layout for THIS slide" in x}
+    assert len(duzenler) == 3                                        # her kart farkli duzen
