@@ -20,6 +20,7 @@ from .ayarlar import AYAR, VERI
 DOSYA = VERI / "tasarim_sistemi.json"
 YENILEME_GUN = 30
 EN_COK_DENEME = 2      # tutmayan sablon tipi en fazla bu kadar gun yeniden denenir (maliyet)
+SISTEM_SURUM = 2       # kurulum mantigi degisince artar: eski surumde bos kalan sistem yeniden kurulur
 GECME = 6.0            # hakem puani: bu ve ustu dogrudan kabul
 KABUL = 5.0            # iki turdan sonra, olcumu temiz en iyi surum en az bu puandaysa kabul
 
@@ -60,6 +61,8 @@ def sistem():
 
 
 def _suresi_doldu(s):
+    if s.get("surum") != SISTEM_SURUM and len(s.get("sablonlar") or {}) < 3:
+        return True                 # onceki surumun hatasiyla (or. logosuz isletme) bos kalmis sistem
     try:
         return datetime.fromisoformat(s["tarih"]) < datetime.now() - timedelta(days=YENILEME_GUN)
     except (KeyError, ValueError):
@@ -146,7 +149,7 @@ def doldur(sablon, tip, metin, varliklar):
 
 
 # ---------------------------------------------------------------- kurulum
-def _istem(tip, dil, arastirma_ozeti):
+def _istem(tip, dil, arastirma_ozeti, logo_var=True):
     (W, H), rol = TIPLER[tip]
     return (
         f"Design ONE reusable {W}x{H}px template for the brand's social media design system.\n"
@@ -158,9 +161,11 @@ def _istem(tip, dil, arastirma_ozeti):
         "PLACEHOLDERS (write them literally, the system fills them). This template may use ONLY these text "
         f"placeholders: {' '.join('{{' + k + '}}' for k in izinli(tip))}. Use each at most once; write NO other words "
         "of your own (no labels like 'No.', 'Step', 'Tip', no invented taglines, no icon-only chips); "
-        "images <img src=\"{{FOTO1}}\"> (and {{FOTO2}} optionally) with object-fit:cover, logo <img src=\"{{LOGO_KOYU}}\"> "
-        "or <img src=\"{{LOGO_ACIK}}\"> (height 56-90px unless the logo is the hero).\n"
-        "TEXT SIZE: the system sets CSS variables on .tuval: use font-size:var(--h) for {{HEADLINE}}/{{HOOK}} and "
+        "images <img src=\"{{FOTO1}}\"> (and {{FOTO2}} optionally) with object-fit:cover"
+        + (", logo <img src=\"{{LOGO_KOYU}}\"> or <img src=\"{{LOGO_ACIK}}\"> (height 56-90px unless the logo is the hero).\n"
+           if logo_var else ". This business has NO logo file: do not use any logo image; "
+           f"where a brand mark is needed write the name '{musteri.ad()}' as text.\n")
+        + "TEXT SIZE: the system sets CSS variables on .tuval: use font-size:var(--h) for {{HEADLINE}}/{{HOOK}} and "
         "font-size:var(--l) for {{LINE}}; they are sized to the text length. Other texts 26-44px.\n"
         "Optional parts: give the element that holds {{PRICE}} data-alan=\"PRICE\", {{OLD_PRICE}} data-alan=\"OLD_PRICE\", "
         "{{CTA}} data-alan=\"CTA\", {{WEB}} data-alan=\"WEB\" - they are removed when the business has no value.\n"
@@ -238,7 +243,7 @@ def kur(urun, gorsel_yollari, taslak, gunluk=print, zorla=False):
         dil = uretken.dil_sec(urun, taslak, None) or uretken._varsayilan_dil()
         dil["palet"] = modern_duzen.palet_onar(dil.get("palet"))
         s = {"tarih": datetime.now().isoformat(timespec="minutes"), "dil": dil, "sablonlar": {}, "kullanim": {},
-             "denendi": {}}
+             "denendi": {}, "surum": SISTEM_SURUM}
         hedefler = _tipler()
     else:
         eski, dil, hedefler = {}, s["dil"], _eksikler(s)
@@ -251,10 +256,11 @@ def kur(urun, gorsel_yollari, taslak, gunluk=print, zorla=False):
     klasor = VERI / "_sistem_tmp"
     klasor.mkdir(parents=True, exist_ok=True)
     ozet, orn = arastirma.istem_ozeti(), ornekler(urun, taslak)
+    logo_var = bool(varliklar.get("LOGO_KOYU") or varliklar.get("LOGO_ACIK"))
 
     def yaz(tip, ek=""):
         try:
-            return uretken._temizle(llm.tasarim_sor(uretken.SISTEM, _istem(tip, dil, ozet) + ek, sicaklik=0.8))
+            return uretken._temizle(llm.tasarim_sor(uretken.SISTEM, _istem(tip, dil, ozet, logo_var) + ek, sicaklik=0.8))
         except Exception as e:
             gunluk(f"[TASARIM] sistem {tip}: yazilamadi ({type(e).__name__})")
             return None
@@ -474,7 +480,8 @@ def son_kart(gorsel_yollari, hedef, gunluk=print):
     v = _varliklar(gorsel_yollari)
     m = AYAR["marka"]
     metin = {"CTA": m.get("cta") or "", "WEB": m.get("web") or "", "MARKA": musteri.ad()}
-    if (s.get("sablonlar") or {}).get("son"):
+    logo_var = bool(v.get("LOGO_KOYU") or v.get("LOGO_ACIK"))
+    if (s.get("sablonlar") or {}).get("son") and (logo_var or "LOGO_" not in s["sablonlar"]["son"]["html"]):
         try:
             ok, olc = _ciz(s, "son", metin, v, hedef, "reels_son")
         except Exception:

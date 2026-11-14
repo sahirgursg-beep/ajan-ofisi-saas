@@ -123,7 +123,7 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
-SURUM = "2026-11-14.ornek-post"
+SURUM = "2026-11-14.logosuz-duzeltme"
 
 
 async def saglik(request):

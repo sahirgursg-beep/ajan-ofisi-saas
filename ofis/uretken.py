@@ -207,6 +207,8 @@ def _sayfa(govde, tuval, dil, varliklar):
     for k, v in varliklar.items():
         govde = govde.replace("{{" + k + "}}", v)
     govde = re.sub(r"\{\{[A-Z0-9_]+\}\}", "", govde)
+    # Logosu/fotografi olmayan isletme: kaynagi bos kalan <img> kaldirilir (bozuk gorsel sayilip tasarim elenmesin)
+    govde = re.sub(r"<img\b[^>]*\bsrc=([\"'])\1[^>]*>", "", govde, flags=re.I)
     from . import dil as dil_
     css = marka.fontlar_css()
     return dil_.html_isareti(

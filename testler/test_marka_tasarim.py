@@ -204,3 +204,13 @@ def test_son_kontrol_kusurlu_kapagi_reddeder(monkeypatch, tmp_path):
     assert marka_tasarim._son_kontrol(tmp_path / "x.jpg") == "empty badge"
     monkeypatch.setattr(llm, "gor", lambda *a, **k: {"score": 8})
     assert marka_tasarim._son_kontrol(tmp_path / "x.jpg") is None
+
+
+def test_logosuz_isletmede_bos_img_kaldirilir_ve_sistem_yeniden_kurulur(monkeypatch, tmp_path):
+    dil = uretken._varsayilan_dil()
+    h = uretken._sayfa('<div class="tuval"><img class="logo" src="{{LOGO_KOYU}}"><img src="{{FOTO1}}"><b>x</b></div>',
+                       {"ad": "post", "boyut": (1080, 1350), "metin": {}}, dil, {"LOGO_KOYU": "", "FOTO1": "data:image/png;base64,AA"})
+    assert 'class="logo"' not in h and "data:image/png" in h
+    assert "NO logo" in marka_tasarim._istem("post_a", dict(dil, dokular=""), "", logo_var=False)
+    assert marka_tasarim._suresi_doldu({"tarih": "2999-01-01T00:00", "sablonlar": {}})              # eski surum, bos
+    assert not marka_tasarim._suresi_doldu({"tarih": "2999-01-01T00:00", "sablonlar": {"a": 1, "b": 1, "c": 1}})
