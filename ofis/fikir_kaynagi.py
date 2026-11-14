@@ -111,7 +111,7 @@ def _gorseller(f, gunluk):
             y = gorsel_kaynak.yz_uret(
                 f"{f.get('ai_image_prompt') or f['title']}. Style: {p.get('gorsel', '')}. "
                 "Photorealistic, professional social media photo, vertical composition, no text, no watermark, "
-                "no logos, no recognisable faces.")
+                "no logos, no recognisable faces, no screens or monitors showing text or UI, no close-up hands.")
             if y:
                 yollar.insert(0, y)
                 kaynaklar.insert(0, {"kaynak": "yapay_zeka"})

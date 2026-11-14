@@ -162,6 +162,9 @@ def _istem(dil, tuval, foto_bilgi, logo_var, ornek=None):
         "(about 1080px / (characters per line x 0.55)); one consistent corner radius; align everything to a clear grid; "
         "grid/flex children get min-width:0 so long words never push the layout; prices on one line "
         "(white-space:nowrap) and sized to fit.\n"
+        "AVOID what reviewers reject: more than ONE call-to-action element; invented UI/screens with tiny fake text "
+        "(use real large text only); boxy split-card layouts that read like a dated template; hyphenated or awkwardly "
+        "broken headlines (use text-wrap:balance, no hyphens); cropping through a person's face.\n"
         "- No <script>, no external URLs, no web fonts other than the variables, no emoji.\n"
         + (f"The cover (slide 1) uses this CSS - reuse its colors, fonts, radius and details, not its layout:\n"
            f"{ornek[:3000]}\n" if ornek else "")
@@ -272,7 +275,7 @@ def _gorsel_puan(yol, tuval):
 
 
 # ---------------------------------------------------------------- 3. hepsi
-def tasarla(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print):
+def tasarla(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print, sablon_ciz=None):
     """Uretken tasarim seti. -> {"dil": ..., "dosyalar": [..], "puanlar": {..}} ya da None (eski sablona dus)."""
     if not llm.hazir() or AYAR.get("uretken_tasarim") is False:
         return None
@@ -337,12 +340,27 @@ def tasarla(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print):
                                          + "\n\nYour previous version had these problems, fix ALL of them and keep "
                                            "the idea:\n- " + "\n- ".join(sorunlar or ["make it more modern"])
                                          + "\n\nPrevious version:\n" + govde[:6000], json_mod=False, sicaklik=0.6)) or govde
-        if not iyi and en_iyi and (en_iyi[2] is None or en_iyi[2] >= 6):
-            _ciz_ve_olc(en_iyi[1], tuval, hedef)            # sert sorunu olmayan en iyi deneme yayinlanir
+        dongude_iyi = iyi
+        esik = 6 if tuval["ad"] == "post" else max(5, (sonuc["puanlar"].get("post") or 6) - 1)
+        if not iyi and en_iyi and (en_iyi[2] is None or en_iyi[2] >= esik):
             iyi = True
+        if not iyi and en_iyi and tuval["ad"] == "post" and sablon_ciz:
+            # Esik altinda: ayni hakemle eski sablonu da puanla, hangisi iyiyse o (yeni tasarim daha kotu degilse yeni)
+            try:
+                yedek = klasor / "_sablon_aday.jpg"
+                sablon_ciz(yedek)
+                sp, _ = _gorsel_puan(yedek, tuval)
+                yedek.unlink(missing_ok=True)
+            except Exception as e:
+                sp = None
+                gunluk(f"sablon karsilastirmasi yapilamadi: {e}")
+            gunluk(f"post: yeni tasarim {en_iyi[2]} / eski sablon {sp}")
+            if sp is None or (en_iyi[2] or 0) >= sp:
+                iyi = True
+        if iyi and not dongude_iyi:
+            _ciz_ve_olc(en_iyi[1], tuval, hedef)            # sert sorunu olmayan en iyi deneme yayinlanir
         if iyi:
             sonuc["puanlar"][tuval["ad"]] = (en_iyi or (None, None, None))[2]
-        if iyi:
             sonuc["dosyalar"].append(hedef)
         elif tuval["ad"] == "post":
             return None                                     # ana tasarim tutmadiysa tum set eski yola

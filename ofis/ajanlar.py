@@ -607,8 +607,13 @@ class Tasarimci(Ajan):
         try:
             from . import uretken
             self.calis("Bugunun gorsel dilini seciyorum ve tasarimi sifirdan ciziyorum...")
+            def sablon_ciz(hedef):
+                from . import tasarim
+                tasarim.ciz("dinamik.html" if tarif else SanatYonetmeni.YONLER.get(yon, SanatYonetmeni.YONLER["B"])[0],
+                            tasarim.veri_hazirla(urun, gorsel_yollari, taslak, tarif), hedef)
             u = uretken.tasarla(urun, gorsel_yollari, taslak, klasor, tur,
-                                lambda m: (print(f"[TASARIM] {m}", flush=True), pano.durum(self.ad, "calisiyor", m)))
+                                lambda m: (print(f"[TASARIM] {m}", flush=True), pano.durum(self.ad, "calisiyor", m)),
+                                sablon_ciz=sablon_ciz)
         except Exception as e:
             u = None
             self.soyle("Yonetici", f"Uretken tasarim calismadi ({type(e).__name__}: {str(e)[:120]}), sablonla devam.", "uyari")

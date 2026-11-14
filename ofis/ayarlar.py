@@ -63,6 +63,9 @@ def yukle(musteri=None):
     cta = str((ayar.get("marka") or {}).get("cta") or "")
     if cta.isupper() and len(cta) > 4:
         ayar["marka"]["cta"] = cta[:1] + cta[1:].lower()
+    # Sik gorulen hata: "Visit to our website" -> "Visit our website" (kalite kontrol ve hakem her seferinde isaretliyor)
+    if re.search(r"(?i)\bvisit to (our|the)\b", str(ayar["marka"].get("cta") or "")):
+        ayar["marka"]["cta"] = re.sub(r"(?i)\b(visit) to (our|the)\b", r"\1 \2", ayar["marka"]["cta"])
     # Eski anahtarla uyum: usd_ngn_kur -> doviz_kurlari
     if "usd_ngn_kur" in ayar and "USD" not in (ayar.get("doviz_kurlari") or {}):
         ayar.setdefault("doviz_kurlari", {})["USD"] = ayar["usd_ngn_kur"]

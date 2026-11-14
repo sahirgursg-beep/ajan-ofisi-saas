@@ -86,3 +86,20 @@ def test_carousel_kartlari_farkli_duzenlerde_tutmayan_kart_atilir_sira_bozulmaz(
     assert not r.get("carousel_eksik")
     duzenler = {x.split("Layout for THIS slide: ")[1].split(".")[0] for x in roller if "Layout for THIS slide" in x}
     assert len(duzenler) == 3                                        # her kart farkli duzen
+
+
+def test_esik_altinda_ayni_hakemle_eski_sablonla_karsilastirilir(tmp_path, monkeypatch):
+    from PIL import Image
+    urun = fiyat.hazirla({"ad": "Lamp", "fiyat": 50, "para_birimi": "USD", "gorseller": []})
+    monkeypatch.setattr(llm, "hazir", lambda: True)
+    monkeypatch.setattr(llm, "sor", lambda s, m, json_mod=False, sicaklik=0.7: {"stil": "x", "font": "cagdas"} if json_mod
+                        else IYI.replace("HEAD", "Light").replace("PRICE", urun["fiyat_metni"]).replace('<img src="{{FOTO1}}">', ""))
+    puanlar = iter([5, 5, 5, 3])                                      # 3 deneme yeni tasarim, sonra eski sablon
+    monkeypatch.setattr(llm, "gor", lambda *a, **k: {"score": next(puanlar)})
+    r = uretken.tasarla(urun, [], {"headline": "Light"}, tmp_path, "reels",
+                        sablon_ciz=lambda h: Image.new("RGB", (1080, 1350)).save(h))
+    assert r and r["puanlar"]["post"] == 5 and (tmp_path / "post_1080x1350.jpg").exists()
+    puanlar = iter([5, 5, 5, 8])                                      # eski sablon daha iyiyse eski yol
+    monkeypatch.setattr(llm, "gor", lambda *a, **k: {"score": next(puanlar)})
+    assert uretken.tasarla(urun, [], {"headline": "Light"}, tmp_path, "reels",
+                           sablon_ciz=lambda h: Image.new("RGB", (1080, 1350)).save(h)) is None
