@@ -123,7 +123,7 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
-SURUM = "2026-11-14.gorsel-hakki"
+SURUM = "2026-11-14.tek-soru-kayit"
 
 
 async def saglik(request):
@@ -206,8 +206,17 @@ async def logo_al(request):
 async def site_kontrol(request):
     kullanici(request)                      # yalnizca giris yapmis kullanicilar (acik vekil olmasin)
     g = await govde(request)
-    from ofis import entegrasyon
-    return JSONResponse(await run_in_threadpool(entegrasyon.site_bilgisi, str(g.get("site") or "")[:200]))
+    from ofis import entegrasyon, sektor_isleri
+    j = await run_in_threadpool(entegrasyon.site_bilgisi, str(g.get("site") or "")[:200])
+    if j.get("tamam"):          # kayit ekranini onceden doldurmak icin: ad, sektor tahmini (musteri yalnizca duzeltir)
+        import re as _re
+        j["isletme_adi"] = _re.split(r"\s+[|\-–—:•·]\s+", j.get("baslik") or "")[0].strip()[:60]
+        try:
+            sek = sektor_isleri.tahmin(f"{j.get('baslik', '')}. {j.get('aciklama', '')}"[:300])
+            j["sektor"] = sek if sek and sek != "genel" else ""
+        except Exception:
+            j["sektor"] = ""
+    return JSONResponse(j)
 
 
 # ---------------------------------------------------------------- yonetim paneli (platform sahibi)

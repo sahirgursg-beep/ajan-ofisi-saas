@@ -148,8 +148,13 @@ def _gorseller(f, gunluk):
 def fikir_urunleri(adet=3, gunluk=print):
     """Uretim hattina 'urun' gibi verilecek fikir icerikleri (gorselleri hazir)."""
     out = []
-    for f in _fikir_listesi(adet + 2):
-        yollar, kaynaklar = _gorseller(f, gunluk)
+    fikirler = _fikir_listesi(adet + 2)
+    # Ilk fikirlerin gorselleri ayni anda toplanir (ag + gorme modeli beklemesi); yedekler gerekirse sirayla
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=3) as h:
+        hazir = dict(zip(range(adet), h.map(lambda f: _gorseller(f, gunluk), fikirler[:adet])))
+    for i, f in enumerate(fikirler):
+        yollar, kaynaklar = hazir[i] if i in hazir else _gorseller(f, gunluk)
         if not yollar:
             continue
         out.append({"ad": f["title"][:80], "url": _adres(f["title"]), "fiyat": None, "eski_fiyat": None,

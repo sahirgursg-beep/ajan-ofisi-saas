@@ -117,7 +117,8 @@ def site_bilgisi(site, oturum=None):
             "baslik": (meta("og:site_name") or (soup.title.string if soup.title else "") or "").strip()[:80],
             "aciklama": (meta("og:description", "description") or "").strip()[:240],
             "gorsel": urljoin(site, meta("og:image")) if meta("og:image") else "",
-            "ikon": urljoin(site, ikon["href"]) if ikon and ikon.get("href") else ""}
+            "ikon": urljoin(site, ikon["href"]) if ikon and ikon.get("href") else "",
+            "dil": str((soup.html.get("lang") if soup.html else "") or "")[:2].lower()}
 
 
 # ---------------------------------------------------------------- shopify

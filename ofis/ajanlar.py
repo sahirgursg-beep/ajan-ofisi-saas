@@ -203,7 +203,14 @@ class SanatYonetmeni(Ajan):
                 foto_vurgu = (k, v)
             except Exception:
                 pass
-        cevap = self.dusun(sanat.llm_istemi(urun, bglm, sanat.son_tarifler(), ek_kisit), json_mod=True, sicaklik=0.9)
+        sistem_var = False
+        try:        # Markanin tasarim sistemi varken gorsel dili o belirler: burada ayri bir yapay zeka tarifi gereksiz
+            from . import marka_tasarim
+            sistem_var = bool(marka_tasarim.sistem().get("sablonlar")) and not ek_kisit
+        except Exception:
+            pass
+        cevap = None if sistem_var else \
+            self.dusun(sanat.llm_istemi(urun, bglm, sanat.son_tarifler(), ek_kisit), json_mod=True, sicaklik=0.9)
         if cevap and isinstance(cevap, dict) and cevap.get("duzen"):
             tarif = sanat.dogrula(cevap, urun, foto_vurgu)
         else:
@@ -211,8 +218,11 @@ class SanatYonetmeni(Ajan):
         tarif["neden"] = str(tarif.get("neden", ""))[:200]
         sanat.kaydet(tarif)
         olay = ", ".join(e["ad"] for e in bglm["etkinlikler"]) or "ozel gun yok"
-        self.soyle("Tasarimci", f"Yeni sablon: '{tarif['isim']}' — {tarif['duzen']} duzen, {tarif['fontlar']} fontlar, "
-                   f"{tarif['motif']} motif, {tarif['fiyat_stili']} fiyat. ({olay}) {tarif['neden']}")
+        if sistem_var:
+            self.soyle("Tasarimci", f"Markanin tasarim sistemiyle ilerliyoruz. ({olay})")
+        else:
+            self.soyle("Tasarimci", f"Yeni sablon: '{tarif['isim']}' — {tarif['duzen']} duzen, {tarif['fontlar']} fontlar, "
+                       f"{tarif['motif']} motif, {tarif['fiyat_stili']} fiyat. ({olay}) {tarif['neden']}")
         satis = tarif["fiyat_stili"] in ("rozet", "serit") or bool(tarif["banner"])
         self.soyle("MetinYazari", "Satis odakli, kisa ve enerjik yaz." if satis else "Sakin, zarif ve premium bir dil kullan.")
         self.bitir()

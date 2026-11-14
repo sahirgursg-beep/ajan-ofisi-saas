@@ -419,6 +419,9 @@ async function anaCiz() {
   const kartlar = [];
   if (!bagli) kartlar.push(`<div class="bekleyen"><div class="yayil"><b>Connect Instagram & Facebook</b><div class="soluk">One time, about a minute. Without it we can prepare posts but not publish them.</div></div><button class="ana kucuk" data-git="isletme">Connect</button></div>`);
   if (!MUSTERI.logo_yuklendi) kartlar.push(`<div class="bekleyen"><div class="yayil"><b>Add your logo</b><div class="soluk">We put it on your designs and take your brand colours from it.</div></div><button class="kucuk" data-logo>Upload logo</button></div>`);
+  try { if (!(await api(`/api/musteri/${MUSTERI.id}/yuklemeler`)).dosyalar?.length)
+    kartlar.push(`<div class="bekleyen" style="background:#fff"><div class="yayil"><b>Add a few of your own photos</b><div class="soluk">Five photos of your products or your place are enough for a month. Posts with your own photos look best.</div></div><button class="kucuk" data-foto>Add photos</button></div>`);
+  } catch {}
   const sorunlu = ICERIK.filter((x) => ["hata", "kismen", "kacirildi", "kaldirma_hatasi"].includes((x.yayin || {}).durum));
   if (sorunlu.length) kartlar.push(`<div class="bekleyen kotu"><div class="yayil"><b>${DIL === "en" ? `${sorunlu.length} post${sorunlu.length > 1 ? "s" : ""} could not go out` : T("{n} could not go out", { n: sorunlu.length })}</b><div class="soluk">${T("Open it and press Try again.")}</div></div><button class="kucuk" data-ac="${esc(sorunlu[0].klasor)}">Open</button></div>`);
   // Kalite kontrolun isaretledigi (otomatik gitmeyecek) gonderiler: tek tusla bakilir
@@ -432,6 +435,7 @@ async function anaCiz() {
   $("#bekleyenler").innerHTML = kartlar.join("");
   $$("[data-git]").forEach((b) => (b.onclick = () => sekme(b.dataset.git)));
   $$("[data-logo]").forEach((b) => (b.onclick = () => $("#logoSec").click()));
+  $$("[data-foto]").forEach((b) => (b.onclick = () => $("#dosyaSec").click()));
   $$("#bekleyenler [data-ac]").forEach((b) => (b.onclick = () => cekmeceAc(b.dataset.ac)));
   $$("[data-hepsi]").forEach((b) => (b.onclick = async () => {
     b.disabled = true; let n = 0;
@@ -731,48 +735,64 @@ function adimCubugu() { return `<div class="adimlar" aria-label="Step ${S.adim} 
 async function sihirbaz(hatalar = {}) {
   $("#giris").classList.add("gizli"); $("#uygulama").classList.add("gizli"); $("#kurulum").classList.remove("gizli");
   const el = $("#sihirbaz");
-  if (S.adim === 1) {
-    el.innerHTML = `${adimCubugu()}<h2>Tell us about your business</h2><p class="soluk" style="margin-top:8px">Two minutes. The team learns the rest by itself.</p>
-      <div id="temel"></div><div class="ileri"><button class="ana" id="ileri">Continue</button></div>`;
+  const kontrol = async () => {
+    const site = $("#siteGir").value.trim(); if (!site) return null;
+    $("#siteSonuc").innerHTML = `<div class="sonuc-kutu soluk">Looking at your website…</div>`;
+    try {
+      const j = await api("/api/site-kontrol", "POST", { site });
+      const PLT = { shopify: "Shopify store — we'll read your products automatically.", woocommerce: "WooCommerce store — we'll read your products automatically.",
+        wordpress: "WordPress site — we'll read your pages and blog.", ticimax: "Ticimax store — we'll read your products.", genel: "We'll read your website like a visitor does." };
+      $("#siteSonuc").innerHTML = j.tamam ? `<div class="sonuc-kutu"><b>${esc(j.baslik || j.site)}</b><p class="soluk" style="margin:4px 0">${esc(j.aciklama || "")}</p><p style="margin:0">✓ ${esc(PLT[j.platform] || PLT.genel)}</p></div>`
+        : `<div class="sonuc-kutu hata">${esc(j.hata || "We could not open this website")}</div>`;
+      S.site = j.tamam ? j : null;
+      return S.site;
+    } catch (e) { $("#siteSonuc").innerHTML = `<div class="hata">${esc(e.message)}</div>`; return null; }
+  };
+  const olustur = async (site) => {
+    const g = { ...S.form, site: site || "" };
+    if (!site) delete g.site;
+    try { const m = await api("/api/musteri", "POST", g); S.mid = m.id; localStorage.setItem("ajan_musteri", m.id); localStorage.removeItem("fz_kayit"); ME = await api("/api/ben");
+          MUSTERI = ME.musteriler.find((x) => x.id === m.id); S.adim = 3; sihirbaz(); }
+    catch (e) { const a = e.alanlar || {}; if (a.site) { S.adim = 1; return sihirbaz(a); } sihirbaz({ ...a, genel: a.isletme_adi || a.tanim || a.kur ? "" : e.message }); }
+  };
+  if (S.adim === 1) {          // tek soru: site. Ad, ne yaptigi, sektor ve dil siteden okunur; musteri yalnizca duzeltir
+    el.innerHTML = `${adimCubugu()}<h2>What's your website?</h2><p class="soluk" style="margin-top:8px">One question. We read your name, what you do and your products from it — you only fix what we got wrong.</p>
+      <label for="siteGir">Website address</label><input id="siteGir" placeholder="yourbusiness.com" value="${esc(S.form.site || "")}">
+      <div id="siteSonuc"></div>${hatalar.site ? `<div class="hata">${esc(hatalar.site)}</div>` : ""}
+      <div class="ileri"><button class="ana" id="ileri">Continue</button><button class="ikincil" id="sitesiz">I don't have a website</button></div>`;
+    $("#siteGir").onkeydown = (e) => { if (e.key === "Enter") $("#ileri").click(); };
+    $("#ileri").onclick = async () => {
+      const s = $("#siteGir").value.trim();
+      if (!s) { S.form.site = ""; S.site = null; S.adim = 2; return sihirbaz(); }
+      $("#ileri").disabled = true;
+      const j = S.site?.site === s ? S.site : await kontrol();
+      $("#ileri").disabled = false;
+      if (!j) return;
+      S.form.site = j.site;
+      if (!S.form.isletme_adi && j.isletme_adi) S.form.isletme_adi = j.isletme_adi;
+      if (!S.form.tanim && j.aciklama) S.form.tanim = j.aciklama.slice(0, 160);
+      if (!S.form.sektor && j.sektor) S.form.sektor = j.sektor;
+      if (!S.form.dil && j.dil) S.form.dil = j.dil;
+      S.adim = 2; sihirbaz();
+    };
+    $("#sitesiz").onclick = () => { S.form.site = ""; S.site = null; S.adim = 2; sihirbaz(); };
+  } else if (S.adim === 2) {
+    el.innerHTML = `${adimCubugu()}<h2>${S.site ? "Here's how we understood you" : "Tell us about your business"}</h2>
+      <p class="soluk" style="margin-top:8px">${S.site ? "Fix anything we got wrong and continue. The team learns the rest by itself." : "Two minutes. The team learns the rest by itself."}</p>
+      <div id="temel"></div>${hatalar.genel ? `<div class="hata">${esc(hatalar.genel)}</div>` : ""}
+      <div class="ileri"><button class="ana" id="ileri">${S.site ? "Looks right" : "Continue"}</button><button class="ikincil" id="geri">Back</button></div>`;
     await temelForm($("#temel"), S.form, hatalar);
+    $("#geri").onclick = () => { Object.assign(S.form, formOku($("#temel"))); S.adim = 1; sihirbaz(); };
     $("#ileri").onclick = () => {
-      Object.assign(S.form, formOku($("#temel")));
+      const site = S.form.site;
+      Object.assign(S.form, formOku($("#temel")), { site });
       const h = {};
       if (!S.form.isletme_adi) h.isletme_adi = "Enter your business name";
       if (!S.form.tanim && !(S.form.hizmetler || []).length) h.tanim = "Pick what you offer or write one sentence";
       if (Object.keys(h).length) return sihirbaz(h);
-      S.adim = 2; sihirbaz();
+      $("#ileri").disabled = true;
+      olustur(site || "");
     };
-  } else if (S.adim === 2) {
-    el.innerHTML = `${adimCubugu()}<h2>Do you have a website?</h2><p class="soluk" style="margin-top:8px">We read your products and services from it. Shopify, WordPress and WooCommerce are connected automatically; any other site is read like a visitor would.</p>
-      <label for="siteGir">Website address</label><div class="satir"><input id="siteGir" class="yayil" placeholder="yourbusiness.com" value="${esc(S.form.site || "")}" style="flex:1;min-width:220px"><button class="ikincil" id="kontrol">Check</button></div>
-      <div id="siteSonuc"></div>${hatalar.site ? `<div class="hata">${esc(hatalar.site)}</div>` : ""}${hatalar.genel ? `<div class="hata">${esc(hatalar.genel)}</div>` : ""}
-      <div class="ileri"><button class="ana" id="ileri">Continue</button><button class="ikincil" id="sitesiz">I don't have a website</button><button class="ikincil" id="geri">Back</button></div>`;
-    const kontrol = async () => {
-      const site = $("#siteGir").value.trim(); if (!site) return null;
-      $("#siteSonuc").innerHTML = `<div class="sonuc-kutu soluk">Looking at your website…</div>`;
-      try {
-        const j = await api("/api/site-kontrol", "POST", { site });
-        const PLT = { shopify: "Shopify store — we'll read your products automatically.", woocommerce: "WooCommerce store — we'll read your products automatically.",
-          wordpress: "WordPress site — we'll read your pages and blog.", ticimax: "Ticimax store — we'll read your products.", genel: "We'll read your website like a visitor does." };
-        $("#siteSonuc").innerHTML = j.tamam ? `<div class="sonuc-kutu"><b>${esc(j.baslik || j.site)}</b><p class="soluk" style="margin:4px 0">${esc(j.aciklama || "")}</p><p style="margin:0">✓ ${esc(PLT[j.platform] || PLT.genel)}</p></div>`
-          : `<div class="sonuc-kutu hata">${esc(j.hata || "We could not open this website")}</div>`;
-        S.site = j.tamam ? j : null;
-        return S.site;
-      } catch (e) { $("#siteSonuc").innerHTML = `<div class="hata">${esc(e.message)}</div>`; return null; }
-    };
-    $("#kontrol").onclick = kontrol;
-    $("#geri").onclick = () => { S.adim = 1; sihirbaz(); };
-    const olustur = async (site) => {
-      const g = { ...S.form, site: site || "" };
-      if (!site) delete g.site;
-      try { const m = await api("/api/musteri", "POST", g); S.mid = m.id; localStorage.setItem("ajan_musteri", m.id); localStorage.removeItem("fz_kayit"); ME = await api("/api/ben");
-            MUSTERI = ME.musteriler.find((x) => x.id === m.id); S.adim = 3; sihirbaz(); }
-      catch (e) { const a = e.alanlar || {}; if (a.isletme_adi || a.tanim) { S.adim = 1; return sihirbaz(a); } sihirbaz({ ...a, genel: a.site || a.kur ? "" : e.message }); }
-    };
-    $("#ileri").onclick = async () => { const s = $("#siteGir").value.trim(); if (!s) return olustur(""); const j = S.site?.site === s ? S.site : await kontrol();
-      if (!j) return; S.form.site = j.site; olustur(j.site); };
-    $("#sitesiz").onclick = () => olustur("");
   } else if (S.adim === 3) {
     el.innerHTML = `${adimCubugu()}<h2>Your logo and a few photos</h2><p class="soluk" style="margin-top:8px">Optional, but it makes everything look like you. Photos of your products, your place, your team and finished jobs.</p>
       <div class="satir" style="gap:18px;margin-top:20px"><div class="logo-onizleme" id="logoOn"></div><div><button id="logoBtn">Upload logo</button><p class="soluk" id="renkNot" style="margin-top:8px"></p></div></div>
