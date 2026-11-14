@@ -155,26 +155,37 @@ def _aile_css(aile, spec, requests):
     return css
 
 
+_font_hata_ani = 0.0
+
+
 def fontlar_css():
     """Google Fonts'u bir kez indirip yerelde saklar (sonra internetsiz calisir). Her aile ayri istenir ve ayri
     saklanir: biri basarisiz olursa digerleri yine gelir. Hicbiri gelmezse None; sablonlar yedek fontlara duser."""
     from . import fontlar
+    import time
+    global _font_hata_ani
     css_yolu = FONT_KLASOR / f"fonts_{fontlar.imza()}.css"
     if css_yolu.exists():
         return css_yolu
+    eski = sorted(FONT_KLASOR.glob("fonts_*.css")) if FONT_KLASOR.exists() else []
+    if time.time() - _font_hata_ani < 600:          # az once hicbiri inmedi: her cizimde yeniden deneme
+        return eski[-1] if eski else None
     try:
         import requests
     except ImportError:
         return None
     FONT_KLASOR.mkdir(parents=True, exist_ok=True)
-    parcalar = []
+    parcalar, hata = [], 0
     for aile in fontlar.aileler():
         try:
             parcalar.append(_aile_css(aile, fontlar.GOOGLE[aile], requests))
         except Exception as e:
+            hata += 1
             print(f"  ! Font indirilemedi: {aile} ({type(e).__name__})")
+            if hata >= 3 and not parcalar:          # ag yok: kalan 30 aileyi tek tek bekleme
+                break
     if not parcalar:
-        eski = sorted(FONT_KLASOR.glob("fonts_*.css"))
+        _font_hata_ani = time.time()
         return eski[-1] if eski else None
     css_yolu.write_text("\n".join(parcalar), encoding="utf-8")
     return css_yolu

@@ -161,6 +161,41 @@ def liste_karti(W, H, m, dil, v):
 {f'<div class="pill" data-metin style="background:{pl["accent"]};color:{_yazi(pl["accent"])}">{E(m["cta"])}<span class="ok"></span></div>' if m.get('cta') else ''}</div></div></div>""")
 
 
+def tipografi(W, H, m, dil, v):
+    """Fotografsiz kart: marka renginde zemin, dev adim numarasi, buyuk satir. (Bos foto kutusu yerine.)"""
+    pl = dil["palet"]
+    zemin = pl["accent"]
+    yazi = _yazi(zemin)
+    ikinci = pl["accent2"] if abs(_p(pl["accent2"]) - _p(zemin)) > 0.12 else ("#FFFFFF" if yazi == "#111111" else "#111111")
+    metin = _ana_metin(m)
+    alt = 360 if H > 1500 else GUVENLI
+    no = (f'<div data-metin style="position:absolute;left:{GUVENLI}px;top:{(220 if H > 1500 else GUVENLI) + 10}px;'
+          f'font-family:var(--bf);font-weight:800;font-size:340px;line-height:.8;letter-spacing:-.05em;color:{yazi}">'
+          f'{E(m.get("no"))}</div>' if m.get("no") else "")
+    return (_ortak(W, H, dil) + f"""
+.daire{{position:absolute;right:-220px;top:-220px;width:720px;height:720px;border-radius:50%;background:{ikinci}}}
+.cizgi{{width:120px;height:14px;border-radius:7px;background:{yazi};margin-bottom:36px}}
+</style><div class="tuval" style="background:{zemin}"><div class="daire"></div>{no}
+<div style="position:absolute;left:{GUVENLI}px;right:{GUVENLI}px;bottom:{alt + 40}px"><div class="cizgi"></div>
+<h1 class="h" data-metin style="font-size:{_boy(metin, 138)}px;color:{yazi}">{E(metin)}</h1></div></div>""")
+
+
+def palet_onar(pl):
+    """Yazi rengi zeminle ayni/yakin ise okunur hale getirir; eksik anahtarlari tamamlar."""
+    pl = dict(pl or {})
+    pl.setdefault("bg", "#F4F1EA")
+    pl.setdefault("accent", "#FF5A36")
+    pl.setdefault("accent2", "#2D5BFF")
+    try:
+        if abs(_p(pl.get("ink")) - _p(pl["bg"])) < 0.45:
+            pl["ink"] = _yazi(pl["bg"])
+        if abs(_p(pl["accent"]) - _p(pl["bg"])) < 0.08:             # vurgu zeminde kaybolmasin
+            pl["accent"] = "#FF5A36" if _p(pl["bg"]) > 0.5 else "#C6F432"
+    except (ValueError, TypeError):
+        pl.update(bg="#F4F1EA", ink="#121212", accent="#FF5A36", accent2="#2D5BFF")
+    return pl
+
+
 DUZENLER = {"tam_foto": tam_foto, "renk_poster": renk_poster, "kart_alt": kart_alt,
             "dikey_bolunmus": dikey_bolunmus, "ust_tipografi": ust_tipografi}
 
@@ -169,6 +204,8 @@ def adaylar(tuval, adet=2, haric=()):
     """Bu tuval icin denenecek duzen adlari (son kart icin liste)."""
     if "points" in tuval["metin"]:
         return ["liste_karti"]
+    if tuval.get("fotosuz"):
+        return ["tipografi"]
     # dikey_bolunmus (50/50) hakemlerce "eski sablon" bulundugu icin otomatik secilmez
     havuz = [d for d in DUZENLER if d not in haric and d != "dikey_bolunmus"]
     return random.sample(havuz, min(adet, len(havuz)))
@@ -176,15 +213,16 @@ def adaylar(tuval, adet=2, haric=()):
 
 def ciz(ad, tuval, dil, varliklar):
     W, H = tuval["boyut"]
-    f = liste_karti if ad == "liste_karti" else DUZENLER[ad]
-    return f(W, H, tuval["metin"], dil, varliklar)
+    f = liste_karti if ad == "liste_karti" else tipografi if ad == "tipografi" else DUZENLER[ad]
+    return f(W, H, tuval["metin"], dict(dil, palet=palet_onar(dil.get("palet"))), varliklar)
 
 
 # ------------------------------------------------------------------ Reels kapanis karti (sabit, saglam)
 def kapanis(W, H, metin, dil, v):
     """Logo kahraman: zemin logoyla kontrast olacak sekilde secilir (koyu zemin -> acik logo, acik -> koyu),
     alt guvenli alanin ustunde tek CTA, kucuk web adresi. Fotograf yok, yazi yok -> asla tasmaz."""
-    pl = dil["palet"]
+    pl = palet_onar(dil.get("palet"))
+    dil = dict(dil, palet=pl)
     adaylar = [pl.get("bg"), pl.get("accent"), pl.get("ink")]
     adaylar = [c for c in adaylar if c]
     # Elde hangi logo varsa ona uyan zemin: acik logo varsa koyu zemin tercih, yalniz koyu logo varsa acik zemin

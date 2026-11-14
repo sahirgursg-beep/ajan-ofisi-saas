@@ -19,7 +19,8 @@ from .ayarlar import AYAR, VERI
 
 DOSYA = VERI / "tasarim_sistemi.json"
 YENILEME_GUN = 14
-GECME = 6.0
+GECME = 6.0            # hakem puani: bu ve ustu dogrudan kabul
+KABUL = 5.0            # iki turdan sonra, olcumu temiz en iyi surum en az bu puandaysa kabul
 
 TIPLER = {
     "post_a": ((1080, 1350), "feed post, PHOTO-LED: full-bleed photo, bold headline overlaid on a scrim or a solid shape; price and one CTA"),
@@ -57,14 +58,23 @@ def sistem():
     return _oku()
 
 
-def eski_mi():
-    s = _oku()
-    if not s.get("sablonlar") or not any(k.startswith("post") for k in s["sablonlar"]):
-        return True
+def _suresi_doldu(s):
     try:
         return datetime.fromisoformat(s["tarih"]) < datetime.now() - timedelta(days=YENILEME_GUN)
     except (KeyError, ValueError):
         return True
+
+
+def _eksikler(s):
+    """Sistemde olmayan ve bugun henuz denenmemis sablon tipleri."""
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    return [t for t in TIPLER if t not in s.get("sablonlar", {}) and (s.get("denendi") or {}).get(t) != bugun]
+
+
+def eski_mi():
+    """Kurulum/yenileme gerekli mi: hic yok, suresi dolmus ya da eksik sablonu var (gunde en fazla bir deneme)."""
+    s = _oku()
+    return not s.get("dil") or _suresi_doldu(s) or bool(_eksikler(s))
 
 
 # ---------------------------------------------------------------- metin sigdirma
@@ -126,69 +136,140 @@ def _istem(tip, dil, arastirma_ozeti):
     )
 
 
-def _dene(tip, html_, dil, varliklar, klasor):
-    """Iki ornek metinle cizip olcer, kisa ornegi puanlar. -> (puan|None, sorunlar)"""
-    (W, H), _ = TIPLER[tip]
-    tuval = {"ad": tip, "boyut": (W, H), "rol": TIPLER[tip][1], "metin": {}}
-    sorunlar, puan = [], None
-    for ad, ornek in ORNEK.items():
+def ornekler(urun, taslak):
+    """Sablon denemesi icin metinler: 'gercek' = bugunun gercek metni (hakem bunu gorur; konuyla uyumlu),
+    'uzun' = ayni alanlarin uzatilmis hali (yalniz olculur, tasma testi). Sabit, konusuz ornek yok."""
+    m = AYAR["marka"]
+    satirlar = [str(x).strip() for x in (taslak.get("carousel_lines") or []) if str(x).strip()]
+    maddeler = [str(x).strip() for x in (taslak.get("carousel_points") or []) if str(x).strip()] \
+        or list(musteri.carousel_maddeleri())[:3]
+    baslik = taslak.get("headline") or urun["ad"]
+    fiyatli = not (urun.get("ngn") == 0 or urun.get("fiyat") == 0)
+    gercek = {"HEADLINE": baslik, "LINE": satirlar[0] if satirlar else baslik,
+              "PRICE": (urun.get("fiyat_metni") or "") if fiyatli else "",
+              "OLD_PRICE": (urun.get("eski_fiyat_metni") or "") if fiyatli else "", "CTA": m.get("cta") or "Learn more",
+              "HOOK": taslak.get("hook") or baslik, "NO": "1",
+              "POINT1": maddeler[0] if maddeler else "", "POINT2": maddeler[1] if len(maddeler) > 1 else "",
+              "POINT3": maddeler[2] if len(maddeler) > 2 else ""}
+    uzun = dict(ORNEK["uzun"])
+    for k in ("HEADLINE", "LINE", "HOOK", "POINT1", "POINT2", "POINT3"):     # gunden gune degisen alanlar
+        if gercek.get(k):
+            uzun[k] = (gercek[k] + " " + gercek[k])[:60] if len(gercek[k]) < 40 else gercek[k][:70]
+    uzun["CTA"] = gercek["CTA"]                 # CTA markanin sabit metni: oldugu gibi denenir
+    if not gercek["PRICE"]:
+        uzun["PRICE"] = uzun["OLD_PRICE"] = ""
+    return {"kisa": gercek, "uzun": uzun}
+
+
+def _olc(tip, html_, dil, varliklar, klasor, orn):
+    """Gercek ve uzun metinle cizip olcer (tarayici: ana is parcaciginda). -> (sert_sorunlar, gercek_metinli_jpg|None)"""
+    (W, H), rol = TIPLER[tip]
+    sorunlar, kisa_yol = [], None
+    for ad, ornek in orn.items():
         m = dict(ornek, WEB=AYAR["marka"].get("web") or "example.com")
-        sayfa = uretken._sayfa(doldur(html_, tip, m, varliklar), tuval, dil, varliklar)
+        tuval = {"ad": tip, "boyut": (W, H), "rol": rol,
+                 "metin": {k.lower(): m[k] for k in ("HEADLINE", "LINE") if m.get(k) and "{{" + k + "}}" in html_}}
         yol = klasor / f"_sistem_{tip}_{ad}.jpg"
-        tuval["metin"] = {"headline": m["HEADLINE"]} if "{{HEADLINE}}" in html_ else {"line": m["LINE"]} if "{{LINE}}" in html_ else {}
         try:
-            olc = uretken._ciz_ve_olc(sayfa, tuval, yol)
+            olc = uretken._ciz_ve_olc(uretken._sayfa(doldur(html_, tip, m, varliklar), tuval, dil, varliklar), tuval, yol)
         except Exception as e:
             olc = {"sert": [f"render error: {str(e)[:80]}"], "yumusak": []}
-        sorunlar += [f"[{ad} text] {x}" for x in olc.get("sert", [])]
-        if ad == "kisa" and not olc.get("sert"):
-            puan, notlar = uretken._gorsel_puan(yol, tuval)
-            if puan is not None and puan < GECME:
-                sorunlar += notlar or ["make it more modern and striking"]
-        yol.unlink(missing_ok=True)
-    return puan, sorunlar
+        sorunlar += [f"[{'long' if ad == 'uzun' else 'real'} text] {x}" for x in olc.get("sert", [])]
+        if ad == "kisa":
+            kisa_yol = yol
+        else:
+            yol.unlink(missing_ok=True)
+    return sorunlar, kisa_yol
 
 
 def kur(urun, gorsel_yollari, taslak, gunluk=print, zorla=False):
-    """Tasarim sistemini kurar/yeniler. -> sistem dict ya da None (model yok)."""
-    if not zorla and not eski_mi():
-        return _oku()
+    """Tasarim sistemini kurar, yeniler ya da eksik sablonlarini tamamlar. -> sistem dict ya da None (model yok).
+
+    Hiz icin: sablonlar paralel yazilir, tarayicida sirayla olculur, hakem puanlari paralel alinir; tutmayanlar
+    bir kez (yine paralel) duzeltilir. Sonuc her durumda kaydedilir: tutanlar kalir, tutmayan tip ertesi gune
+    kadar yeniden denenmez (her uretimde dakikalarca beklenmesin)."""
+    import time
+    s = _oku()
     if not llm.hazir():
-        return None
+        return s or None
+    tam = zorla or not s.get("dil") or _suresi_doldu(s)
+    if tam:
+        eski = s.get("sablonlar") or {}
+        dil = uretken.dil_sec(urun, taslak, None) or uretken._varsayilan_dil()
+        dil["palet"] = modern_duzen.palet_onar(dil.get("palet"))
+        s = {"tarih": datetime.now().isoformat(timespec="minutes"), "dil": dil, "sablonlar": {}, "kullanim": {},
+             "denendi": {}}
+        hedefler = list(TIPLER)
+    else:
+        eski, dil, hedefler = {}, s["dil"], _eksikler(s)
+    if not hedefler:
+        return s
     from . import arastirma
-    dil = uretken.dil_sec(urun, taslak, None) or uretken._varsayilan_dil()
-    gunluk(f"Tasarim sistemi kuruluyor: '{dil['stil']}' — model {llm.tasarim_modeli_adi()}")
+    t0 = time.time()
+    gunluk(f"Tasarim sistemi {'kuruluyor' if tam else 'tamamlaniyor'}: '{dil['stil']}', {len(hedefler)} sablon")
     varliklar = _varliklar(gorsel_yollari)
     klasor = VERI / "_sistem_tmp"
     klasor.mkdir(parents=True, exist_ok=True)
-    ozet = arastirma.istem_ozeti()
-    yaz = lambda tip, ek="": uretken._temizle(llm.tasarim_sor(uretken.SISTEM, _istem(tip, dil, ozet) + ek, sicaklik=0.8))
-    with ThreadPoolExecutor(max_workers=4) as h:
-        taslaklar = dict(zip(TIPLER, h.map(yaz, TIPLER)))
-    sablonlar = {}
-    for tip, html_ in taslaklar.items():
-        for deneme in range(2):
-            if not html_ or ".tuval" not in html_:
-                html_ = yaz(tip)
-                continue
-            puan, sorunlar = _dene(tip, html_, dil, varliklar, klasor)
-            gunluk(f"[TASARIM] sistem {tip}: deneme {deneme + 1}, puan {puan}, sorun {len(sorunlar)}"
-                   + (f": {'; '.join(sorunlar[:2])}" if sorunlar else ""))
-            if not sorunlar:
-                sablonlar[tip] = {"html": html_, "puan": puan}
+    ozet, orn = arastirma.istem_ozeti(), ornekler(urun, taslak)
+
+    def yaz(tip, ek=""):
+        try:
+            return uretken._temizle(llm.tasarim_sor(uretken.SISTEM, _istem(tip, dil, ozet) + ek, sicaklik=0.8))
+        except Exception as e:
+            gunluk(f"[TASARIM] sistem {tip}: yazilamadi ({type(e).__name__})")
+            return None
+
+    def puanla(is_):
+        tip, yol = is_
+        return uretken._gorsel_puan(yol, {"ad": tip, "rol": TIPLER[tip][1]})
+
+    with ThreadPoolExecutor(max_workers=5) as h:
+        html_ = dict(zip(hedefler, h.map(yaz, hedefler)))
+        bekleyen, en_iyi = list(hedefler), {}                       # en_iyi[tip] = (puan, html) olcumu temiz surum
+        for tur_no in range(2):
+            olcum = {}
+            for tip in bekleyen:                                    # tarayici tek is parcaciginda
+                if not html_.get(tip) or ".tuval" not in html_[tip]:
+                    olcum[tip] = (["no valid HTML returned"], None)
+                else:
+                    olcum[tip] = _olc(tip, html_[tip], dil, varliklar, klasor, orn)
+            temiz = [(t, y) for t, (sert, y) in olcum.items() if not sert and y]
+            puanlar = dict(zip([t for t, _ in temiz], h.map(puanla, temiz)))
+            kalan = {}
+            for tip in bekleyen:
+                sert, yol = olcum[tip]
+                puan, notlar = puanlar.get(tip, (None, []))
+                if yol:
+                    Path(yol).unlink(missing_ok=True)
+                if not sert:
+                    p = puan if puan is not None else GECME
+                    if tip not in en_iyi or p > en_iyi[tip][0]:
+                        en_iyi[tip] = (p, html_[tip])
+                    if p >= GECME:
+                        gunluk(f"[TASARIM] sistem {tip}: kabul (tur {tur_no + 1}, puan {puan})")
+                        continue
+                kalan[tip] = sert + ([] if sert else (notlar or ["make it more modern and striking"]))
+                gunluk(f"[TASARIM] sistem {tip}: tur {tur_no + 1}, puan {puan}, sorun: {'; '.join(kalan[tip][:2])}")
+            bekleyen = list(kalan)
+            if not bekleyen or tur_no == 1:
                 break
-            if deneme == 0:
-                html_ = yaz(tip, "\n\nA first version had these problems; write a better one that fixes ALL of them:\n- "
-                            + "\n- ".join(sorunlar[:8]) + "\n\nFirst version:\n" + html_[:6000])
-    s = {"tarih": datetime.now().isoformat(timespec="minutes"), "dil": dil, "sablonlar": sablonlar,
-         "model": llm.tasarim_modeli_adi(), "kullanim": {}}
-    if any(k.startswith("post") for k in sablonlar):
-        DOSYA.parent.mkdir(parents=True, exist_ok=True)
-        DOSYA.write_text(json.dumps(s, ensure_ascii=False, indent=1), encoding="utf-8")
-        gunluk(f"Tasarim sistemi hazir: {len(sablonlar)}/{len(TIPLER)} sablon ({', '.join(sablonlar)})")
-        return s
-    gunluk("Tasarim sistemi kurulamadi (hicbir post sablonu gecemedi); modern duzenler kullanilacak")
-    return None
+            ekler = ["\n\nA first version had these problems; write a better one that fixes ALL of them:\n- "
+                     + "\n- ".join(kalan[t][:8]) + "\n\nFirst version:\n" + (html_.get(t) or "")[:6000] for t in bekleyen]
+            html_.update(zip(bekleyen, h.map(yaz, bekleyen, ekler)))
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    for tip in hedefler:
+        if tip in en_iyi and en_iyi[tip][0] >= KABUL:
+            s["sablonlar"][tip] = {"html": en_iyi[tip][1], "puan": en_iyi[tip][0]}
+        else:
+            s.setdefault("denendi", {})[tip] = bugun
+            if tip in eski:                                         # yenisi tutmadi: calisan eski surum kalsin
+                s["sablonlar"][tip] = eski[tip]
+    s["model"] = llm.tasarim_modeli_adi()
+    DOSYA.parent.mkdir(parents=True, exist_ok=True)
+    DOSYA.write_text(json.dumps(s, ensure_ascii=False, indent=1), encoding="utf-8")
+    gunluk(f"Tasarim sistemi: {len(s['sablonlar'])}/{len(TIPLER)} sablon hazir ({', '.join(s['sablonlar']) or 'yok'}), "
+           f"{int(time.time() - t0)} sn. Eksik tuvaller modern duzenlerle cizilir.")
+    return s
 
 
 def _kirpik(yol):
@@ -222,14 +303,6 @@ def _varliklar(gorsel_yollari):
 
 
 # ---------------------------------------------------------------- gunluk kullanim
-def _sec(s, onek, haric=()):
-    """Bu tipteki sablonlardan en az kullanilani (esitlikte rastgele)."""
-    adaylar = [k for k in s["sablonlar"] if k.startswith(onek) and k not in haric]
-    k = s.setdefault("kullanim", {})
-    random.shuffle(adaylar)
-    return sorted(adaylar, key=lambda a: k.get(a, 0))
-
-
 def _ciz(s, tip, metin, varliklar, hedef, rol_ad):
     (W, H), rol = TIPLER[tip]
     sab = s["sablonlar"][tip]["html"]
@@ -242,59 +315,92 @@ def _ciz(s, tip, metin, varliklar, hedef, rol_ad):
 
 
 def ciz_set(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print):
-    """Gunun icerigini tasarim sistemiyle cizer. -> {"dil", "dosyalar"} ya da None (sistem yok)."""
+    """Gunun icerigini cizer: once markanin sistem sablonlari (en az kullanilan), tutmayan/eksik her tuval icin
+    modern duzen kutuphanesi. Yapay zeka cagrisi yok -> saniyeler surer, eski sablonlara donulmez.
+    -> {"dil", "dosyalar", ...} ya da None (tarayici yok / post hic cizilemedi)."""
+    import shutil
     s = _oku()
-    if not s.get("sablonlar"):
-        return None
+    dil = s.get("dil") or uretken._varsayilan_dil()
+    dil["palet"] = modern_duzen.palet_onar(dil.get("palet"))
+    sablonlar, kullanim = s.get("sablonlar") or {}, s.setdefault("kullanim", {})
     m = AYAR["marka"]
     v = _varliklar(gorsel_yollari)
     foto_sayisi = len({str(g) for g in gorsel_yollari})
-    temel = {"HEADLINE": taslak.get("headline") or urun["ad"], "PRICE": urun.get("fiyat_metni") or "",
-             "OLD_PRICE": urun.get("eski_fiyat_metni") or "", "CTA": m.get("cta") or "", "WEB": m.get("web") or "",
-             "HOOK": taslak.get("hook") or ""}
-    dosyalar, kullanim = [], s.setdefault("kullanim", {})
+    fiyatli = not (urun.get("ngn") == 0 or urun.get("fiyat") == 0)     # fiyatsiz icerikte "0" etiketi olmasin
+    temel = {"HEADLINE": taslak.get("headline") or urun["ad"], "PRICE": (urun.get("fiyat_metni") or "") if fiyatli else "",
+             "OLD_PRICE": (urun.get("eski_fiyat_metni") or "") if fiyatli else "", "CTA": m.get("cta") or "",
+             "WEB": m.get("web") or "", "HOOK": taslak.get("hook") or ""}
+    kucuk = lambda mt: {"headline": mt.get("HEADLINE"), "line": mt.get("LINE"), "price": mt.get("PRICE"),
+                        "old_price": mt.get("OLD_PRICE"), "cta": mt.get("CTA"), "hook": mt.get("HOOK"),
+                        "small": mt.get("WEB")}
+    dosyalar, kullanilan_duzen = [], set()
 
-    def bir(onek, metin, hedef, rol_ad, varlik=None):
-        for tip in _sec(s, onek):
-            ok, olc = _ciz(s, tip, metin, varlik or v, hedef, rol_ad)
-            if ok:
-                kullanim[tip] = kullanim.get(tip, 0) + 1
-                gunluk(f"[TASARIM] {rol_ad}: sistem sablonu {tip}")
+    def bir(onekler, metin, hedef, rol_ad, boyut, varlik=None, maddeler=None):
+        vv = varlik or v
+        for onek in onekler:                                        # 1) markanin sistem sablonlari
+            for tip in sorted((k for k in sablonlar if k.startswith(onek)),
+                              key=lambda a: (kullanim.get(a, 0), random.random())):
+                try:
+                    ok, olc = _ciz(s, tip, metin, vv, hedef, rol_ad)
+                except Exception as e:
+                    ok, olc = False, {"sert": [f"{type(e).__name__}: {str(e)[:60]}"]}
+                if ok:
+                    kullanim[tip] = kullanim.get(tip, 0) + 1
+                    gunluk(f"[TASARIM] {rol_ad}: sistem sablonu {tip}")
+                    return True
+                gunluk(f"[TASARIM] {rol_ad}: {tip} bu metne sigmadi ({'; '.join(olc['sert'][:2])})")
+        mt = {k: x for k, x in kucuk(metin).items() if x}           # 2) modern duzen kutuphanesi
+        if maddeler is not None:
+            mt = {"points": maddeler, "price": metin.get("PRICE"), "cta": metin.get("CTA")}
+        elif metin.get("LINE"):
+            mt = {"line": metin["LINE"], "no": metin.get("NO")}
+        tuval = {"ad": rol_ad, "boyut": boyut, "rol": "", "metin": mt, "fotosuz": not vv.get("FOTO1")}
+        for ad in modern_duzen.adaylar(tuval, 4, haric=kullanilan_duzen) + modern_duzen.adaylar(dict(tuval, fotosuz=False), 4):
+            try:
+                olc = uretken._ciz_ve_olc(uretken._sayfa(modern_duzen.ciz(ad, tuval, dil, vv), tuval, dil, vv), tuval, hedef)
+            except Exception as e:
+                olc = {"sert": [f"{type(e).__name__}: {str(e)[:60]}"]}
+            if not olc.get("sert"):
+                kullanilan_duzen.add(ad)
+                gunluk(f"[TASARIM] {rol_ad}: modern duzen {ad}")
                 return True
-            gunluk(f"[TASARIM] {rol_ad}: {tip} bu metne sigmadi ({'; '.join(olc['sert'][:2])}), siradaki")
+        Path(hedef).unlink(missing_ok=True)
+        gunluk(f"[TASARIM] {rol_ad}: cizilemedi")
         return False
 
     post = klasor / "post_1080x1350.jpg"
-    if not bir("post", temel, post, "post"):
+    if not bir(("post",), temel, post, "post", (1080, 1350)):
         return None
     dosyalar.append(post)
-    if tur in (None, "post") and bir("story", temel, klasor / "story_1080x1920.jpg", "story"):
+    if tur in (None, "post") and bir(("story",), temel, klasor / "story_1080x1920.jpg", "story", (1080, 1920)):
         dosyalar.append(klasor / "story_1080x1920.jpg")
     if tur in (None, "carousel"):
-        import shutil
         satirlar = [str(x).strip() for x in (taslak.get("carousel_lines") or []) if str(x).strip()][:4] \
             or [taslak.get("headline") or urun["ad"]]
         maddeler = ([str(x).strip() for x in (taslak.get("carousel_points") or []) if str(x).strip()]
-                    or musteri.carousel_maddeleri())[:3]
+                    or list(musteri.carousel_maddeleri()))[:3]
         shutil.copyfile(post, klasor / "carousel_1.jpg")
         dosyalar.append(klasor / "carousel_1.jpg")
         no = 2
         for i, satir in enumerate(satirlar):
-            foto_var = i + 2 <= foto_sayisi                    # 2. fotograftan itibaren her karta yeni foto
-            onek = "slayt_foto" if foto_var and i % 2 == 0 else "slayt_tip"
-            v2 = dict(v, FOTO1=v.get(f"FOTO{i + 2}", v["FOTO1"])) if foto_var else v
+            foto_var = i + 2 <= foto_sayisi                         # kapak 1. fotoyu kullandi; kartlar siradakini
+            v2 = dict(v, FOTO1=v.get(f"FOTO{i + 2}", v["FOTO1"])) if foto_var else dict(v, FOTO1="")
+            sira = ("slayt_foto", "slayt_tip") if foto_var and i % 2 == 0 else ("slayt_tip", "slayt_foto") if foto_var \
+                else ("slayt_tip",)
             hedef = klasor / f"carousel_{no}.jpg"
-            if bir(onek, dict(temel, LINE=satir, NO=str(i + 1)), hedef, f"carousel_{no}", v2) or \
-                    bir("slayt_tip" if onek == "slayt_foto" else "slayt_foto", dict(temel, LINE=satir, NO=str(i + 1)),
-                        hedef, f"carousel_{no}", v2):
+            if bir(sira, dict(temel, LINE=satir, NO=str(i + 1)), hedef, f"carousel_{no}", (1080, 1350), v2):
                 dosyalar.append(hedef)
                 no += 1
         hedef = klasor / f"carousel_{no}.jpg"
-        if bir("liste", dict(temel, POINT1=maddeler[0] if maddeler else "", POINT2=maddeler[1] if len(maddeler) > 1 else "",
-                              POINT3=maddeler[2] if len(maddeler) > 2 else ""), hedef, f"carousel_{no}"):
+        if maddeler and bir(("liste",), dict(temel, **{f"POINT{j}": x for j, x in enumerate(maddeler, 1)}), hedef,
+                            f"carousel_{no}", (1080, 1350), maddeler=maddeler):
             dosyalar.append(hedef)
-    DOSYA.write_text(json.dumps(s, ensure_ascii=False, indent=1), encoding="utf-8")
-    return {"dil": s["dil"], "dosyalar": dosyalar, "puanlar": {}, "sistem": True}
+    if s.get("dil"):
+        try:
+            DOSYA.write_text(json.dumps(s, ensure_ascii=False, indent=1), encoding="utf-8")
+        except OSError:
+            pass
+    return {"dil": dil, "dosyalar": dosyalar, "puanlar": {}, "sistem": bool(sablonlar)}
 
 
 def son_kart(gorsel_yollari, hedef, gunluk=print):
@@ -303,8 +409,11 @@ def son_kart(gorsel_yollari, hedef, gunluk=print):
     v = _varliklar(gorsel_yollari)
     m = AYAR["marka"]
     metin = {"CTA": m.get("cta") or "", "WEB": m.get("web") or "", "MARKA": musteri.ad()}
-    if s.get("sablonlar", {}).get("son"):
-        ok, olc = _ciz(s, "son", metin, v, hedef, "reels_son")
+    if (s.get("sablonlar") or {}).get("son"):
+        try:
+            ok, olc = _ciz(s, "son", metin, v, hedef, "reels_son")
+        except Exception:
+            ok = False
         if ok:
             gunluk("[TASARIM] reels kapanis: sistem sablonu")
             return hedef

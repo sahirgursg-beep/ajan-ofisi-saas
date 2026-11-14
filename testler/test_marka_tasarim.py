@@ -45,7 +45,7 @@ class _Http:
         return _Yanit(200, {"choices": [{"message": {"content": "<div class='tuval'></div>"}}], "usage": {}})
 
 
-def test_tasarim_modeli_403_verirse_siradaki_claude_denenir(monkeypatch):
+def test_tasarim_modeli_403_hesap_duzeyinde_tum_do_claude_atlanir(monkeypatch):
     monkeypatch.setenv("AJAN_YZ_ANAHTAR", "x")
     monkeypatch.delenv("AJAN_YZ_TASARIM_MODEL", raising=False)
     monkeypatch.delenv("FAL_KEY", raising=False)
@@ -55,8 +55,9 @@ def test_tasarim_modeli_403_verirse_siradaki_claude_denenir(monkeypatch):
     http = _Http()
     cevap = llm_openai.tasarim_sor("s", "m", oturum=http)
     assert cevap == "<div class='tuval'></div>"
-    assert http.denenen == ["anthropic-claude-4.6-sonnet", "anthropic-claude-4.5-sonnet"]
-    assert llm_openai.tasarim_modeli(http) == "anthropic-claude-4.5-sonnet"
+    assert http.denenen[0] == "anthropic-claude-4.6-sonnet"
+    assert "anthropic-claude-4.5-sonnet" not in http.denenen          # 403 hesap duzeyinde: digerleri denenmez
+    assert llm_openai.tasarim_modeli(http) == llm_openai.model_adi()
 
 
 def test_do_claude_yoksa_fal_openrouter_kullanilir(monkeypatch):
@@ -89,6 +90,13 @@ def test_kapanis_karti_logoyu_kontrast_zemine_koyar():
     assert "background:#F4F4F0" in yalniz_koyu and "data:koyu" in yalniz_koyu
 
 
+def test_sablon_ornek_metni_gunun_icerigiyle_ayni_konuda():
+    urun = fiyat.hazirla({"ad": "AI captions", "fiyat": 0, "para_birimi": "USD", "gorseller": []})
+    o = marka_tasarim.ornekler(urun, {"headline": "3 caption hacks", "carousel_lines": ["Hook first"]})
+    assert o["kisa"]["HEADLINE"] == "3 caption hacks" and o["kisa"]["LINE"] == "Hook first"
+    assert "caption" in o["uzun"]["HEADLINE"] and "Fresh" not in json.dumps(o)
+
+
 def test_hakem_kapanis_kartinda_foto_ya_da_baslik_aramaz():
     assert "do not ask for a photo" in uretken._olcut({"ad": "reels_son"})
     assert "Instagram creative" in uretken._olcut({"ad": "post"})
@@ -118,3 +126,30 @@ def test_sistem_kurulur_ve_gunluk_set_sablonlardan_cizilir(tmp_path, monkeypatch
     assert [p.name for p in r["dosyalar"]][:3] == ["post_1080x1350.jpg", "carousel_1.jpg", "carousel_2.jpg"]
     son = marka_tasarim.son_kart(fotolar, tmp_path / "son.jpg", gunluk=lambda m: None)
     assert son and son.stat().st_size > 3000
+
+
+@TARAYICI
+def test_sistem_kurulamasa_da_set_modern_duzenlerle_tam_cizilir_ve_her_uretimde_yeniden_denenmez(tmp_path, monkeypatch):
+    from PIL import Image
+    monkeypatch.setattr(marka_tasarim, "DOSYA", tmp_path / "sistem.json")
+    fotolar = []
+    for i, renk in enumerate(("#7a8c6e", "#8c6e7a")):
+        f = tmp_path / f"f{i}.jpg"
+        Image.new("RGB", (900, 1200), renk).save(f)
+        fotolar.append(str(f))
+    urun = fiyat.hazirla({"ad": "Lamp", "fiyat": 50, "para_birimi": "USD", "gorseller": []})
+    cagri = []
+    monkeypatch.setattr(llm, "hazir", lambda: True)
+    monkeypatch.setattr(llm, "sor", lambda s, m, json_mod=False, sicaklik=0.7:
+                        {"stil": "bento", "fikir": "x", "font": "cagdas"} if json_mod else "")
+    monkeypatch.setattr(llm, "tasarim_sor", lambda s, m, sicaklik=0.7: cagri.append(1) or SABLON)
+    monkeypatch.setattr(llm, "gor", lambda *a, **k: {"score": 3, "problems": ["dated"]})
+    s = marka_tasarim.kur(urun, fotolar, {"headline": "Glow"}, gunluk=lambda m: None)
+    assert s is not None and s["sablonlar"] == {} and len(cagri) == 2 * len(marka_tasarim.TIPLER)
+    assert not marka_tasarim.eski_mi()                               # bugun denendi: ayni gun tekrar kurulmaz
+    r = marka_tasarim.ciz_set(urun, fotolar, {"headline": "Glow", "carousel_lines": ["One", "Two", "Three"],
+                                              "carousel_points": ["A", "B", "C"]}, tmp_path, None, gunluk=lambda m: None)
+    adlar = [p.name for p in r["dosyalar"]]
+    assert adlar == ["post_1080x1350.jpg", "story_1080x1920.jpg", "carousel_1.jpg", "carousel_2.jpg", "carousel_3.jpg",
+                     "carousel_4.jpg", "carousel_5.jpg"] and not r["sistem"]
+    assert marka_tasarim.son_kart(fotolar, tmp_path / "son.jpg", gunluk=lambda m: None)

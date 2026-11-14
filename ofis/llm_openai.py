@@ -233,6 +233,7 @@ TASARIM_TERCIH = ("anthropic-claude-sonnet-5", "anthropic-claude-4.6-sonnet", "a
 FAL_TASARIM = os.environ.get("AJAN_FAL_TASARIM_MODEL", "anthropic/claude-sonnet-4.6")
 _tasarim_adaylari = None
 _tasarim_kotu = set()
+_kilit = __import__("threading").RLock()
 
 
 def _do_tasarim_adaylari(http):
@@ -253,8 +254,9 @@ def _do_tasarim_adaylari(http):
 def tasarim_modeli(http=None):
     """Kullanilacak ilk tasarim modelinin adi (kayit icin)."""
     global _tasarim_adaylari
-    if _tasarim_adaylari is None:
-        _tasarim_adaylari = _do_tasarim_adaylari(http or requests)
+    with _kilit:                                   # paralel isler ayni anda sorarsa /models bir kez cagrilsin
+        if _tasarim_adaylari is None:
+            _tasarim_adaylari = _do_tasarim_adaylari(http or requests)
     for m in _tasarim_adaylari:
         if m not in _tasarim_kotu:
             return m
@@ -293,13 +295,17 @@ def tasarim_sor(sistem, mesaj, sicaklik=0.7, oturum=None):
             return sor(sistem, mesaj, json_mod=False, sicaklik=sicaklik, oturum=oturum)
         try:
             if model.startswith("fal:"):
-                return _fal_sor(sistem, mesaj, sicaklik, http)
+                cevap = _fal_sor(sistem, mesaj, sicaklik, http)
+                if model not in _bildirilen:
+                    _bildirilen.add(model)
+                    print(f"  Tasarim modeli: {model} (fal.ai uzerinden)")
+                return cevap
             govde = {"model": model, "temperature": sicaklik, "max_tokens": 6000,
                      "messages": [{"role": "system", "content": sistem}, {"role": "user", "content": mesaj}]}
             r = http.post(_url() + "/chat/completions", json=govde, timeout=300,
                           headers={"Authorization": f"Bearer {_anahtar()}"})
             if r.status_code in (400, 401, 403, 404, 422):
-                raise PermissionError(f"HTTP {r.status_code}")
+                raise PermissionError(f"HTTP {r.status_code}: {r.text[:160]}")
             r.raise_for_status()
             veri = r.json()
             _maliyet_yaz(veri.get("usage") or {}, model)
@@ -307,8 +313,17 @@ def tasarim_sor(sistem, mesaj, sicaklik=0.7, oturum=None):
             _bildirilen.add(model)
             return (veri["choices"][0]["message"].get("content") or "").strip()
         except PermissionError as e:
-            print(f"  ! Tasarim modeli '{model}' kullanilamadi ({e}); siradaki deneniyor")
-            _tasarim_kotu.add("fal" if model.startswith("fal:") else model)
+            with _kilit:
+                if model.startswith("fal:"):
+                    _tasarim_kotu.add("fal")
+                elif "anthropic" in model and str(e).startswith("HTTP 403"):
+                    # 403 hesap duzeyinde: DO'daki tum Claude modelleri ayni yaniti verir, hepsini atla
+                    _tasarim_kotu.update(m for m in (_tasarim_adaylari or []) if "anthropic" in m)
+                else:
+                    _tasarim_kotu.add(model)
+                if model not in _bildirilen_hata:
+                    _bildirilen_hata.add(model)
+                    print(f"  ! Tasarim modeli '{model}' kullanilamadi ({e}); siradaki deneniyor")
         except Exception as e:
             print(f"  ! Tasarim modeli hatasi ({model}): {str(e)[:160]}")
             return sor(sistem, mesaj, json_mod=False, sicaklik=sicaklik, oturum=oturum)
@@ -316,3 +331,4 @@ def tasarim_sor(sistem, mesaj, sicaklik=0.7, oturum=None):
 
 
 _bildirilen = set()
+_bildirilen_hata = set()

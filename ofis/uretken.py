@@ -99,7 +99,7 @@ def dil_sec(urun, taslak, tur):
 
 
 PALETLER = ({"bg": "#F4F1EA", "ink": "#121212", "accent": "#FF5A36", "accent2": "#2D5BFF"},
-            {"bg": "#0F1115", "ink": "#0F1115", "accent": "#C6F432", "accent2": "#7C5CFF"},
+            {"bg": "#0F1115", "ink": "#F5F5F0", "accent": "#C6F432", "accent2": "#7C5CFF"},
             {"bg": "#EEF3F8", "ink": "#0B2545", "accent": "#FFB703", "accent2": "#13315C"},
             {"bg": "#FFF4EC", "ink": "#2B1A12", "accent": "#E4572E", "accent2": "#17BEBB"})
 
@@ -297,9 +297,11 @@ def _olcut(tuval):
                 "(not tiny, not stretched, not floating randomly) on a background that contrasts with it; the call to "
                 "action is bold and readable; colors match a modern brand; calm, intentional composition. Empty space "
                 "around the logo is GOOD here; do not ask for a photo or a headline.")
-    return ("Score it 1-10 as a 2026 Instagram creative: modern and thumb-stopping (not like a newspaper or a "
-            "dated template), every text easy to read on a phone, clear hierarchy, the photo/subject well presented, "
-            "nothing cut off or overlapping.")
+    gorev = str(tuval.get("rol") or "")[:220]
+    return ((f"Its job: {gorev}. Judge it for that job (a typography-only slide needs no photo). " if gorev else "")
+            + "Score it 1-10 as a 2026 Instagram creative: modern and thumb-stopping (not like a newspaper or a "
+            "dated template), every text easy to read on a phone, clear hierarchy, the photo/subject well presented "
+            "when there is one, nothing cut off or overlapping.")
 
 
 def _gorsel_puan(yol, tuval):
