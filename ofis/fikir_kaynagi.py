@@ -108,13 +108,25 @@ def _gorseller(f, gunluk):
     if len(yollar) < 3:
         try:
             p = sektor.profil()
-            y = gorsel_kaynak.yz_uret(
-                f"{f.get('ai_image_prompt') or f['title']}. Style: {p.get('gorsel', '')}. "
-                "Photorealistic, professional social media photo, vertical composition, no text, no watermark, "
-                "no logos, no recognisable faces, no screens or monitors showing text or UI, no close-up hands.")
-            if y:
-                yollar.insert(0, y)
-                kaynaklar.insert(0, {"kaynak": "yapay_zeka"})
+            istem = (f"{f.get('ai_image_prompt') or f['title']}. Style: {p.get('gorsel', '')}. "
+                     "Photorealistic, professional social media photo, vertical composition, no text, no letters, "
+                     "no watermark, no logos, no recognisable faces, no screens or monitors showing text or UI, "
+                     "no close-up hands.")
+            for deneme in range(2):
+                y = gorsel_kaynak.yz_uret(istem)
+                if not y:
+                    break
+                # Yapay zeka gorseli de ayni hakemden gecer: anlamsiz yazi/bozuk el varsa kullanilmaz
+                from . import gorsel_secici
+                puan = gorsel_secici.puanla([y], f["title"], f"{musteri.ad()}, {musteri.tanim()}",
+                                            "any visible text or letters, garbled writing, distorted hands")
+                skor = (puan or {}).get(0) if puan is not None else None
+                gunluk(f"[GORSEL] yapay zeka gorseli puani: {skor}")
+                if skor is None or skor >= 6:
+                    yollar.insert(0, y)
+                    kaynaklar.insert(0, {"kaynak": "yapay_zeka"})
+                    break
+                istem += " Absolutely no writing of any kind anywhere in the image."
         except Exception as e:
             gunluk(f"Yapay zeka gorseli uretilemedi ({type(e).__name__}): {str(e)[:80]}")
     return yollar, kaynaklar

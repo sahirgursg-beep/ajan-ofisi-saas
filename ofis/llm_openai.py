@@ -182,7 +182,7 @@ def gor(sistem, mesaj, gorsel_yollari, json_mod=True, oturum=None):
                 continue
             r.raise_for_status()
             veri = r.json()
-            _maliyet_yaz(veri.get("usage") or {})
+            _maliyet_yaz(veri.get("usage") or {}, model)
             metin = (veri["choices"][0]["message"].get("content") or "").strip()
             if _gorme_model != model:
                 _gorme_model = model
@@ -196,15 +196,22 @@ def gor(sistem, mesaj, gorsel_yollari, json_mod=True, oturum=None):
     return None
 
 
-def _maliyet_yaz(kullanim):
+FIYATLAR = (("opus", 5.0, 25.0), ("sonnet", 3.0, 15.0), ("haiku", 1.0, 5.0), ("kimi", 0.6, 2.5), ("glm", 0.6, 2.2))
+
+
+def _maliyet_yaz(kullanim, model=None):
     """Token kullanimini aylik yapay zeka harcamasina ekler (fiyatlar USD / 1M token, ortamdan degistirilebilir)."""
     try:
         g = float(os.environ.get("AJAN_YZ_FIYAT_GIRDI", "0.25"))
         c = float(os.environ.get("AJAN_YZ_FIYAT_CIKTI", "0.87"))
+        for parca, fg, fc in FIYATLAR:
+            if model and parca in model.lower():
+                g, c = fg, fc
+                break
         tutar = (kullanim.get("prompt_tokens", 0) * g + kullanim.get("completion_tokens", 0) * c) / 1_000_000
         if tutar > 0:
             from . import fal_ai
-            fal_ai.harca(tutar, "metin_yz")
+            fal_ai.harca(tutar, "tasarim_yz" if model and model != model_adi() else "metin_yz")
     except Exception:
         pass
 
@@ -216,3 +223,61 @@ def sifirla():
 
 def durum():
     return durum_metni
+
+
+# ---------------------------------------------------------------- tasarim modeli
+TASARIM_TERCIH = ("anthropic-claude-4.5-sonnet", "anthropic-claude-sonnet-4.5", "anthropic-claude-sonnet-4",
+                  "anthropic-claude-haiku-4.5", "claude-sonnet", "claude-haiku", "kimi-k3", "kimi-k2.6")
+_tasarim_model = None
+_tasarim_kotu = set()
+
+
+def tasarim_modeli(http=None):
+    """HTML/CSS tasarim yazmak icin en iyi model (Claude varsa). AJAN_YZ_TASARIM_MODEL ile sabitlenebilir;
+    "metin" yazilirsa metin modeli kullanilir. Bulunamazsa metin modeli."""
+    global _tasarim_model
+    env = os.environ.get("AJAN_YZ_TASARIM_MODEL", "").strip()
+    if env:
+        return model_adi() if env == "metin" else env
+    if _tasarim_model:
+        return _tasarim_model
+    try:
+        r = (http or requests).get(_url() + "/models", timeout=30, headers={"Authorization": f"Bearer {_anahtar()}"})
+        mevcut = [m.get("id") for m in (r.json().get("data") or []) if m.get("id")] if r.status_code == 200 else []
+    except Exception:
+        mevcut = []
+    for parca in TASARIM_TERCIH:
+        bulunan = [m for m in mevcut if parca in m and m not in _tasarim_kotu]
+        if bulunan:
+            _tasarim_model = bulunan[0]
+            print(f"  Tasarim modeli: {_tasarim_model}")
+            return _tasarim_model
+    _tasarim_model = model_adi()
+    return _tasarim_model
+
+
+def tasarim_sor(sistem, mesaj, sicaklik=0.7, oturum=None):
+    """Tasarim modeline sorar; model hata verirse bir daha denemez ve metin modeline doner."""
+    global _tasarim_model
+    if not hazir():
+        return None
+    http = oturum or requests
+    model = tasarim_modeli(http)
+    if model == model_adi():
+        return sor(sistem, mesaj, json_mod=False, sicaklik=sicaklik, oturum=oturum)
+    govde = {"model": model, "temperature": sicaklik, "max_tokens": 6000,
+             "messages": [{"role": "system", "content": sistem}, {"role": "user", "content": mesaj}]}
+    try:
+        r = http.post(_url() + "/chat/completions", json=govde, timeout=300, headers={"Authorization": f"Bearer {_anahtar()}"})
+        if r.status_code in (400, 401, 403, 404, 422):
+            print(f"  ! Tasarim modeli '{model}' kullanilamadi (HTTP {r.status_code}); metin modeline donuluyor")
+            _tasarim_kotu.add(model)
+            _tasarim_model = model_adi()
+            return sor(sistem, mesaj, json_mod=False, sicaklik=sicaklik, oturum=oturum)
+        r.raise_for_status()
+        veri = r.json()
+        _maliyet_yaz(veri.get("usage") or {}, model)
+        return (veri["choices"][0]["message"].get("content") or "").strip()
+    except Exception as e:
+        print(f"  ! Tasarim modeli hatasi: {str(e)[:160]}")
+        return sor(sistem, mesaj, json_mod=False, sicaklik=sicaklik, oturum=oturum)

@@ -95,6 +95,20 @@ def sor(sistem, mesaj, json_mod=False, sicaklik=0.7):
 
 
 @_sayarak
+def tasarim_sor(sistem, mesaj, sicaklik=0.7):
+    """HTML/CSS tasarim yazdirmak icin (saglayici destekliyorsa daha guclu tasarim modeli)."""
+    for ad in _adlar():
+        s = _yukle(ad)
+        if not s or not s.hazir():
+            continue
+        cevap = s.tasarim_sor(sistem, mesaj, sicaklik=sicaklik) if hasattr(s, "tasarim_sor") else \
+            s.sor(sistem, mesaj, json_mod=False, sicaklik=sicaklik)
+        if cevap is not None:
+            return cevap
+    return None
+
+
+@_sayarak
 def gor(sistem, mesaj, gorsel_yollari, json_mod=True):
     """Gorselleri de inceleyen soru (destekleyen saglayicilar: gor() fonksiyonu olanlar). Yoksa None."""
     for ad in _adlar():
