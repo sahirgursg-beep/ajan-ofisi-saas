@@ -603,6 +603,37 @@ class Tasarimci(Ajan):
         """tur: post -> post+story | carousel -> kapak+kartlar | reels -> sadece kapak (onizleme) | None -> hepsi"""
         from . import gorsel
         tarif = yon if isinstance(yon, dict) else None
+        # Once uretken tasarim (sabit sablon yok); tutmazsa asagidaki sablon yolu devralir
+        try:
+            from . import uretken
+            self.calis("Bugunun gorsel dilini seciyorum ve tasarimi sifirdan ciziyorum...")
+            u = uretken.tasarla(urun, gorsel_yollari, taslak, klasor, tur, lambda m: pano.durum(self.ad, "calisiyor", m))
+        except Exception as e:
+            u = None
+            self.soyle("Yonetici", f"Uretken tasarim calismadi ({type(e).__name__}: {str(e)[:120]}), sablonla devam.", "uyari")
+        if u:
+            d = u["dil"]
+            if tarif is not None:       # ogrenme ve Reels ayni gorsel dili kullansin
+                tarif.update({"isim": f"{d['stil']} #{random.randint(100, 999)}", "duzen": f"uretken:{d['stil']}",
+                              "fontlar": d["font"], "neden": d.get("neden") or d.get("fikir"),
+                              "palet": {"zemin": d["palet"]["bg"], "vurgu": d["palet"]["accent"], "panel": d["palet"]["bg"]}})
+            self.soyle("SanatYonetmeni", f"Yeni gorsel dil: '{d['stil']}' — {d['fikir']}")
+            try:
+                from . import tasarim
+                if tur in (None, "post") and not (klasor / "story_1080x1920.jpg").exists() and tarif:
+                    tasarim.ciz("dinamik.html", tasarim.veri_hazirla(urun, (dikey or [])[:1] + list(gorsel_yollari[1:]) if dikey else gorsel_yollari, taslak, tarif),
+                                klasor / "story_1080x1920.jpg", (1080, 1920))
+                if tur in (None, "carousel") and u.get("carousel_eksik"):
+                    from . import carousel
+                    carousel.uret(urun, gorsel_yollari, taslak, tarif, klasor, lambda m: pano.durum(self.ad, "calisiyor", m))
+                tasarim.kapat()
+            except Exception as e:
+                self.soyle("Yonetici", f"Ek tuvaller cizilemedi ({type(e).__name__}: {e}).", "uyari")
+            self.soyle("VideoEditoru" if tur in (None, "reels") else "Yonetici",
+                       {"post": "Post ve story hazir.", "carousel": "Carousel kartlari hazir.",
+                        "reels": "Kapak hazir, Reels'e gecebilirsin."}.get(tur, "Tasarimlar hazir."))
+            self.bitir()
+            return
         sablon = "dinamik.html" if tarif else SanatYonetmeni.YONLER.get(yon, SanatYonetmeni.YONLER["B"])[0]
         self.calis(f"'{tarif['isim'] if tarif else yon}' sablonuyla post ve story ciziyorum...")
         try:

@@ -115,7 +115,7 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
-SURUM = "2026-11-14.yeni-arayuz"
+SURUM = "2026-11-14.uretken-tasarim"
 
 
 async def saglik(request):

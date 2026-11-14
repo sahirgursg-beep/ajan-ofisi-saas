@@ -48,7 +48,10 @@ def _fikir_listesi(adet):
               "shown with phones, laptops, planning boards and content creation, never as a clothing shop. "
               'Return JSON: {"ideas": [{"title": "<short title>", "pillar": "<content pillar>", '
               '"angle": "<one sentence>", "details": "<2-3 sentences of what the post says>", '
-              '"stock_query": "<3-5 word stock photo search showing the business\'s own world>", '
+              '"stock_queries": ["<3 DIFFERENT concrete stock photo searches, 2-4 words each, nouns a camera can '
+              'see (people/objects/place/action), e.g. \'barista pouring latte art\', never abstract words like '
+              'success or growth>"], "must_show": "<what the photo must show, one sentence>", '
+              '"avoid": "<what would be wrong for this business, a few words>", '
               '"ai_image_prompt": "<photorealistic scene of the business\'s own world, no text, no logos, '
               'no recognisable faces>"}]}', json_mod=True, sicaklik=0.7)
     fikirler = [_duzle(f) for f in (cevap or {}).get("ideas", []) if isinstance(f, dict) and f.get("title")]
@@ -78,13 +81,26 @@ def _metin(x):
 
 def _duzle(f):
     """Yapay zeka bazen alanlari liste/sozluk dondurur: hepsi duz metne."""
-    return {k: _metin(f.get(k)) for k in ("title", "pillar", "angle", "details", "stock_query", "ai_image_prompt")}
+    d = {k: _metin(f.get(k)) for k in ("title", "pillar", "angle", "details", "stock_query", "ai_image_prompt",
+                                       "must_show", "avoid")}
+    q = f.get("stock_queries")
+    d["stock_queries"] = [_metin(x) for x in (q if isinstance(q, list) else [q] if q else []) if _metin(x)][:4]
+    if d["stock_query"] and d["stock_query"] not in d["stock_queries"]:
+        d["stock_queries"].append(d["stock_query"])
+    return d
 
 
 def _gorseller(f, gunluk):
-    yollar, kaynaklar, haric = [], [], set()
+    """Birden fazla aramadan adaylar -> gorme modeli konuya uyanlari secer (gorsel_secici). Iyi aday yetmezse
+    yapay zeka gorseli tamamlar."""
+    yollar, kaynaklar = [], []
     try:
-        for y, k in gorsel_kaynak.stok_ara(f.get("stock_query") or f["title"], adet=3, haric=haric):
+        from . import gorsel_secici
+        secilen, _ = gorsel_secici.sec(f.get("stock_queries") or [f.get("stock_query") or f["title"]],
+                                       f"{f['title']}. {f.get('must_show') or f.get('angle') or ''}",
+                                       f"{musteri.ad()}, {musteri.tanim()}", adet=3, kacin=f.get("avoid", ""),
+                                       gunluk=gunluk)
+        for y, k, _ in secilen:
             yollar.append(y)
             kaynaklar.append(k)
     except Exception as e:

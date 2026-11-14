@@ -120,10 +120,38 @@ def _veri_uri(yol, kenar=896):
     return "data:image/jpeg;base64," + base64.b64encode(b.getvalue()).decode()
 
 
+# Gorsel gorebilen modeller (DigitalOcean katalogu degisir): sirayla aranir; metin modeli gorse o da denenir.
+GORME_TERCIH = ("kimi-k2.6", "kimi-k3", "kimi", "glm-5.3", "glm", "nemotron-3.5-super-vl", "vl",
+                "deepseek-v4.1-flash", "anthropic-claude-haiku-4.5", "llama-4-maverick", "qwen3.5")
+_gorme_model = None
+_gorme_kotu = set()
+
+
+def _gorme_adaylari(http):
+    """Ortam degiskeni > katalogdaki gorme modelleri (tercih sirasiyla) > metin modeli."""
+    adaylar = []
+    if os.environ.get("AJAN_YZ_GORME_MODEL"):
+        adaylar.append(os.environ["AJAN_YZ_GORME_MODEL"])
+    try:
+        r = http.get(_url() + "/models", timeout=30, headers={"Authorization": f"Bearer {_anahtar()}"})
+        mevcut = [m.get("id") for m in (r.json().get("data") or []) if m.get("id")] if r.status_code == 200 else []
+    except Exception:
+        mevcut = []
+    for parca in GORME_TERCIH:
+        adaylar += [m for m in mevcut if parca in m.lower() and m not in adaylar
+                    and not any(x in m for x in ("image", "embed", "tts", "whisper"))]
+    adaylar.append(model_adi())
+    return [m for m in dict.fromkeys(adaylar) if m not in _gorme_kotu]
+
+
+def gorme_modeli():
+    return _gorme_model
+
+
 def gor(sistem, mesaj, gorsel_yollari, json_mod=True, oturum=None):
-    """Gorsel + metin (OpenAI 'image_url' bicimi). Model gorsel kabul etmiyorsa None ve bir daha denemez.
-    AJAN_YZ_GORME_MODEL ile ayri bir gorsel model secilebilir (varsayilan: metin modeli)."""
-    global _gorme_yok
+    """Gorsel + metin (OpenAI 'image_url' bicimi). Calisan ilk gorme modelini bulur ve hatirlar; resim
+    kabul etmeyen model bir daha denenmez. Hicbiri yoksa None (cagiran taraf gorsel incelemesiz devam eder)."""
+    global _gorme_yok, _gorme_model
     if _gorme_yok or not hazir():
         return None
     http = oturum or requests
@@ -133,29 +161,39 @@ def gor(sistem, mesaj, gorsel_yollari, json_mod=True, oturum=None):
             icerik.append({"type": "image_url", "image_url": {"url": _veri_uri(y)}})
         except Exception as e:
             print(f"  ! gorsel okunamadi {y}: {e}")
-    govde = {"model": os.environ.get("AJAN_YZ_GORME_MODEL") or model_adi(), "temperature": 0.2,
-             "messages": [{"role": "system", "content": sistem}, {"role": "user", "content": icerik}]}
-    if json_mod and _json_destek:
-        govde["response_format"] = {"type": "json_object"}
-    try:
-        r = http.post(_url() + "/chat/completions", json=govde, timeout=180,
-                      headers={"Authorization": f"Bearer {_anahtar()}"})
-        if r.status_code == 400 and "response_format" in govde:
-            govde.pop("response_format")
+    modeller = [_gorme_model] if _gorme_model else _gorme_adaylari(http)
+    for model in modeller:
+        govde = {"model": model, "temperature": 0.2,
+                 "messages": [{"role": "system", "content": sistem}, {"role": "user", "content": icerik}]}
+        if json_mod and _json_destek:
+            govde["response_format"] = {"type": "json_object"}
+        try:
             r = http.post(_url() + "/chat/completions", json=govde, timeout=180,
                           headers={"Authorization": f"Bearer {_anahtar()}"})
-        if r.status_code in (400, 404, 415, 422):
-            _gorme_yok = True
-            print(f"  ! Model gorsel kabul etmiyor (HTTP {r.status_code}); gorsel inceleme kapali.")
+            if r.status_code == 400 and "response_format" in govde:
+                govde.pop("response_format")
+                r = http.post(_url() + "/chat/completions", json=govde, timeout=180,
+                              headers={"Authorization": f"Bearer {_anahtar()}"})
+            if r.status_code in (400, 404, 415, 422):
+                _gorme_kotu.add(model)
+                if _gorme_model == model:
+                    _gorme_model = None
+                print(f"  ! '{model}' gorsel kabul etmiyor (HTTP {r.status_code}), siradaki deneniyor.")
+                continue
+            r.raise_for_status()
+            veri = r.json()
+            _maliyet_yaz(veri.get("usage") or {})
+            metin = (veri["choices"][0]["message"].get("content") or "").strip()
+            if _gorme_model != model:
+                _gorme_model = model
+                print(f"  Gorsel inceleme modeli: {model}")
+            return json_coz(metin) if json_mod else metin
+        except Exception as e:
+            print(f"  ! Gorsel inceleme hatasi ({model}): {str(e)[:160]}")
             return None
-        r.raise_for_status()
-        veri = r.json()
-        _maliyet_yaz(veri.get("usage") or {})
-        metin = (veri["choices"][0]["message"].get("content") or "").strip()
-        return json_coz(metin) if json_mod else metin
-    except Exception as e:
-        print(f"  ! Gorsel inceleme hatasi: {str(e)[:160]}")
-        return None
+    _gorme_yok = True
+    print("  ! Hicbir model gorsel kabul etmedi; gorsel inceleme kapali (AJAN_YZ_GORME_MODEL ile belirtilebilir).")
+    return None
 
 
 def _maliyet_yaz(kullanim):

@@ -168,7 +168,9 @@ def test_fikir_modu_fiyatsiz_urun_uretir_ve_tekrar_etmez(isletme, monkeypatch, t
     assert fikir_kaynagi.veri_yok_mu()
     foto = tmp_path / "f.jpg"
     Image.new("RGB", (800, 1000)).save(foto)
-    monkeypatch.setattr(gorsel_kaynak, "stok_ara", lambda *a, **k: [(str(foto), {"kaynak": "pexels", "fotografci": "Ada"})])
+    monkeypatch.setattr(gorsel_kaynak, "stok_adaylar", lambda q, adet=6, haric=(), **k: [] if "tek" in haric else [
+        {"id": "tek", "onizleme": str(foto), "buyuk": str(foto), "bilgi": {"kaynak": "pexels", "fotografci": "Ada"}}])
+    monkeypatch.setattr(gorsel_kaynak, "indir", lambda adres, oturum=None: adres)
     monkeypatch.setattr(gorsel_kaynak, "yz_uret", lambda *a, **k: None)
     kullanilan = set()
     monkeypatch.setattr(fikir_kaynagi.pano, "son_hazirlananlar", lambda gun: kullanilan)
