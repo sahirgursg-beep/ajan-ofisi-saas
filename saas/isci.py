@@ -222,7 +222,8 @@ def calistir(mid, tmp, paylasik, adimlar, sure_sn):
             break
         cikti.append(f"$ {' '.join(komut[1:])} -> {kod}\n" + "".join(satirlar)[-4500:])
         basari &= kod == 0
-    sureler = [l for c in cikti for l in c.splitlines() if l.lstrip().startswith("[SURE]")]
+    sureler = [l for c in cikti for l in c.splitlines()
+               if l.lstrip().startswith(("[SURE]", "[GORSEL]", "[TASARIM]")) or "Gorsel inceleme modeli" in l]
     ozet = ("\n\nSURELER:\n" + "\n".join(sureler)) if sureler else ""    # kayit bastan kirpilir: sureler sonda kalir
     return basari, "\n".join(cikti) + ozet
 

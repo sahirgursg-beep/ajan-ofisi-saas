@@ -66,7 +66,7 @@ class UrunSorumlusu(Ajan):
     def _fikirden(self):
         from . import fikir_kaynagi
         self.calis("Sektor arastirmasindan bugunun icerik fikirlerini hazirliyorum...")
-        urunler = fikir_kaynagi.fikir_urunleri(3, gunluk=lambda m: pano.durum(self.ad, "calisiyor", m))
+        urunler = fikir_kaynagi.fikir_urunleri(3, gunluk=lambda m: (print(m, flush=True), pano.durum(self.ad, "calisiyor", m)))
         self.tum_urunler = list(urunler)
         if not urunler:
             self.soyle("Yonetici", "Icerik fikri icin gorsel bulamadim (stok foto / yapay zeka kapali).", "hata")
@@ -607,7 +607,8 @@ class Tasarimci(Ajan):
         try:
             from . import uretken
             self.calis("Bugunun gorsel dilini seciyorum ve tasarimi sifirdan ciziyorum...")
-            u = uretken.tasarla(urun, gorsel_yollari, taslak, klasor, tur, lambda m: pano.durum(self.ad, "calisiyor", m))
+            u = uretken.tasarla(urun, gorsel_yollari, taslak, klasor, tur,
+                                lambda m: (print(f"[TASARIM] {m}", flush=True), pano.durum(self.ad, "calisiyor", m)))
         except Exception as e:
             u = None
             self.soyle("Yonetici", f"Uretken tasarim calismadi ({type(e).__name__}: {str(e)[:120]}), sablonla devam.", "uyari")

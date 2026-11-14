@@ -351,6 +351,8 @@ def tasarla(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print):
                 [klasor / f"carousel_{i}.jpg" for i in range(1, len(tutan) + 2)]
         else:
             sonuc["carousel_eksik"] = True
+    gunluk(f"Sonuc: {len(sonuc['dosyalar'])} tuval, puanlar {sonuc['puanlar']}"
+           + (" (carousel eski sablona dustu)" if sonuc.get("carousel_eksik") else ""))
     _gecmise_yaz({"tarih": datetime.now().strftime("%Y-%m-%d %H:%M"), "stil": dil["stil"], "palet": dil["palet"],
                   "font": dil["font"], "puanlar": sonuc["puanlar"]})
     return sonuc
