@@ -8,23 +8,24 @@ Uretimde uygulanan sinirlar: gunluk formatlar, platformlar, aylik ucretli yapay 
 PAKETLER = {
     "starter": {
         "ad": "Starter", "usd": 10, "formatlar": ["post"], "platformlar": ["instagram", "facebook"],
-        "ai_tavan_usd": 2, "isletme": 1,
+        "ai_tavan_usd": 2, "ai_gorsel": 10, "isletme": 1,
         "ozellikler": ["1 designed post every day", "Instagram & Facebook auto-publishing",
                        "Captions and hashtags written for your business", "Your photos + free stock photos",
+                       "10 AI images every month",
                        "Sector research every week"],
     },
     "growth": {
         "ad": "Growth", "usd": 30, "formatlar": ["post", "carousel", "reels"],
-        "platformlar": ["instagram", "facebook", "tiktok", "linkedin"], "ai_tavan_usd": 6, "isletme": 1,
+        "platformlar": ["instagram", "facebook", "tiktok", "linkedin"], "ai_tavan_usd": 6, "ai_gorsel": 40, "isletme": 1,
         "ozellikler": ["3 pieces every day: post, carousel and Reel", "Instagram & Facebook auto-publishing",
-                       "Ready-to-post TikTok & LinkedIn versions", "AI photo retouching and AI images",
+                       "Ready-to-post TikTok & LinkedIn versions", "40 AI images every month + AI photo retouching",
                        "Reads your website, menu and price lists", "Everything in Starter"],
         "one_cikan": True,
     },
     "pro": {
         "ad": "Pro", "usd": 60, "formatlar": ["post", "carousel", "reels"],
-        "platformlar": ["instagram", "facebook", "tiktok", "linkedin"], "ai_tavan_usd": 15, "isletme": 3,
-        "ozellikler": ["Up to 3 businesses or brands", "Higher AI image and retouching budget",
+        "platformlar": ["instagram", "facebook", "tiktok", "linkedin"], "ai_tavan_usd": 15, "ai_gorsel": 120, "isletme": 1,
+        "ozellikler": ["120 AI images every month", "Highest AI retouching budget",
                        "Priority production every morning", "Monthly performance report", "Everything in Growth"],
     },
 }

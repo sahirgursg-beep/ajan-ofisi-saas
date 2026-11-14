@@ -176,3 +176,31 @@ def test_bos_rozet_ve_ikon_cipi_goruntuden_kalkar(tmp_path):
     finally:
         sayfa.close()
         tasarim.kapat()
+
+
+def test_gorsel_hakki_dolunca_yapay_zeka_gorseli_uretilmez(tmp_path, monkeypatch):
+    from ofis import fal_ai, paketler
+    monkeypatch.setattr(fal_ai, "HARCAMA", tmp_path / "h.json")
+    monkeypatch.setenv("FAL_KEY", "k")
+    monkeypatch.setattr(paketler, "aktif", lambda: {"ai_gorsel": 2, "ai_tavan_usd": 50})
+    cagri = []
+    from PIL import Image
+    monkeypatch.setattr(fal_ai, "_cagir", lambda *a, **k: cagri.append(1) or Image.new("RGB", (8, 8)))
+    assert fal_ai.gorsel_kalan() == 2
+    assert fal_ai.uret("x") is not None and fal_ai.uret("x") is not None
+    assert fal_ai.gorsel_kalan() == 0 and fal_ai.uret("x") is None and len(cagri) == 2
+
+
+def test_pro_paket_tek_marka_ve_her_pakette_gorsel_hakki():
+    from ofis import paketler
+    assert [p["isletme"] for p in paketler.PAKETLER.values()] == [1, 1, 1]
+    assert [p["ai_gorsel"] for p in paketler.PAKETLER.values()] == [10, 40, 120]
+    from saas.site import metin
+    assert "3" not in " ".join(str(x) for x in paketler.PAKETLER["pro"]["ozellikler"][:1])
+
+
+def test_son_kontrol_kusurlu_kapagi_reddeder(monkeypatch, tmp_path):
+    monkeypatch.setattr(llm, "gor", lambda *a, **k: {"ok": False, "problem": "empty badge"})
+    assert marka_tasarim._son_kontrol(tmp_path / "x.jpg") == "empty badge"
+    monkeypatch.setattr(llm, "gor", lambda *a, **k: {"score": 8})
+    assert marka_tasarim._son_kontrol(tmp_path / "x.jpg") is None

@@ -356,6 +356,22 @@ def _ciz(s, tip, metin, varliklar, hedef, rol_ad):
     return not olc.get("sert"), olc
 
 
+def _son_kontrol(yol):
+    """Yayindan once kapaga son bakis (gorme modeli): bos rozet/cip, ust uste binen ya da okunmayan yazi var mi?
+    -> sorun metni ya da None (sorun yok / model yok)."""
+    try:
+        c = llm.gor("You are the final quality check before a social media image is published. Answer ONLY with valid JSON.",
+                    "Look for DEFECTS only (not taste): empty badges or chips, placeholder fragments like 'No.' with "
+                    "nothing after, icons with no label, texts overlapping each other, text cut off, unreadable text, "
+                    "a headline covering a face. "
+                    'Return JSON: {"ok": true|false, "problem": "<the defect in max 10 words, empty if ok>"}', [yol])
+    except Exception:
+        return None
+    if isinstance(c, dict) and c.get("ok") is False:
+        return str(c.get("problem") or "defect")[:80]
+    return None
+
+
 def ciz_set(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print):
     """Gunun icerigini cizer: once markanin sistem sablonlari (en az kullanilan), tutmayan/eksik her tuval icin
     modern duzen kutuphanesi. Yapay zeka cagrisi yok -> saniyeler surer, eski sablonlara donulmez.
@@ -376,6 +392,7 @@ def ciz_set(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print):
                         "old_price": mt.get("OLD_PRICE"), "cta": mt.get("CTA"), "hook": mt.get("HOOK"),
                         "small": mt.get("WEB")}
     dosyalar, kullanilan_duzen = [], set()
+    kontrol = {"kalan": 2}                      # kapak icin en fazla 2 son kontrol cagrisi
 
     def bir(onekler, metin, hedef, rol_ad, boyut, varlik=None, maddeler=None):
         vv = varlik or v
@@ -386,6 +403,12 @@ def ciz_set(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print):
                     ok, olc = _ciz(s, tip, metin, vv, hedef, rol_ad)
                 except Exception as e:
                     ok, olc = False, {"sert": [f"{type(e).__name__}: {str(e)[:60]}"]}
+                if ok and rol_ad == "post" and kontrol["kalan"] > 0:
+                    kontrol["kalan"] -= 1
+                    sorun = _son_kontrol(hedef)
+                    if sorun:
+                        gunluk(f"[TASARIM] post: {tip} son kontrolden gecemedi ({sorun}), siradaki")
+                        continue
                 if ok:
                     kullanim[tip] = kullanim.get(tip, 0) + 1
                     gunluk(f"[TASARIM] {rol_ad}: sistem sablonu {tip}")

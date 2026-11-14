@@ -116,7 +116,10 @@ def sec(sorgular, konu, isletme, adet=3, kacin="", haric=(), gunluk=print):
         sira = list(range(len(gecerli)))[:adet]
         rapor["not"] = "gorme modeli yok, ilk adaylar alindi"
     else:
-        sira = [i for i, _ in sorted(puanlar.items(), key=lambda x: -x[1]) if puanlar[i] >= ESIK][:adet]
+        sirali = [i for i, _ in sorted(puanlar.items(), key=lambda x: -x[1])]
+        sira = [i for i in sirali if puanlar[i] >= ESIK][:adet]
+        if len(sira) < adet:                   # yeterli 7+ yok: 6'lar da kabul (yapay zeka gorsel hakkini korur)
+            sira += [i for i in sirali if ESIK - 1 <= puanlar[i] < ESIK][:adet - len(sira)]
         rapor["puanlar"] = sorted((round(p, 1) for p in puanlar.values()), reverse=True)
     secilen = []
     for i in sira:

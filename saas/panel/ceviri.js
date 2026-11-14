@@ -70,7 +70,7 @@ fr: {
 "Enter your business name": "Saisissez le nom de votre entreprise", "Pick what you offer or write one sentence": "Choisissez ce que vous proposez ou écrivez une phrase",
 "Brand colours from your logo:": "Couleurs de marque issues de votre logo :", "Language": "Langue",
 "Next: {jour} at {saat} — {tur} on Instagram & Facebook. You don't need to do anything.": "Prochain : {jour} à {saat} — {tur} sur Instagram et Facebook. Vous n'avez rien à faire.",
-"today": "aujourd'hui", "{n} posted so far": "{n} publiés pour l'instant", "Plan: {ad}": "Formule : {ad}", "free trial, {n} days left": "essai gratuit, {n} jours restants",
+"today": "aujourd'hui", "{n} posted so far": "{n} publiés pour l'instant", "{k} of {n} AI images used this month. Your own photos never count - upload a few and every post gets better.": "Ce mois-ci : {k} images IA utilisées sur {n}. Vos propres photos ne comptent jamais : ajoutez-en quelques-unes et chaque publication s'améliore.", "Plan: {ad}": "Formule : {ad}", "free trial, {n} days left": "essai gratuit, {n} jours restants",
 "{n} files added. Add more or continue.": "{n} fichiers ajoutés. Ajoutez-en ou continuez.", "Delete this file?": "Supprimer ce fichier ?",
 "Delete this post from Instagram and Facebook?": "Supprimer ce post d'Instagram et Facebook ?", "What should change? For example: different photo, shorter text, brighter colours": "Que faut-il changer ? Par exemple : autre photo, texte plus court, couleurs plus vives",
 "Your first posts are being made — about 15 minutes.": "Vos premiers posts sont en cours — environ 15 minutes.", "{n} could not go out": "{n} n'ont pas pu partir", "Open it and press Try again.": "Ouvrez-le et appuyez sur Réessayer."
@@ -134,7 +134,7 @@ es: {
 "Enter your business name": "Escribe el nombre de tu negocio", "Pick what you offer or write one sentence": "Elige lo que ofreces o escribe una frase",
 "Brand colours from your logo:": "Colores de marca de tu logo:", "Language": "Idioma",
 "Next: {jour} at {saat} — {tur} on Instagram & Facebook. You don't need to do anything.": "Siguiente: {jour} a las {saat} — {tur} en Instagram y Facebook. No tienes que hacer nada.",
-"today": "hoy", "{n} posted so far": "{n} publicadas hasta ahora", "Plan: {ad}": "Plan: {ad}", "free trial, {n} days left": "prueba gratis, quedan {n} días",
+"today": "hoy", "{n} posted so far": "{n} publicadas hasta ahora", "{k} of {n} AI images used this month. Your own photos never count - upload a few and every post gets better.": "Este mes: {k} de {n} imágenes con IA usadas. Tus propias fotos nunca cuentan: sube algunas y cada publicación mejora.", "Plan: {ad}": "Plan: {ad}", "free trial, {n} days left": "prueba gratis, quedan {n} días",
 "{n} files added. Add more or continue.": "{n} archivos añadidos. Añade más o continúa.", "Delete this file?": "¿Borrar este archivo?",
 "Delete this post from Instagram and Facebook?": "¿Borrar esta publicación de Instagram y Facebook?", "What should change? For example: different photo, shorter text, brighter colours": "¿Qué cambiamos? Por ejemplo: otra foto, texto más corto, colores más vivos",
 "Your first posts are being made — about 15 minutes.": "Se están creando tus primeras publicaciones — unos 15 minutos.", "{n} could not go out": "{n} no pudieron salir", "Open it and press Try again.": "Ábrela y pulsa Reintentar."
@@ -198,7 +198,7 @@ pt: {
 "Enter your business name": "Digite o nome do seu negócio", "Pick what you offer or write one sentence": "Escolha o que você oferece ou escreva uma frase",
 "Brand colours from your logo:": "Cores da marca do seu logo:", "Language": "Idioma",
 "Next: {jour} at {saat} — {tur} on Instagram & Facebook. You don't need to do anything.": "Próximo: {jour} às {saat} — {tur} no Instagram e Facebook. Você não precisa fazer nada.",
-"today": "hoje", "{n} posted so far": "{n} publicados até agora", "Plan: {ad}": "Plano: {ad}", "free trial, {n} days left": "teste grátis, faltam {n} dias",
+"today": "hoje", "{n} posted so far": "{n} publicados até agora", "{k} of {n} AI images used this month. Your own photos never count - upload a few and every post gets better.": "Este mês: {k} de {n} imagens com IA usadas. Suas próprias fotos nunca contam: envie algumas e cada post fica melhor.", "Plan: {ad}": "Plano: {ad}", "free trial, {n} days left": "teste grátis, faltam {n} dias",
 "{n} files added. Add more or continue.": "{n} arquivos adicionados. Adicione mais ou continue.", "Delete this file?": "Excluir este arquivo?",
 "Delete this post from Instagram and Facebook?": "Excluir este post do Instagram e Facebook?", "What should change? For example: different photo, shorter text, brighter colours": "O que deve mudar? Por exemplo: outra foto, texto mais curto, cores mais vivas",
 "Your first posts are being made — about 15 minutes.": "Seus primeiros posts estão sendo feitos — cerca de 15 minutos.", "{n} could not go out": "{n} não puderam sair", "Open it and press Try again.": "Abra e toque em Tentar de novo."
@@ -262,7 +262,7 @@ de: {
 "Enter your business name": "Gib den Namen deines Unternehmens ein", "Pick what you offer or write one sentence": "Wähle dein Angebot oder schreibe einen Satz",
 "Brand colours from your logo:": "Markenfarben aus deinem Logo:", "Language": "Sprache",
 "Next: {jour} at {saat} — {tur} on Instagram & Facebook. You don't need to do anything.": "Nächster: {jour} um {saat} — {tur} auf Instagram & Facebook. Du musst nichts tun.",
-"today": "heute", "{n} posted so far": "{n} bisher gepostet", "Plan: {ad}": "Tarif: {ad}", "free trial, {n} days left": "kostenloser Test, noch {n} Tage",
+"today": "heute", "{n} posted so far": "{n} bisher gepostet", "{k} of {n} AI images used this month. Your own photos never count - upload a few and every post gets better.": "Diesen Monat {k} von {n} KI-Bildern genutzt. Eigene Fotos zählen nie mit: Laden Sie ein paar hoch, und jeder Beitrag wird besser.", "Plan: {ad}": "Tarif: {ad}", "free trial, {n} days left": "kostenloser Test, noch {n} Tage",
 "{n} files added. Add more or continue.": "{n} Dateien hinzugefügt. Mehr hinzufügen oder weiter.", "Delete this file?": "Diese Datei löschen?",
 "Delete this post from Instagram and Facebook?": "Diesen Post von Instagram und Facebook löschen?", "What should change? For example: different photo, shorter text, brighter colours": "Was soll sich ändern? Zum Beispiel: anderes Foto, kürzerer Text, hellere Farben",
 "Your first posts are being made — about 15 minutes.": "Deine ersten Posts werden erstellt — etwa 15 Minuten.", "{n} could not go out": "{n} konnten nicht veröffentlicht werden", "Open it and press Try again.": "Öffnen und auf Erneut versuchen tippen."
@@ -326,7 +326,7 @@ tr: {
 "Enter your business name": "İşletme adını girin", "Pick what you offer or write one sentence": "Sunduklarınızı seçin ya da bir cümle yazın",
 "Brand colours from your logo:": "Logonuzdan alınan marka renkleri:", "Language": "Dil",
 "Next: {jour} at {saat} — {tur} on Instagram & Facebook. You don't need to do anything.": "Sıradaki: {jour} {saat} — Instagram ve Facebook'ta {tur}. Sizin bir şey yapmanıza gerek yok.",
-"today": "bugün", "{n} posted so far": "şimdiye kadar {n} paylaşım", "Plan: {ad}": "Paket: {ad}", "free trial, {n} days left": "ücretsiz deneme, {n} gün kaldı",
+"today": "bugün", "{n} posted so far": "şimdiye kadar {n} paylaşım", "{k} of {n} AI images used this month. Your own photos never count - upload a few and every post gets better.": "Bu ay {n} yapay zekâ görselinden {k} tanesi kullanıldı. Kendi fotoğraflarınız haktan düşmez: birkaç tane yükleyin, her gönderi daha iyi olsun.", "Plan: {ad}": "Paket: {ad}", "free trial, {n} days left": "ücretsiz deneme, {n} gün kaldı",
 "{n} files added. Add more or continue.": "{n} dosya eklendi. Daha fazla ekleyin ya da devam edin.", "Delete this file?": "Bu dosya silinsin mi?",
 "Delete this post from Instagram and Facebook?": "Bu gönderi Instagram ve Facebook'tan silinsin mi?", "What should change? For example: different photo, shorter text, brighter colours": "Ne değişsin? Örneğin: başka fotoğraf, daha kısa metin, daha canlı renkler",
 "Your first posts are being made — about 15 minutes.": "İlk gönderileriniz hazırlanıyor — yaklaşık 15 dakika.", "{n} could not go out": "{n} gönderi paylaşılamadı", "Open it and press Try again.": "Açın ve Tekrar dene'ye basın."
@@ -390,7 +390,7 @@ ar: {
 "Enter your business name": "أدخل اسم نشاطك", "Pick what you offer or write one sentence": "اختر ما تقدمه أو اكتب جملة واحدة",
 "Brand colours from your logo:": "ألوان العلامة من شعارك:", "Language": "اللغة",
 "Next: {jour} at {saat} — {tur} on Instagram & Facebook. You don't need to do anything.": "التالي: {jour} الساعة {saat} — {tur} على إنستغرام وفيسبوك. لا تحتاج لفعل أي شيء.",
-"today": "اليوم", "{n} posted so far": "نُشر {n} حتى الآن", "Plan: {ad}": "الباقة: {ad}", "free trial, {n} days left": "تجربة مجانية، متبقٍ {n} أيام",
+"today": "اليوم", "{n} posted so far": "نُشر {n} حتى الآن", "{k} of {n} AI images used this month. Your own photos never count - upload a few and every post gets better.": "هذا الشهر: استُخدمت {k} من {n} صورة بالذكاء الاصطناعي. صورك الخاصة لا تُحتسب أبدًا: ارفع بعضها ليصبح كل منشور أفضل.", "Plan: {ad}": "الباقة: {ad}", "free trial, {n} days left": "تجربة مجانية، متبقٍ {n} أيام",
 "{n} files added. Add more or continue.": "أُضيف {n} ملفات. أضف المزيد أو تابع.", "Delete this file?": "حذف هذا الملف؟",
 "Delete this post from Instagram and Facebook?": "حذف هذا المنشور من إنستغرام وفيسبوك؟", "What should change? For example: different photo, shorter text, brighter colours": "ما الذي يجب تغييره؟ مثلاً: صورة أخرى، نص أقصر، ألوان أزهى",
 "Your first posts are being made — about 15 minutes.": "يتم إنشاء منشوراتك الأولى — حوالي 15 دقيقة.", "{n} could not go out": "تعذّر نشر {n}", "Open it and press Try again.": "افتحه واضغط أعد المحاولة."

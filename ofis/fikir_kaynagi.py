@@ -44,6 +44,10 @@ def _fikir_listesi(adet):
             + f"\n\nWrite {adet} DIFFERENT post ideas for today. Mix pillars (education/tips, behind the scenes, "
               "how it works, invitation/offer, community). Each idea must be about THIS business and its own "
               "offer, written for its customers. No invented customers, case studies, statistics or results. "
+              "Never propose an idea that needs photos of specific real people or places we do not have - the "
+              "team, founders, engineers, staff, the office, customers, events ('meet the team', 'behind the "
+              "scenes with our engineers'): a stock or AI photo of strangers would mislead. Build ideas around "
+              "the product, its benefits, how it works, tips and the customer's everyday situation instead. "
               "The photo must show the business's own world (see VISUALS above) - e.g. a social media agency is "
               "shown with phones, laptops, planning boards and content creation, never as a clothing shop. "
               'Return JSON: {"ideas": [{"title": "<short title>", "pillar": "<content pillar>", '
@@ -116,12 +120,16 @@ def _gorseller(f, gunluk):
                      "no close-up hands.")
             acilar = ("", " Different shot: a close-up detail of the key object.",
                       " Different shot: a wide environmental view with soft natural light.")
+            uretim = 0                                   # fikir basina en fazla 2 uretim (aylik gorsel hakki)
             for aci in acilar[:3 - len(yollar)]:
                 istem = taban + aci
                 for deneme in range(2):
+                    if uretim >= 2:
+                        break
                     y = gorsel_kaynak.yz_uret(istem)
                     if not y:
                         break
+                    uretim += 1
                     # Yapay zeka gorseli de ayni hakemden gecer: anlamsiz yazi/bozuk el varsa kullanilmaz
                     puan = gorsel_secici.puanla([y], f["title"], f"{musteri.ad()}, {musteri.tanim()}",
                                                 "any visible text or letters, garbled writing, distorted hands")

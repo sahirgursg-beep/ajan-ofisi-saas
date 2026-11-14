@@ -59,6 +59,25 @@ def bu_ay():
     return float(_harcamalar().get(_ay(), 0.0))
 
 
+def gorsel_hakki():
+    """Paketin aylik yapay zeka gorsel hakki (adet). Musterinin kendi fotograflari hakki harcamaz."""
+    try:
+        from . import paketler
+        return int(paketler.aktif().get("ai_gorsel") or 0)
+    except Exception:
+        return 0
+
+
+def gorsel_kullanilan():
+    k = ((_harcamalar().get("_kalemler") or {}).get(_ay()) or {}).get("gorsel_uretim") or {}
+    return int(k.get("adet") or 0)
+
+
+def gorsel_kalan():
+    hak = gorsel_hakki()
+    return max(0, hak - gorsel_kullanilan()) if hak else 10 ** 6
+
+
 def butce_var(tahmini=0.0):
     return bu_ay() + tahmini <= tavan()
 
@@ -130,7 +149,7 @@ def uret(istem, w=1024, h=1536, oturum=None):
     # Butcenin ilk yarisinda FLUX.2 Pro (kalite), ikinci yarisinda flash (6 kat ucuz): ay sonu stoksuz kalinmasin
     model = os.environ.get("AJAN_FAL_URET") or ("fal-ai/flux-2-pro" if bu_ay() < 0.5 * tavan() else "fal-ai/flux-2/flash")
     fiyat = (0.005 if "flash" in model else 0.03) * max(1, _mp(w, h))
-    if not hazir() or not butce_var(fiyat):
+    if not hazir() or not butce_var(fiyat) or gorsel_kalan() <= 0:
         return None
     girdi = {"prompt": istem[:3000], "image_size": {"width": w, "height": h}, "output_format": "jpeg"}
     try:

@@ -595,6 +595,7 @@ async function paketCiz(para) {
       ${p.kod === pk.kod ? `<span class="soluk">${pk.deneme ? "You're trying this plan" : "Your plan"}</span>`
         : YAP.destek ? `<a href="mailto:${esc(YAP.destek)}?subject=${encodeURIComponent("Plan: " + p.ad + " — " + m.ad)}"><button class="kucuk ${p.one_cikan ? "ana" : "ikincil"}">Choose ${esc(p.ad)}</button></a>`
         : `<span class="soluk">Online payment opens soon</span>`}</div>`).join("")}</div>
+    ${pk.gorsel_hak ? `<p style="margin-top:10px">${esc(T("{k} of {n} AI images used this month. Your own photos never count - upload a few and every post gets better.", { k: Math.min(pk.gorsel_kullanilan || 0, pk.gorsel_hak), n: pk.gorsel_hak }))}</p>` : ""}
     <p class="soluk" style="margin-top:10px">Billed in US dollars. Local amounts are approximate${f.kur_tarihi ? " (rates updated daily)" : ""}.</p>`;
   $("#paraSec").onchange = (e) => { localStorage.setItem("fz_para", e.target.value); paketCiz(e.target.value); };
 }

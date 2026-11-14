@@ -81,7 +81,15 @@ def tz(m):
 def _paket(m):
     from ofis import paketler
     kod = paketler.kod_of((m.get("profil") or {}).get("abonelik"))
-    return {"kod": kod, "ad": paketler.al(kod)["ad"], "usd": paketler.al(kod)["usd"], "deneme": m.get("durum") == "deneme"}
+    pk = {"kod": kod, "ad": paketler.al(kod)["ad"], "usd": paketler.al(kod)["usd"], "deneme": m.get("durum") == "deneme",
+          "gorsel_hak": paketler.al(kod).get("ai_gorsel") or 0, "gorsel_kullanilan": 0}
+    try:                                         # bu ay kullanilan yapay zeka gorseli (isci her uretimden sonra yukler)
+        h = depo().json_oku(f"{m['id']}/harcama.json", {}) or {}
+        ay = datetime.now(timezone.utc).strftime("%Y-%m")
+        pk["gorsel_kullanilan"] = int((((h.get("_kalemler") or {}).get(ay) or {}).get("gorsel_uretim") or {}).get("adet") or 0)
+    except Exception:
+        pass
+    return pk
 
 
 def musteri_ozeti(m, rol=None):
@@ -115,7 +123,7 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
-SURUM = "2026-11-14.reels-yazi-maliyet"
+SURUM = "2026-11-14.gorsel-hakki"
 
 
 async def saglik(request):
