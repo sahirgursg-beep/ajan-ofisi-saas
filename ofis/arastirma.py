@@ -92,6 +92,35 @@ def _hashtag_trendleri(p, gunluk):
     return out
 
 
+def gorsel_analiz(hesaplar, gunluk=print):
+    """Ornek hesaplarin en cok etkilesim alan paylasimlarina GERCEKTEN bakar (gorme modeli): hangi duzenler,
+    tipografi, renkler ve duzenleme tarzi tutuyor. Sanat Yonetmeni gorsel dili secerken bunu kullanir."""
+    from . import gorsel_kaynak, gorsel_secici
+    adresler = []
+    for h in sorted(hesaplar, key=lambda h: -(h.get("ort_begeni") or 0)):
+        adresler += [e["gorsel"] for e in h.get("en_iyi", []) if e.get("gorsel")][:2]
+    yollar = []
+    for a in adresler[:16]:
+        try:
+            yollar.append(gorsel_kaynak.indir(a))
+        except Exception:
+            continue
+    if len(yollar) < 4:
+        return None
+    sayfa = gorsel_secici.temas_sayfasi(yollar, VERI / "_ilham.jpg")
+    cevap = llm.gor(
+        "You are a design researcher at a social media agency. Describe only what you actually see. Answer ONLY with valid JSON.",
+        f"These are the best-performing recent posts of leading Instagram accounts in this niche: {sektor.profil().get('ad')}.\n"
+        "Extract the concrete, reusable design patterns. Return JSON: "
+        '{"duzenler": ["<4 layout patterns, concrete>"], "tipografi": ["<3 typography patterns>"], '
+        '"renkler": ["<3 colour approaches with example hex>"], "duzenleme": ["<3 photo/editing styles>"], '
+        '"ozet": "<2 sentences: what makes these posts work visually>"}', [sayfa])
+    if isinstance(cevap, dict):
+        gunluk(f"Ornek hesaplarin {len(yollar)} paylasimi gorsel olarak incelendi")
+        return {k: cevap.get(k) for k in ("duzenler", "tipografi", "renkler", "duzenleme", "ozet")}
+    return None
+
+
 def _istatistik(hesaplar, trend):
     tur = Counter()
     for h in hesaplar:
@@ -131,6 +160,11 @@ def guncelle(gunluk=print, zorla=False):
         HESAPLAR.write_text(json.dumps(kutuphane, ensure_ascii=False, indent=2), encoding="utf-8")
         trend = _hashtag_trendleri(p, gunluk)
     ist = _istatistik(hesaplar, trend)
+    gorsel = None
+    try:
+        gorsel = gorsel_analiz(hesaplar, gunluk) if hesaplar else None
+    except Exception as e:
+        gunluk(f"Gorsel analiz yapilamadi: {str(e)[:80]}")
     sentez = None
     if llm.hazir():
         sentez = llm.sor(
@@ -140,7 +174,9 @@ def guncelle(gunluk=print, zorla=False):
             f"Verified example accounts (followers, format mix, best posts):\n"
             + json.dumps([{k: h.get(k) for k in ("kullanici", "takipci", "tur_dagilimi", "ort_begeni", "en_iyi")}
                           for h in hesaplar][:10], ensure_ascii=False)[:6000]
-            + f"\nHashtag trend stats: {json.dumps(ist, ensure_ascii=False)[:3000]}\n\n"
+            + f"\nHashtag trend stats: {json.dumps(ist, ensure_ascii=False)[:3000]}\n"
+            + (f"What the top posts of these accounts actually look like (visual analysis): "
+               f"{json.dumps(gorsel, ensure_ascii=False)[:2000]}\n" if gorsel else "") + "\n"
             "Write this week's research brief for the art director and copywriter. If data is thin, rely on your "
             "expertise for this niche and say so in 'ozet'. Return JSON: "
             '{"ozet": "<3 sentences, English>", "tutan_formatlar": ["<formats that work now>"], '
@@ -152,7 +188,7 @@ def guncelle(gunluk=print, zorla=False):
             json_mod=True, sicaklik=0.6)
     r = {"tarih": datetime.now().isoformat(timespec="minutes"), "sektor": p.get("anahtar"),
          "kaynak": "meta+yapay_zeka" if meta_var else ("yapay_zeka" if sentez else "bilgi_bankasi"),
-         "istatistik": ist, "ornek_hesaplar": [h["kullanici"] for h in hesaplar]}
+         "istatistik": ist, "ornek_hesaplar": [h["kullanici"] for h in hesaplar], "gorsel_analiz": gorsel}
     if isinstance(sentez, dict):
         r.update({k: sentez.get(k) for k in ("ozet", "tutan_formatlar", "kancalar", "gorsel_trendler",
                                              "renk_paletleri", "fikirler", "kacin", "en_iyi_saatler")})
@@ -178,6 +214,11 @@ def istem_ozeti():
         s += f"Hook patterns: {k('kancalar', 5)}\n"
     if r.get("kacin"):
         s += f"Avoid: {k('kacin', 4)}\n"
+    g = r.get("gorsel_analiz") or {}
+    if g.get("ozet"):
+        s += (f"Observed in the top posts of leading accounts in this niche: {g['ozet']} Layouts: "
+              + "; ".join(str(x) for x in (g.get("duzenler") or [])[:4]) + ". Typography: "
+              + "; ".join(str(x) for x in (g.get("tipografi") or [])[:3]) + "\n")
     if r.get("renk_paletleri"):
         s += "Trending palettes: " + "; ".join(f"{p.get('ad')} {' '.join(p.get('renkler') or [])}"
                                                for p in r["renk_paletleri"][:3] if isinstance(p, dict)) + "\n"

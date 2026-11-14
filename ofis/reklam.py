@@ -21,7 +21,7 @@ def _ffmpeg():
 
 
 def reklam_yap(urun, gorsel_yollari, taslak, tarif, hedef: Path, gunluk=print, dikey_yollari=None,
-               muzik_id=None, muzik_haric=None, format_adi="luks"):
+               muzik_id=None, muzik_haric=None, format_adi="luks", son_kart=None):
     """format_adi: "luks" (sablonlar/reels.html) veya reels_formatlari.FORMATLAR icindeki trend formatlardan biri."""
     from . import sanat
     tarif = tarif if isinstance(tarif, dict) else sanat.rastgele_tarif(urun, sanat.baglam())
@@ -62,6 +62,14 @@ def reklam_yap(urun, gorsel_yollari, taslak, tarif, hedef: Path, gunluk=print, d
             else __import__("html").escape(str(deger))
         metin = metin.replace("{{" + k + "}}", guvenli)
     metin = metin.replace("</head>", f"<style>:root{{{tasarim.marka_css()}}}</style></head>", 1)
+    if son_kart and Path(son_kart).exists():
+        # Sanat Yonetmeni'nin icerige ozel kapanis karti son ~3 saniyede yumusakca gelir (logo/renk karari ondan)
+        bas = SURE - 3.2
+        metin = metin.replace("</body>",
+            f'<img id="sonkart" src="{tasarim._uri(son_kart)}" style="position:fixed;left:0;top:0;width:1080px;'
+            'height:1920px;object-fit:cover;opacity:0;z-index:2147483647;pointer-events:none">'
+            f"<script>window.__sk=function(t){{var e=document.getElementById('sonkart');var a=Math.min(1,Math.max(0,(t-{bas})/0.45));"
+            "e.style.opacity=a;e.style.transform='scale('+(1.035-0.035*a)+')';}}</script></body>", 1)
     gecici = tasarim.SABLON / f"_render_{AYAR['musteri_id']}_reels.html"
     gecici.write_text(metin, encoding="utf-8")
 
@@ -96,7 +104,7 @@ def reklam_yap(urun, gorsel_yollari, taslak, tarif, hedef: Path, gunluk=print, d
         import time as _t
         _bas = _t.time()
         for i in range(toplam):
-            sayfa.evaluate(f"ciz({i / FPS:.4f})")
+            sayfa.evaluate(f"ciz({i / FPS:.4f}); window.__sk && __sk({i / FPS:.4f})")
             p.stdin.write(sayfa.screenshot(type="jpeg", quality=93))
             if i % 90 == 0:
                 gunluk(f"Reels kurguluyorum... %{int(100 * i / toplam)}")

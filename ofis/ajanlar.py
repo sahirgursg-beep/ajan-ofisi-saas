@@ -621,6 +621,7 @@ class Tasarimci(Ajan):
             d = u["dil"]
             if tarif is not None:       # ogrenme ve Reels ayni gorsel dili kullansin
                 tarif.update({"isim": f"{d['stil']} #{random.randint(100, 999)}", "duzen": f"uretken:{d['stil']}",
+                              "uretken_dil": d,
                               "fontlar": d["font"], "neden": d.get("neden") or d.get("fikir"),
                               "palet": {"zemin": d["palet"]["bg"], "vurgu": d["palet"]["accent"], "panel": d["palet"]["bg"]}})
             self.soyle("SanatYonetmeni", f"Yeni gorsel dil: '{d['stil']}' — {d['fikir']}")
@@ -693,13 +694,23 @@ class VideoEditoru(Ajan):
                     self.soyle("Yonetici", f"Muzik kutuphanesine {yeni} yeni telifsiz parca ekledim (lisanslar kayitli).")
             except Exception as e:
                 self.soyle("Yonetici", f"Muzik kutuphanesi guncellenemedi ({type(e).__name__}), mevcut parcalarla devam.", "uyari")
+        son_kart = None
+        if isinstance(tarif, dict) and tarif.get("uretken_dil"):
+            try:
+                from . import uretken
+                self.calis("Kapanis kartini (logo + CTA) bu icerigin gorsel diliyle tasarliyorum...")
+                son_kart = uretken.son_kart(urun, gorsel_yollari or [], taslak, tarif["uretken_dil"],
+                                            klasor / "_reels_son.jpg",
+                                            lambda m: (print(f"[TASARIM] {m}", flush=True), pano.durum(self.ad, "calisiyor", m)))
+            except Exception as e:
+                self.soyle("Yonetici", f"Kapanis karti tasarlanamadi ({type(e).__name__}), sablon kapanisi kullanilacak.", "uyari")
         self.calis(f"Bugunun Reels formati: {reels_formatlari.FORMATLAR[bicim]}. Kurguluyorum (yaklasik 1 dakika)...")
         try:
             from . import reklam
             try:
                 reklam.reklam_yap(urun, gorsel_yollari or [], taslak, tarif if isinstance(tarif, dict) else None, hedef,
                                   lambda m: pano.durum(self.ad, "calisiyor", m), dikey_yollari=dikey,
-                                  muzik_id=muzik_id, muzik_haric=muzik_haric, format_adi=bicim)
+                                  muzik_id=muzik_id, muzik_haric=muzik_haric, format_adi=bicim, son_kart=son_kart)
             except Exception as e:
                 if bicim == "luks" or urun.get("proje") or not urun.get("fiyat_metni"):
                     raise
@@ -707,8 +718,11 @@ class VideoEditoru(Ajan):
                 bicim = "luks"
                 reklam.reklam_yap(urun, gorsel_yollari or [], taslak, tarif if isinstance(tarif, dict) else None, hedef,
                                   lambda m: pano.durum(self.ad, "calisiyor", m), dikey_yollari=dikey,
-                                  muzik_id=muzik_id, muzik_haric=muzik_haric, format_adi="luks")
+                                  muzik_id=muzik_id, muzik_haric=muzik_haric, format_adi="luks", son_kart=son_kart)
             tur = f"'{reels_formatlari.FORMATLAR[bicim]}' formati"
+            if son_kart:
+                tur += ", kapanis karti icerige ozel"
+                Path(son_kart).unlink(missing_ok=True)
         except Exception as e:
             self.soyle("Yonetici", f"Reklam motoru calismadi ({type(e).__name__}: {e}), basit Reels'e geciyorum.", "uyari")
             try:

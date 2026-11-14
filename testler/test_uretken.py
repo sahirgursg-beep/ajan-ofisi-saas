@@ -103,3 +103,34 @@ def test_esik_altinda_ayni_hakemle_eski_sablonla_karsilastirilir(tmp_path, monke
     monkeypatch.setattr(llm, "gor", lambda *a, **k: {"score": next(puanlar)})
     assert uretken.tasarla(urun, [], {"headline": "Light"}, tmp_path, "reels",
                            sablon_ciz=lambda h: Image.new("RGB", (1080, 1350)).save(h)) is None
+
+
+def test_reels_kapanis_karti_gorsel_dille_tasarlanir(tmp_path, monkeypatch):
+    urun = fiyat.hazirla({"ad": "Sofa", "fiyat": 900, "para_birimi": "USD", "gorseller": []})
+    istem = []
+    kart = ('<style>.tuval{width:1080px;height:1920px;background:#141414;display:grid;place-items:center}'
+            '.c{color:#fff;font:600 64px var(--gf)}</style><div class="tuval"><div class="c" data-metin>CTA</div></div>')
+    monkeypatch.setattr(llm, "hazir", lambda: True)
+    monkeypatch.setattr(llm, "sor", lambda s, m, json_mod=False, sicaklik=0.7: istem.append(m) or kart.replace(
+        "CTA", __import__("ofis.ayarlar", fromlist=["x"]).AYAR["marka"]["cta"]))
+    monkeypatch.setattr(llm, "gor", lambda *a, **k: {"score": 8})
+    dil = {"stil": "bento", "fikir": "x", "font": "cagdas", "dokular": "", "palet": {"bg": "#141414", "ink": "#fff",
+           "accent": "#f50", "accent2": "#05f"}}
+    y = uretken.son_kart(urun, [], {}, dil, tmp_path / "son.jpg")
+    assert y and y.stat().st_size > 3000 and "end card" in istem[0] and "LOGO is the hero" in istem[0]
+
+
+def test_ornek_hesap_paylasimlari_gorsel_olarak_incelenir(tmp_path, monkeypatch):
+    from PIL import Image
+    from ofis import arastirma, gorsel_kaynak
+    yollar = []
+    for i in range(6):
+        y = tmp_path / f"{i}.jpg"
+        Image.new("RGB", (100, 125), (i * 30, 60, 90)).save(y)
+        yollar.append(str(y))
+    monkeypatch.setattr(gorsel_kaynak, "indir", lambda a, oturum=None: a)
+    monkeypatch.setattr(llm, "gor", lambda *a, **k: {"ozet": "Bold type on full-bleed photos.", "duzenler": ["full-bleed"],
+                                                      "tipografi": ["condensed caps"]})
+    hesaplar = [{"ort_begeni": 10 * i, "en_iyi": [{"gorsel": yollar[2 * i]}, {"gorsel": yollar[2 * i + 1]}]} for i in range(3)]
+    g = arastirma.gorsel_analiz(hesaplar, gunluk=lambda m: None)
+    assert g["ozet"] == "Bold type on full-bleed photos." and g["duzenler"] == ["full-bleed"]

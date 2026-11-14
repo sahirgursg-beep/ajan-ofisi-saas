@@ -389,3 +389,61 @@ def tasarla(urun, gorsel_yollari, taslak, klasor, tur=None, gunluk=print, sablon
     _gecmise_yaz({"tarih": datetime.now().strftime("%Y-%m-%d %H:%M"), "stil": dil["stil"], "palet": dil["palet"],
                   "font": dil["font"], "puanlar": sonuc["puanlar"]})
     return sonuc
+
+
+# ---------------------------------------------------------------- Reels kapanis karti
+def son_kart(urun, gorsel_yollari, taslak, dil, hedef, gunluk=print):
+    """Reels'in son sahnesi (1080x1920): logo, harekete gecirme ve adres; icerigin gorsel diliyle, yerlesimi ve
+    renkleri tasarimci secer. Olcum + hakemden gecmezse None (sablonun kendi kapanisi kalir)."""
+    if not llm.hazir() or not dil:
+        return None
+    logo = marka.logolar()
+    fotolar = [marka.gorsel_hazirla(Path(g)) for g in gorsel_yollari[:2]]
+    varliklar = {f"FOTO{i}": tasarim._uri(f) for i, f in enumerate(fotolar, 1)}
+    varliklar.setdefault("FOTO1", "")
+    varliklar.setdefault("FOTO2", varliklar["FOTO1"])
+    varliklar["LOGO_KOYU"] = tasarim._uri(logo.get("koyu")) if logo.get("koyu") else ""
+    varliklar["LOGO_ACIK"] = tasarim._uri(logo.get("krem")) if logo.get("krem") else ""
+    m = AYAR["marka"]
+    tuval = {"ad": "reels_son", "boyut": (1080, 1920),
+             "rol": "Final scene (end card) of a 15-second Instagram Reel. The brand closes the video: the LOGO is the "
+                    "hero (large, 240-420px wide, perfectly centred or on a deliberate grid line, on a background "
+                    "colour that makes it contrast clearly - choose the light or dark logo variant accordingly), then "
+                    "the call to action as one bold button-like element, then the website small. Calm, premium, "
+                    "uncluttered; a photo may appear only as a subtle background or small accent. Keep top 220px and "
+                    "bottom 340px free of text.",
+             "metin": {"cta": m.get("cta") or "", "small": m.get("web") or ""}}
+    foto_bilgi = ", ".join(f"FOTO{i}" for i in range(1, len(fotolar) + 1)) or "none"
+    govde = _temizle(llm.sor(SISTEM, _istem(dil, tuval, foto_bilgi, bool(varliklar["LOGO_KOYU"])), json_mod=False, sicaklik=0.7))
+    en_iyi = None
+    for deneme in range(3):
+        if not govde or ".tuval" not in govde:
+            break
+        sayfa_html = _sayfa(govde, tuval, dil, varliklar)
+        try:
+            olcum = _ciz_ve_olc(sayfa_html, tuval, hedef)
+        except Exception as e:
+            olcum = {"sert": [f"render error: {str(e)[:80]}"], "yumusak": []}
+        sert = olcum.get("sert", [])
+        puan, notlar = (None, [])
+        logo_yok = varliklar["LOGO_KOYU"] and "{{LOGO" not in govde and "LOGO_" not in govde
+        if logo_yok:
+            sert = sert + ["the logo is missing - place the logo image as the hero"]
+        if not sert:
+            puan, notlar = _gorsel_puan(hedef, tuval)
+            if en_iyi is None or (puan or 0) > (en_iyi[0] or 0):
+                en_iyi = (puan, sayfa_html)
+            if puan is None or puan >= 7:
+                gunluk(f"Reels kapanis karti hazir (puan {puan})")
+                return hedef
+        gunluk(f"reels_son: deneme {deneme + 1} - {'; '.join((sert + notlar)[:3])}, puan {puan}")
+        if deneme < 2:
+            govde = _temizle(llm.sor(SISTEM, _istem(dil, tuval, foto_bilgi, bool(varliklar["LOGO_KOYU"]))
+                                     + "\n\nYour previous version had these problems, fix ALL of them:\n- "
+                                     + "\n- ".join(sert + notlar or ["make the logo clearer"]) + "\n\nPrevious version:\n"
+                                     + govde[:6000], json_mod=False, sicaklik=0.5)) or govde
+    if en_iyi and (en_iyi[0] is None or en_iyi[0] >= 5):
+        _ciz_ve_olc(en_iyi[1], tuval, hedef)
+        return hedef
+    Path(hedef).unlink(missing_ok=True)
+    return None
