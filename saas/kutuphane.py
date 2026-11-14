@@ -117,6 +117,8 @@ def ogrenim_topla(d=None, icerik_sayisi=200):
     muzik = defaultdict(list)
     sektorler, diller = defaultdict(int), defaultdict(int)
     for m in d.musteriler(["deneme", "aktif", "duraklatildi"]):
+        if (m.get("profil") or {}).get("onizleme"):          # uyelik oncesi ornek isletmeler ogrenime katilmaz
+            continue
         i = ((m.get("profil") or {}).get("isletme") or {})
         sektor = i.get("sektor") or ""
         if sektor:

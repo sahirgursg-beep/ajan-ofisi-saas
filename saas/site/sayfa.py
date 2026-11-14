@@ -96,7 +96,7 @@ def iskelet(site, uygulama, dil, sayfa, baslik, aciklama, govde, diller=None, ld
 <a href="/legal/data-deletion">{E(t(dil, "veri_silme"))}</a><span style="flex:1"></span>
 <label>{E(t(dil, "dil"))} <select onchange="location.href='/'+this.value+'/{(sayfa or '') if cok else ''}'" aria-label="{E(t(dil, 'dil'))}">{dil_sec}</select></label></div></footer>
 <script>
-(() => {{ const y = document.querySelector('.yapiskan'), f = document.querySelector('.basla-form, .son');
+(() => {{ const y = document.querySelector('.yapiskan'), f = document.querySelector('.basla-form, .onizleme-form, .son');
   if (!y || !('IntersectionObserver' in window)) return;
   // telefonda: baslatma formu ekrandan cikinca alta tek tus gelir; form ya da son cagri gorununce kaybolur
   new IntersectionObserver(([e]) => y.classList.toggle('gorunur', !e.isIntersecting && scrollY > 200)).observe(f || document.body);
@@ -105,8 +105,48 @@ document.querySelectorAll('form.basla-form').forEach(f => f.addEventListener('su
   e.preventDefault(); const ad = f.querySelector('input').value.trim();
   location.href = f.action + (f.action.includes('?') ? '&' : '?') + 'ad=' + encodeURIComponent(ad);
 }}));
+document.querySelectorAll('form.onizleme-form').forEach(f => f.addEventListener('submit', async e => {{
+  e.preventDefault();
+  const M = JSON.parse(f.dataset.m), kutu = document.getElementById('oz-sonuc'), dugme = f.querySelector('button');
+  const site = f.site.value.trim(), eposta = f.eposta.value.trim();
+  const yaz = (h, sinif) => {{ kutu.className = 'oz-sonuc ' + (sinif || ''); kutu.innerHTML = h; }};
+  const metin = s => {{ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }};
+  const kayit = () => f.dataset.kayit + '&site=' + encodeURIComponent(site);
+  const dene = h => yaz('<p>' + metin(h) + '</p><a class="dugme" href="' + kayit() + '">' + metin(M.oz_devam) + '</a>', 'uyari');
+  if (!site || !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(eposta)) return yaz('<p>' + metin(M.oz_gecersiz) + '</p>', 'uyari');
+  dugme.disabled = true; yaz('<p class="bekle">' + metin(M.oz_bekle) + '</p>');
+  try {{
+    const r = await fetch('/api/onizleme', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }},
+                                           body: JSON.stringify({{ site, eposta, dil: f.dataset.dil }}) }});
+    const j = await r.json();
+    if (!r.ok) {{ dugme.disabled = false; return j.neden === 'sinir' ? dene(M.oz_sinir) : j.neden === 'gecersiz' ? yaz('<p>' + metin(M.oz_gecersiz) + '</p>', 'uyari') : dene(j.hata || M.oz_hata); }}
+    for (let i = 0; i < 100; i++) {{                      // ~10 dakika
+      await new Promise(c => setTimeout(c, 6000));
+      const d = await (await fetch('/api/onizleme/' + j.id)).json();
+      if (d.durum === 'hazir') return yaz('<h3>' + metin(M.oz_hazir) + '</h3><img src="' + d.gorsel + '" alt="" width="1080" height="1350">'
+        + (d.metin ? '<p class="oz-metin">' + metin(d.metin) + '</p>' : '') + '<a class="dugme" href="' + kayit() + '">' + metin(M.oz_devam) + '</a>', 'hazir');
+      if (d.durum === 'hata') break;
+    }}
+    dene(M.oz_hata);
+  }} catch (_) {{ dene(M.oz_hata); }}
+  dugme.disabled = false;
+}}));
 </script>
 </body></html>"""
+
+
+def _onizleme_formu(uygulama, dil):
+    """Ana sayfa: site + e-posta -> uye olmadan once kendi markasiyla tek ornek post (gunluk sinirli)."""
+    kayit = f"{E(uygulama)}/?kayit=1&amp;dil={dil}"
+    veri = {k: t(dil, k) for k in ("oz_bekle", "oz_hazir", "oz_devam", "oz_hata", "oz_sinir", "oz_gecersiz")}
+    return (f'<form class="kutu onizleme-form" data-kayit="{kayit}" data-dil="{dil}" data-m="{E(json.dumps(veri, ensure_ascii=False))}" novalidate>'
+            f'<label class="ekran-okuyucu" for="oz-site">Website</label>'
+            f'<input id="oz-site" name="site" placeholder="yourbusiness.com" autocomplete="url" maxlength="200" inputmode="url">'
+            f'<label class="ekran-okuyucu" for="oz-eposta">{E(t(dil, "oz_eposta"))}</label>'
+            f'<input id="oz-eposta" name="eposta" type="email" placeholder="{E(t(dil, "oz_eposta"))}" autocomplete="email" maxlength="200">'
+            f'<button class="dugme" type="submit">{E(t(dil, "oz_btn"))}</button></form>'
+            f'<div class="oz-sonuc" id="oz-sonuc" role="status" aria-live="polite"></div>'
+            f'<p class="kutu-not">{E(t(dil, "oz_not"))} <a href="{kayit}">{E(t(dil, "oz_veya"))}</a></p>')
 
 
 def _basla_formu(uygulama, dil):
@@ -179,7 +219,7 @@ def ana(site, uygulama, dil):
     sektorler = ("".join(tum[:ilk]) + f'<details class="hepsi"><summary>{E(t(dil, "sektor_hepsi").replace("{n}", str(len(tum))))}</summary>'
                  + "".join(tum[ilk:]) + "</details>")
     govde = f"""
-<section class="sar kahraman"><div><h1>{E(t(dil, "h1"))}</h1><p class="alt">{E(t(dil, "alt"))}</p>{_basla_formu(uygulama, dil)}</div>
+<section class="sar kahraman"><div><h1>{E(t(dil, "h1"))}</h1><p class="alt">{E(t(dil, "alt"))}</p>{_onizleme_formu(uygulama, dil)}</div>
 <aside class="ekip" aria-label="{E(t(dil, "ekip_h"))}"><h3>{E(t(dil, "ekip_h"))}</h3><ol>{ekip}</ol>
 <div class="saatler"><span>12:00 · Post</span><span>15:00 · Carousel</span><span>18:30 · Reel</span></div></aside></section>
 <section class="bolum beyaz" id="nasil"><div class="sar"><div class="bolum-bas"><h2>{E(t(dil, "nasil_h"))}</h2></div><ol class="adimlar">{adimlar}</ol></div></section>

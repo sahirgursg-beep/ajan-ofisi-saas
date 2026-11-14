@@ -157,7 +157,7 @@ def komutlar(tur, parametre, kok):
     p = parametre or {}
     if tur == "uret":
         adimlar.append([py, "calistir.py"] + (["--demo"] if p.get("demo") else []) +
-                       (["--plansiz"] if p.get("plansiz", True) else []))
+                       (["--plansiz"] if p.get("plansiz", True) else []) + (["--onizleme"] if p.get("onizleme") else []))
     elif tur == "yayin_turu":
         adimlar.append([py, "yayinla.py", "--otomatik"])
     elif tur == "kaldir":
@@ -391,7 +391,8 @@ def bir_is(isci_adi, paylasik):
         m = d.musteri_al(mid)
         if not m:
             raise RuntimeError("Musteri yok")
-        if m["durum"] in ("duraklatildi", "kapali") and tur not in ("kaldir",):
+        onizleme = bool((m.get("profil") or {}).get("onizleme")) and bool((is_.get("parametre") or {}).get("onizleme"))
+        if m["durum"] in ("duraklatildi", "kapali") and tur not in ("kaldir",) and not onizleme:
             d.is_bitir(is_["id"], "hata", f"Abonelik {m['durum']}: is yapilmadi")
             return is_
         with tempfile.TemporaryDirectory(prefix="ajan_") as t:

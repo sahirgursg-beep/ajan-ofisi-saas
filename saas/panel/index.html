@@ -281,7 +281,7 @@ async function dosyaGonder(yol, dosyalar, ekler = {}) {
 const KAYIT = (() => {            // tanitim sitesinden gelen: ?kayit=1&ad=...&dil=..&paket=..
   const q = new URLSearchParams(location.search);
   if (q.has("kayit") || q.has("ad")) {
-    const k = { ad: q.get("ad") || "", dil: q.get("dil") || "", paket: q.get("paket") || "" };
+    const k = { ad: q.get("ad") || "", dil: q.get("dil") || "", paket: q.get("paket") || "", site: q.get("site") || "" };
     try { localStorage.setItem("fz_kayit", JSON.stringify(k)); } catch {}
     history.replaceState(null, "", location.pathname + location.hash);
     return { ...k, yeni: true };
@@ -730,7 +730,7 @@ async function perdeArkasiCiz() {
 
 // ======================= kurulum sihirbazi =======================
 // Adimlar: 1 isletme  2 web sitesi (burada isletme olusur)  3 logo ve fotograflar  4 hesaplar ve baslat
-const S = { adim: 1, form: { cta: "Send us a message", ...(KAYIT?.ad ? { isletme_adi: KAYIT.ad } : {}) }, mid: null, site: null };
+const S = { adim: 1, form: { cta: "Send us a message", ...(KAYIT?.ad ? { isletme_adi: KAYIT.ad } : {}), ...(KAYIT?.site ? { site: KAYIT.site } : {}) }, mid: null, site: null };
 function adimCubugu() { return `<div class="adimlar" aria-label="Step ${S.adim} of 4">${[1, 2, 3, 4].map((i) => `<span class="${i <= S.adim ? "tamam" : ""}"></span>`).join("")}</div>`; }
 async function sihirbaz(hatalar = {}) {
   $("#giris").classList.add("gizli"); $("#uygulama").classList.add("gizli"); $("#kurulum").classList.remove("gizli");

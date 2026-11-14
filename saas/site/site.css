@@ -151,3 +151,17 @@ footer select { font:inherit; padding:6px 10px; border-radius:8px; border:1.5px 
   .yapiskan .dugme { display:block; text-align:center; padding:17px; box-shadow:0 8px 24px rgba(27,59,46,.25); }
   footer { padding-bottom:96px; }
 }
+
+/* uyelik oncesi ornek post */
+.onizleme-form { flex-direction:column; border-radius:22px; padding:10px; max-width:440px; }
+.onizleme-form input { flex:none; padding:14px 12px; border-bottom:1px solid var(--cizgi); }
+.onizleme-form .dugme { margin-top:8px; }
+.oz-sonuc { margin-top:14px; }
+.oz-sonuc:empty { display:none; }
+.oz-sonuc p { margin:0 0 12px; }
+.oz-sonuc .bekle::before { content:""; display:inline-block; width:14px; height:14px; margin-right:10px; border-radius:50%;
+  border:2px solid currentColor; border-right-color:transparent; vertical-align:-2px; animation:oz-don 1s linear infinite; }
+@keyframes oz-don { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .oz-sonuc .bekle::before { animation:none; } }
+.oz-sonuc.hazir img { display:block; width:100%; max-width:380px; height:auto; border-radius:18px; margin:0 0 14px; box-shadow:0 12px 40px rgba(0,0,0,.14); }
+.oz-sonuc .oz-metin { white-space:pre-line; max-width:52ch; max-height:8.5em; overflow:hidden; }

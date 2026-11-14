@@ -148,6 +148,10 @@ def uret(istem, w=1024, h=1536, oturum=None):
     # Varsayilan FLUX.2 Pro: flash'a gore cok daha az bozuk el/anlamsiz yazi (~$0.03/MP). Hata verirse flash.
     # Butcenin ilk yarisinda FLUX.2 Pro (kalite), ikinci yarisinda flash (6 kat ucuz): ay sonu stoksuz kalinmasin
     model = os.environ.get("AJAN_FAL_URET") or ("fal-ai/flux-2-pro" if bu_ay() < 0.5 * tavan() else "fal-ai/flux-2/flash")
+    if os.environ.get("AJAN_ONIZLEME"):         # uyelik oncesi ornek: ucuz model, en fazla 2 gorsel
+        model = "fal-ai/flux-2/flash"
+        if gorsel_kullanilan() >= 2:
+            return None
     fiyat = (0.005 if "flash" in model else 0.03) * max(1, _mp(w, h))
     if not hazir() or not butce_var(fiyat) or gorsel_kalan() <= 0:
         return None

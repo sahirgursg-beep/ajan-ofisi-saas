@@ -123,7 +123,7 @@ def klasor_dogrula(k):
 
 
 # ---------------------------------------------------------------- genel
-SURUM = "2026-11-14.tek-soru-kayit"
+SURUM = "2026-11-14.ornek-post"
 
 
 async def saglik(request):
@@ -219,6 +219,88 @@ async def site_kontrol(request):
     return JSONResponse(j)
 
 
+# ---------------------------------------------------------------- uyelik oncesi ornek post (herkese acik, sinirli)
+ONIZLEME_GUNLUK = int(ayar.al("SAAS_ONIZLEME_GUNLUK", "50") or 50)      # toplam / gun
+ONIZLEME_IP = int(ayar.al("SAAS_ONIZLEME_IP", "1") or 1)                # ayni adresten / gun
+_EPOSTA = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s.]{2,24}$")
+
+
+def _onizleme_mi(m):
+    return bool(m and (m.get("profil") or {}).get("onizleme"))
+
+
+async def onizleme_baslat(request):
+    """POST /api/onizleme {site, eposta, dil}: sitenin bilgisinden gecici bir isletme kurar, tek post urettirir.
+    Sinirlar: IP basina ve toplam gunluk. Ayni e-posta + site bugun istediyse ayni ornek doner."""
+    import hashlib
+    import secrets
+    from ofis import entegrasyon, sektor_isleri
+    g = await govde(request)
+    eposta_ = str(g.get("eposta") or "").strip().lower()[:200]
+    site = str(g.get("site") or "").strip()[:200]
+    if not site or not _EPOSTA.match(eposta_):
+        return hata("Enter your website and a valid email", 422, neden="gecersiz")
+    d = depo()
+    gun = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() or (request.client.host if request.client else "")
+    ip_iz = hashlib.sha256(f"{gun}|{ip}".encode()).hexdigest()[:16]          # ham adres saklanmaz
+    kim_iz = hashlib.sha256(f"{eposta_}|{entegrasyon.normallestir(site)}".encode()).hexdigest()[:16]
+    sayac = d.json_oku("_onizleme/sayac.json", {}) or {}
+    if sayac.get("gun") != gun:
+        sayac = {"gun": gun, "toplam": 0, "ip": {}, "kim": {}}
+    if kim_iz in sayac["kim"]:
+        return JSONResponse({"id": sayac["kim"][kim_iz]}, status_code=200)
+    if sayac["toplam"] >= ONIZLEME_GUNLUK or sayac["ip"].get(ip_iz, 0) >= ONIZLEME_IP:
+        return hata("Today's free previews are used up", 429, neden="sinir")
+    j = await run_in_threadpool(entegrasyon.site_bilgisi, site)
+    if not j.get("tamam"):
+        return hata(j.get("hata") or "We could not open this website", 422, neden="site")
+    ad = re.split(r"\s+[|\-–—:•·]\s+", j.get("baslik") or "")[0].strip()[:60] or re.sub(r"^https?://(www\.)?", "", j["site"]).split("/")[0]
+    try:
+        sek = sektor_isleri.tahmin(f"{j.get('baslik', '')}. {j.get('aciklama', '')}"[:300])
+    except Exception:
+        sek = ""
+    dil = str(g.get("dil") or j.get("dil") or "en")[:2]
+    try:
+        p = profil.formdan({"isletme_adi": ad, "tanim": (j.get("aciklama") or j.get("baslik") or ad)[:200],
+                            "sektor": sek if sek != "genel" else "", "dil": dil, "site": j["site"], "cta": "Visit our website"})
+    except profil.ProfilHatasi:
+        return hata("We could not read enough from this website", 422, neden="site")
+    p["onizleme"] = {"zaman": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    mid = "onz-" + secrets.token_hex(10)                                     # tahmin edilemez: sonucu gormenin anahtari
+    d.musteri_ekle({"id": mid, "ad": p["isletme"]["ad"], "profil": p, "durum": "duraklatildi",
+                    "yayin_ayar": {"otomatik": False}})
+    kuyruk.is_ekle(mid, "uret", {"demo": False, "plansiz": True, "onizleme": True})
+    sayac["toplam"] += 1
+    sayac["ip"][ip_iz] = sayac["ip"].get(ip_iz, 0) + 1
+    sayac["kim"][kim_iz] = mid
+    d.json_yaz("_onizleme/sayac.json", sayac)
+    kayitlar = d.json_oku("_onizleme/kayitlar.json", []) or []               # potansiyel musteri listesi (yalniz yonetici)
+    kayitlar.append({"eposta": eposta_, "site": j["site"], "zaman": p["onizleme"]["zaman"], "id": mid, "dil": dil})
+    d.json_yaz("_onizleme/kayitlar.json", kayitlar[-5000:])
+    return JSONResponse({"id": mid}, status_code=202)
+
+
+async def onizleme_durum(request):
+    """GET /api/onizleme/<id>: hazirlaniyor | hazir (gorsel + metin) | hata"""
+    mid = request.path_params["kimlik"]
+    d = depo()
+    m = d.musteri_al(mid) if re.fullmatch(r"onz-[0-9a-f]{20}", mid or "") else None
+    if not _onizleme_mi(m):
+        return hata("Not found", 404)
+    for ic in d.icerikler(mid, 3):
+        if "post_1080x1350.jpg" in (ic.get("dosyalar") or []):
+            anahtar = f"{mid}/cikti/{ic['klasor']}/post_1080x1350.jpg"
+            adres = d.dosya_adresleri([anahtar], 6 * 3600).get(anahtar)
+            return JSONResponse({"durum": "hazir", "gorsel": adres, "ad": m["ad"],
+                                 "metin": ((ic.get("yayin") or {}).get("caption") or ic.get("caption") or "")[:600],
+                                 "site": (m.get("profil") or {}).get("site") or ""})
+    isler = d.isler(mid, 1)
+    if isler and isler[0].get("durum") in ("hata", "bitti"):               # bitti ama post yok = uretilemedi
+        return JSONResponse({"durum": "hata"})
+    return JSONResponse({"durum": "hazirlaniyor"})
+
+
 # ---------------------------------------------------------------- yonetim paneli (platform sahibi)
 DURUMLAR = ("deneme", "aktif", "duraklatildi", "kapali")
 
@@ -244,7 +326,7 @@ async def yonetim_ozet(request):
     d = depo()
 
     def topla():
-        musteriler = d.musteriler()
+        musteriler = [m for m in d.musteriler() if not _onizleme_mi(m)]
         isler = d.son_isler(300)
         son = {}
         for i in isler:
@@ -731,6 +813,7 @@ routes = [
     Route(M + "/yukleme/{kimlik}/sil", yukleme_sil, methods=["POST"]),
     Route(M + "/logo", logo_yukle, methods=["POST"]), Route(M + "/logo", logo_al),
     Route("/api/site-kontrol", site_kontrol, methods=["POST"]),
+    Route("/api/onizleme", onizleme_baslat, methods=["POST"]), Route("/api/onizleme/{kimlik}", onizleme_durum),
     Route("/yonetim", yonetim_sayfasi), Route("/api/yonetim/ozet", yonetim_ozet),
     Route("/api/yonetim/isler", yonetim_isler), Route("/api/yonetim/kutuphane", yonetim_kutuphane, methods=["GET", "POST"]),
     Route("/api/yonetim/musteri/{mid}", yonetim_musteri),

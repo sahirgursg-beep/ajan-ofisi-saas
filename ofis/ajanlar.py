@@ -4,6 +4,7 @@ LLM'in yaptigi: secim, yaratici metin, elestiri.
 Kodun yaptigi: veri cekme, fiyat hesabi, cizim, video (hata kabul etmeyen isler).
 """
 import json
+import os
 import random
 import re
 import time
@@ -617,7 +618,7 @@ class Tasarimci(Ajan):
         u = None
         try:
             from . import marka_tasarim
-            if marka_tasarim.eski_mi() and llm.hazir():
+            if marka_tasarim.eski_mi() and llm.hazir() and not os.environ.get("AJAN_ONIZLEME"):
                 self.calis("Markana ozel tasarim sistemini kuruyorum (iki haftada bir yenilenir, birkac dakika)...")
                 marka_tasarim.kur(urun, gorsel_yollari, taslak, lambda m: (print(f"[TASARIM] {m}", flush=True),
                                                                           pano.durum(self.ad, "calisiyor", m)))

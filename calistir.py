@@ -6,6 +6,7 @@
     python calistir.py --revize <klasor> -> Onay kartindan istenen revizyonu uretir (yeni versiyon, yine onay bekler)
 """
 import hashlib
+import os
 import sys
 import time
 from datetime import date, datetime
@@ -38,6 +39,9 @@ def main(plan_tarihi=None):
     """Gunun 3 icerigini (post 12:00, carousel 15:00, reels 18:30) - her biri farkli urun - sirayla uretir."""
     from ofis import plan
     demo = "--demo" in sys.argv
+    onizleme = "--onizleme" in sys.argv         # uye olmadan once tek ornek post: hizli ve ucuz
+    if onizleme:
+        os.environ["AJAN_ONIZLEME"] = "1"
     pano.kur()
     plan_tarihi = plan_tarihi or _arg("--gun")
     tarih = plan_tarihi or date.today().isoformat()
@@ -59,7 +63,7 @@ def main(plan_tarihi=None):
         Y.soyle("Herkes", f"Haftalik plana gore {plan_gunu['tarih']} ({plan_gunu['gun']}) icin 3 icerik uretiyoruz: "
                 "post 12:00, carousel 15:00, Reels 18:30" + (f" — {plan_gunu['etkinlik']}" if plan_gunu.get("etkinlik") else "") + ".")
     Y.toplanti_ac(tema)
-    if not demo:
+    if not demo and not onizleme:
         try:                     # ilk uretimde (ve haftada bir) sektor arastirmasi: istemler sektore gore sekillenir
             from ofis import arastirma
             if arastirma.eski_mi():
@@ -99,7 +103,7 @@ def main(plan_tarihi=None):
         Y.soyle("Herkes", f"🏗 Bugun proje gunu! Tamamlanan isimiz '{proje['baslik']}' ({proje['foto_sayisi']} fotograf) "
                 "icin post, carousel ve Reels hazirliyoruz. Gercek fotograflar: yapay zeka ile degistirmiyoruz.", "rapor")
     from ofis import paketler
-    for tur in paketler.formatlar(plan.FORMATLAR):
+    for tur in (["post"] if onizleme else paketler.formatlar(plan.FORMATLAR)):
         slot = (plan_gunu or {}).get("icerikler", {}).get(tur) if plan_gunu else None
         if slot and slot.get("klasor"):
             kullanilan.add(slot["urun"]["url"])

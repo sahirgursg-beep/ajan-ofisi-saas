@@ -7,6 +7,7 @@ Ayni fikir 60 gun icinde tekrar kullanilmaz (pano.hazirlananlar).
 """
 import hashlib
 import json
+import os
 import random
 
 from . import arastirma, gorsel_kaynak, llm, marka_ozeti, musteri, pano, sektor
@@ -148,6 +149,8 @@ def _gorseller(f, gunluk):
 def fikir_urunleri(adet=3, gunluk=print):
     """Uretim hattina 'urun' gibi verilecek fikir icerikleri (gorselleri hazir)."""
     out = []
+    if os.environ.get("AJAN_ONIZLEME"):
+        adet = 1
     fikirler = _fikir_listesi(adet + 2)
     # Ilk fikirlerin gorselleri ayni anda toplanir (ag + gorme modeli beklemesi); yedekler gerekirse sirayla
     from concurrent.futures import ThreadPoolExecutor

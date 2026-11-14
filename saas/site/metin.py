@@ -1,7 +1,7 @@
 """Tanitim sitesinin metinleri (7 dil). Yeni dil: ayni anahtarlarla bir sozluk ekleyin; eksik anahtar Ingilizceye duser."""
 
 EN = {
-    "sektor_hepsi": "See all {n} industries", "kutu_not": "No card needed · Ready in 2 minutes · Cancel anytime",
+    "sektor_hepsi": "See all {n} industries", "oz_eposta": "Your email", "oz_btn": "Show me my first post", "oz_not": "Free · About 3 minutes · No card needed. We use your email only to save your preview and write to you about it.", "oz_bekle": "Reading your website and designing your post… about 3 minutes. Keep this page open.", "oz_hazir": "Your first post is ready", "oz_devam": "Start free trial — a post, a carousel and a Reel like this every day", "oz_hata": "We couldn't make a preview right now. Start the free trial and we'll prepare your posts there.", "oz_sinir": "Today's free previews are used up. Start the free trial instead — it takes two minutes.", "oz_gecersiz": "Enter your website and a valid email.", "oz_veya": "or start the free trial directly", "kutu_not": "No card needed · Ready in 2 minutes · Cancel anytime",
     "kod": "en", "ad": "English", "yon": "ltr",
     "nav_nasil": "How it works", "nav_fiyat": "Pricing", "nav_sektor": "Industries", "nav_sss": "FAQ",
     "giris": "Sign in", "basla": "Start free",
@@ -55,7 +55,7 @@ EN = {
 }
 
 FR = {
-    "sektor_hepsi": "Voir les {n} secteurs", "kutu_not": "Sans carte · Prêt en 2 minutes · Résiliable à tout moment",
+    "sektor_hepsi": "Voir les {n} secteurs", "oz_eposta": "Votre e-mail", "oz_btn": "Montrez-moi ma première publication", "oz_not": "Gratuit · Environ 3 minutes · Sans carte. Votre e-mail sert uniquement à enregistrer votre aperçu et à vous écrire à son sujet.", "oz_bekle": "Nous lisons votre site et créons votre publication… environ 3 minutes. Gardez cette page ouverte.", "oz_hazir": "Votre première publication est prête", "oz_devam": "Commencer l'essai gratuit — un post, un carrousel et un Reel comme celui-ci chaque jour", "oz_hata": "Impossible de créer un aperçu pour le moment. Commencez l'essai gratuit et nous préparerons vos publications.", "oz_sinir": "Les aperçus gratuits du jour sont épuisés. Commencez plutôt l'essai gratuit — deux minutes suffisent.", "oz_gecersiz": "Saisissez votre site web et un e-mail valide.", "oz_veya": "ou commencer directement l'essai gratuit", "kutu_not": "Sans carte · Prêt en 2 minutes · Résiliable à tout moment",
     "kod": "fr", "ad": "Français", "yon": "ltr",
     "nav_nasil": "Comment ça marche", "nav_fiyat": "Tarifs", "nav_sektor": "Secteurs", "nav_sss": "FAQ",
     "giris": "Connexion", "basla": "Essai gratuit",
@@ -106,7 +106,7 @@ FR = {
 }
 
 ES = {
-    "sektor_hepsi": "Ver los {n} sectores", "kutu_not": "Sin tarjeta · Listo en 2 minutos · Cancela cuando quieras",
+    "sektor_hepsi": "Ver los {n} sectores", "oz_eposta": "Tu correo", "oz_btn": "Muéstrame mi primera publicación", "oz_not": "Gratis · Unos 3 minutos · Sin tarjeta. Usamos tu correo solo para guardar tu vista previa y escribirte sobre ella.", "oz_bekle": "Leyendo tu web y diseñando tu publicación… unos 3 minutos. Mantén esta página abierta.", "oz_hazir": "Tu primera publicación está lista", "oz_devam": "Empezar la prueba gratis: un post, un carrusel y un Reel como este cada día", "oz_hata": "Ahora no hemos podido crear la vista previa. Empieza la prueba gratis y prepararemos tus publicaciones.", "oz_sinir": "Las vistas previas gratis de hoy se han agotado. Empieza la prueba gratis: son dos minutos.", "oz_gecersiz": "Escribe tu sitio web y un correo válido.", "oz_veya": "o empieza directamente la prueba gratis", "kutu_not": "Sin tarjeta · Listo en 2 minutos · Cancela cuando quieras",
     "kod": "es", "ad": "Español", "yon": "ltr",
     "nav_nasil": "Cómo funciona", "nav_fiyat": "Precios", "nav_sektor": "Sectores", "nav_sss": "Preguntas",
     "giris": "Entrar", "basla": "Empieza gratis",
@@ -155,7 +155,7 @@ ES = {
 }
 
 PT = {
-    "sektor_hepsi": "Ver os {n} setores", "kutu_not": "Sem cartão · Pronto em 2 minutos · Cancele quando quiser",
+    "sektor_hepsi": "Ver os {n} setores", "oz_eposta": "Seu e-mail", "oz_btn": "Mostre meu primeiro post", "oz_not": "Grátis · Cerca de 3 minutos · Sem cartão. Usamos seu e-mail apenas para salvar sua prévia e escrever para você sobre ela.", "oz_bekle": "Lendo seu site e criando seu post… cerca de 3 minutos. Mantenha esta página aberta.", "oz_hazir": "Seu primeiro post está pronto", "oz_devam": "Começar o teste grátis — um post, um carrossel e um Reel como este todos os dias", "oz_hata": "Não conseguimos criar a prévia agora. Comece o teste grátis e prepararemos seus posts.", "oz_sinir": "As prévias grátis de hoje acabaram. Comece o teste grátis — leva dois minutos.", "oz_gecersiz": "Informe seu site e um e-mail válido.", "oz_veya": "ou comece o teste grátis direto", "kutu_not": "Sem cartão · Pronto em 2 minutos · Cancele quando quiser",
     "kod": "pt", "ad": "Português", "yon": "ltr",
     "nav_nasil": "Como funciona", "nav_fiyat": "Preços", "nav_sektor": "Setores", "nav_sss": "Perguntas",
     "giris": "Entrar", "basla": "Comece grátis",
@@ -204,7 +204,7 @@ PT = {
 }
 
 DE = {
-    "sektor_hepsi": "Alle {n} Branchen ansehen", "kutu_not": "Keine Karte · In 2 Minuten startklar · Jederzeit kündbar",
+    "sektor_hepsi": "Alle {n} Branchen ansehen", "oz_eposta": "Ihre E-Mail", "oz_btn": "Zeigen Sie mir meinen ersten Beitrag", "oz_not": "Kostenlos · Etwa 3 Minuten · Keine Karte nötig. Ihre E-Mail nutzen wir nur, um Ihre Vorschau zu speichern und Ihnen dazu zu schreiben.", "oz_bekle": "Wir lesen Ihre Website und gestalten Ihren Beitrag … etwa 3 Minuten. Lassen Sie diese Seite geöffnet.", "oz_hazir": "Ihr erster Beitrag ist fertig", "oz_devam": "Kostenlos testen – jeden Tag ein Post, ein Karussell und ein Reel wie dieser", "oz_hata": "Gerade konnten wir keine Vorschau erstellen. Starten Sie den kostenlosen Test, dort bereiten wir Ihre Beiträge vor.", "oz_sinir": "Die kostenlosen Vorschauen für heute sind aufgebraucht. Starten Sie stattdessen den kostenlosen Test – das dauert zwei Minuten.", "oz_gecersiz": "Geben Sie Ihre Website und eine gültige E-Mail ein.", "oz_veya": "oder direkt kostenlos testen", "kutu_not": "Keine Karte · In 2 Minuten startklar · Jederzeit kündbar",
     "kod": "de", "ad": "Deutsch", "yon": "ltr",
     "nav_nasil": "So funktioniert's", "nav_fiyat": "Preise", "nav_sektor": "Branchen", "nav_sss": "FAQ",
     "giris": "Anmelden", "basla": "Kostenlos starten",
@@ -254,7 +254,7 @@ DE = {
 }
 
 TR = {
-    "sektor_hepsi": "{n} sektörün tümünü gör", "kutu_not": "Kart gerekmez · 2 dakikada hazır · İstediğiniz an iptal",
+    "sektor_hepsi": "{n} sektörün tümünü gör", "oz_eposta": "E-posta adresiniz", "oz_btn": "İlk gönderimi göster", "oz_not": "Ücretsiz · Yaklaşık 3 dakika · Kart gerekmez. E-postanızı yalnızca önizlemenizi saklamak ve size bu konuda yazmak için kullanırız.", "oz_bekle": "Sitenizi okuyor ve gönderinizi tasarlıyoruz… yaklaşık 3 dakika. Bu sayfayı açık tutun.", "oz_hazir": "İlk gönderiniz hazır", "oz_devam": "Ücretsiz denemeyi başlat: her gün böyle bir post, bir carousel ve bir Reel", "oz_hata": "Şu an önizleme hazırlayamadık. Ücretsiz denemeyi başlatın, gönderilerinizi orada hazırlayalım.", "oz_sinir": "Bugünkü ücretsiz önizlemeler doldu. Bunun yerine ücretsiz denemeyi başlatın; iki dakika sürer.", "oz_gecersiz": "Web sitenizi ve geçerli bir e-posta adresi girin.", "oz_veya": "ya da doğrudan ücretsiz denemeyi başlatın", "kutu_not": "Kart gerekmez · 2 dakikada hazır · İstediğiniz an iptal",
     "kod": "tr", "ad": "Türkçe", "yon": "ltr",
     "nav_nasil": "Nasıl çalışır", "nav_fiyat": "Fiyatlar", "nav_sektor": "Sektörler", "nav_sss": "SSS",
     "giris": "Giriş", "basla": "Ücretsiz başla",
@@ -303,7 +303,7 @@ TR = {
 }
 
 AR = {
-    "sektor_hepsi": "عرض القطاعات الـ{n} كلها", "kutu_not": "بدون بطاقة · جاهز خلال دقيقتين · ألغِ متى شئت",
+    "sektor_hepsi": "عرض القطاعات الـ{n} كلها", "oz_eposta": "بريدك الإلكتروني", "oz_btn": "أرِني منشوري الأول", "oz_not": "مجانًا · نحو 3 دقائق · بدون بطاقة. نستخدم بريدك فقط لحفظ المعاينة ومراسلتك بشأنها.", "oz_bekle": "نقرأ موقعك ونصمّم منشورك… نحو 3 دقائق. أبقِ هذه الصفحة مفتوحة.", "oz_hazir": "منشورك الأول جاهز", "oz_devam": "ابدأ التجربة المجانية — منشور وكاروسيل وريل مثل هذا كل يوم", "oz_hata": "تعذّر إنشاء المعاينة الآن. ابدأ التجربة المجانية وسنجهّز منشوراتك هناك.", "oz_sinir": "انتهت المعاينات المجانية لليوم. ابدأ التجربة المجانية بدلًا من ذلك؛ تستغرق دقيقتين.", "oz_gecersiz": "أدخل موقعك الإلكتروني وبريدًا صالحًا.", "oz_veya": "أو ابدأ التجربة المجانية مباشرة", "kutu_not": "بدون بطاقة · جاهز خلال دقيقتين · ألغِ متى شئت",
     "kod": "ar", "ad": "العربية", "yon": "rtl",
     "nav_nasil": "كيف يعمل", "nav_fiyat": "الأسعار", "nav_sektor": "القطاعات", "nav_sss": "الأسئلة",
     "giris": "تسجيل الدخول", "basla": "ابدأ مجاناً",
